@@ -1,0 +1,702 @@
+Hello, world!
+Writing image to disk:
+  File: out/IMG_0000.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0000.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0001.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0001.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0002.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0002.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0003.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0003.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0004.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0004.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0005.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0005.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0006.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0006.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0007.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0007.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0008.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0008.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0009.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0009.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0010.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0010.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0011.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0011.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0012.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0012.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0013.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0013.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0014.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0014.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0015.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0015.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0016.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0016.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0017.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0017.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0018.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0018.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0019.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0019.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0020.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0020.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0021.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0021.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0022.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0022.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0023.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0023.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0024.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0024.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0025.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0025.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0026.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0026.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0027.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0027.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0028.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0028.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0029.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0029.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0030.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0030.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0031.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0031.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0032.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0032.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0033.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0033.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0034.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0034.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0035.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0035.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0036.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0036.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0037.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0037.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0038.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0038.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0039.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0039.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0040.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0040.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0041.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0041.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0042.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0042.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0043.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0043.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0044.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0044.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0045.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0045.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0046.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0046.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0047.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0047.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0048.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0048.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0049.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0049.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0050.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0050.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0051.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0051.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0052.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0052.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0053.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0053.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0054.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0054.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0055.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0055.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0056.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0056.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0057.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0057.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0058.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0058.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0059.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0059.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0060.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0060.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0061.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0061.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0062.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0062.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0063.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0063.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0064.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0064.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0065.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0065.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0066.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0066.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0067.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0067.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0068.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0068.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0069.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0069.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0070.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0070.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0071.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0071.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0072.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0072.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0073.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0073.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0074.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0074.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0075.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0075.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0076.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0076.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0077.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0077.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0078.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0078.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0079.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0079.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0080.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0080.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0081.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0081.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0082.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0082.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0083.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0083.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0084.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0084.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0085.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0085.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0086.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0086.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0087.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0087.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0088.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0088.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0089.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0089.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0090.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0090.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0091.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0091.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0092.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0092.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0093.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0093.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0094.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0094.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0095.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0095.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0096.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0096.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0097.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0097.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0098.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0098.png written successfully.
+
+Writing image to disk:
+  File: out/IMG_0099.png
+  Size: 512x512
+  Type: Portable PixMap (RGB8)
+
+ out/IMG_0099.png written successfully.
+
+Finished!
