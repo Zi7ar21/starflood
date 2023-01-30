@@ -1,7 +1,14 @@
+# Build
+*.o
+*.out
+build
+
+# CMake
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
 CMakeScripts
+
 Testing
 Makefile
 cmake_install.cmake
@@ -9,8 +16,22 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
-build
-out
+
+# IDEs
+.vs
 .vscode
+*.code-workspace
+
+# Renders
+out
+IMG_*.png
+IMG_*.hdr
+IMG_*.tga
+*.mp4
+*.webm
+
+# Uncatagorized
 sph.py
-render.mp4
+eigen-3.4.0
+eigen-3.4.0.*
+encode.sh

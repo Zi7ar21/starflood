@@ -45,7 +45,8 @@ void WriteImageBuffer(Buffer2D<RGBA32F>& image, std::string filename) {
 		raw_image_buffer[3u * i + 2u] = (uint8_t)(255.0f * clamp(image.data[i].b, 0.0f, 1.0f));
 	}
 
-	int write_success = stbi_write_png(filename.c_str(), image.size_x, image.size_y, 3u, raw_image_buffer, 3u * image.size_x);
+	//int write_success = stbi_write_png(filename.c_str(), image.size_x, image.size_y, 3u, raw_image_buffer, 3u * image.size_x);
+	int write_success = stbi_write_tga(filename.c_str(), image.size_x, image.size_y, 3u, raw_image_buffer);
 
 	delete[] raw_image_buffer;
 
