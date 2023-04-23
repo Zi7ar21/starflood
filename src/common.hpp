@@ -203,4 +203,13 @@ namespace Starflood {
 		simulation.v = v;
 	}
 	*/
+
+	class Tree {
+		private:
+			//uint32_t ;
+
+		public:
+			Tree() {
+			}
+	};
 }
