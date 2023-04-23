@@ -2,6 +2,8 @@
 #include <cstdint>
 //#include <cstdlib>
 #include <cmath>
+#include <stack>
+#include <vector>
 
 //#include <Eigen/Core>
 
@@ -9,6 +11,277 @@
 #include "config.h"
 #include "constants.h"
 #include "image.hpp"
+
+class Node {
+	public:
+		int id;
+		int parent; // <0: this is the root node
+		int child1; // <0: not allocated
+		int child2; // <0: not allocated
+		int child3; // <0: not allocated
+		int child4; // <0: not allocated
+		int depth;
+
+		int particle_id; // <0: no particles, >=0: particle id
+
+		int particles_contained; // number of particles contained in this and child nodes
+		float mass; // mass of particles in this and child nodes
+		float mass_x; // center of mass x
+		float mass_y; // center of mass y
+
+		Node(int _id): id(_id), parent(-1), child1(-1), child2(-1), child3(-1), child4(-1), depth(-1), particle_id(-1), particles_contained(0), mass(0.0), mass_x(0.0), mass_y(0.0) {}
+};
+
+class BarnesHut {
+	public:
+		unsigned int N = 256;
+		float* m;
+		float* r;
+		float* v;
+		float* a;
+
+		double bound_min_x;
+		double bound_min_y;
+		double bound_max_x;
+		double bound_max_y;
+
+		std::vector<Node> node;
+
+		BarnesHut(double _bound_min_x, double _bound_min_y, double _bound_max_x, double _bound_max_y): bound_min_x(_bound_min_x), bound_min_y(_bound_min_y), bound_max_x(_bound_max_x), bound_max_y(_bound_max_y) {
+			//node.push_back(Node(0));
+		}
+
+		void Build() {
+			node.clear();
+
+			node.push_back(Node(0));
+
+			node[0].depth = 0;
+			node[0].particle_id = 0;
+			node[0].particles_contained = 1;
+			node[0].mass = m[0];
+			node[0].mass_x = m[0]*r[2*0+0];
+			node[0].mass_y = m[0]*r[2*0+1];
+
+			//std::cout << "i = 0" << std::endl;
+			//std::cout << "rx = " << r[2*0+0] << std::endl;
+			//std::cout << "ry = " << r[2*0+1] << std::endl;
+
+			for(int i = 1; i < N; i++) {
+				float rx = r[2 * i + 0];
+				float ry = r[2 * i + 1];
+				//std::cout << "i = " << i << std::endl;
+				//std::cout << "rx = " << rx << std::endl;
+				//std::cout << "ry = " << ry << std::endl;
+
+				if((bound_min_x > rx) || (rx > bound_max_x) || (bound_min_y > ry) || (ry > bound_max_y)) continue;
+
+				int cur_node = 0;
+
+				double current_bound_min_x = bound_min_x;
+				double current_bound_min_y = bound_min_y;
+				double current_bound_max_x = bound_max_x;
+				double current_bound_max_y = bound_max_y;
+
+				while(true) {
+					//std::cout << "INSIDE NODE " << cur_node << std::endl;
+
+					double current_bound_center_x = 0.5 * (current_bound_max_x + current_bound_min_x);
+					double current_bound_center_y = 0.5 * (current_bound_max_y + current_bound_min_y);
+					//std::cout << "current_bound_min_x: " << current_bound_min_x << std::endl;
+					//std::cout << "current_bound_min_y: " << current_bound_min_y << std::endl;
+					//std::cout << "current_bound_max_x: " << current_bound_max_x << std::endl;
+					//std::cout << "current_bound_max_y: " << current_bound_max_y << std::endl;
+					//std::cout << "current_bound_center_x: " << current_bound_center_x << std::endl;
+					//std::cout << "current_bound_center_y: " << current_bound_center_y << std::endl;
+
+					//std::cout << "children: [" << node[cur_node].child1 << ", "<< node[cur_node].child2 << ", " << node[cur_node].child3 << ", " << node[cur_node].child4 << "]" << std::endl;
+					if((node[cur_node].child1 < 0) && (node[cur_node].child2 < 0) && (node[cur_node].child3 < 0) && (node[cur_node].child4 < 0)) {
+						// node is not subdivided
+						//std::cout << "NODE " << cur_node << " IS NOT SUBDIVIDED" << std::endl;
+						if(node[cur_node].particle_id < 0) {
+							// node doesn't contain a particle
+							//std::cout << "NODE " << cur_node << " DOESN'T CONTAIN A PARTICLE" << std::endl;
+
+							node[cur_node].particle_id = 0;
+							node[cur_node].particles_contained = 1;
+							node[cur_node].mass = m[i];
+							node[cur_node].mass_x = m[i]*r[2*i+0];
+							node[cur_node].mass_y = m[i]*r[2*i+1];
+
+							while(true) {
+								if(node[cur_node].parent < 0) {
+									// this node is the root node
+									break;
+								} else {
+									// this node is not the root node
+									node[cur_node].particles_contained += 1;
+									node[cur_node].mass += m[i];
+									node[cur_node].mass_x += m[i]*r[2*i+0];
+									node[cur_node].mass_y += m[i]*r[2*i+1];
+									cur_node = node[cur_node].parent;
+								}
+							}
+
+							break;
+						} else {
+							// node contains a particle
+							//std::cout << "NODE " << cur_node << " CONTAINS A PARTICLE" << std::endl;
+
+							int new_node_id = node.size();
+							//std::cout << "Creating node " << new_node_id << std::endl;
+							node.push_back(Node(new_node_id));
+							node[new_node_id].depth = node[cur_node].depth + 1;
+
+							int new_node_id_1 = node.size();
+							//std::cout << "Creating node " << new_node_id_1 << std::endl;
+							node.push_back(Node(new_node_id_1));
+							node[new_node_id_1].depth = node[cur_node].depth + 1;
+
+							int new_node_id_2 = node.size();
+							//std::cout << "Creating node " << new_node_id_2 << std::endl;
+							node.push_back(Node(new_node_id_2));
+							node[new_node_id_2].depth = node[cur_node].depth + 1;
+
+							int new_node_id_3 = node.size();
+							//std::cout << "Creating node " << new_node_id_3 << std::endl;
+							node.push_back(Node(new_node_id_3));
+							node[new_node_id_3].depth = node[cur_node].depth + 1;
+
+							int cur_node_particle = node[cur_node].particle_id;
+
+							double cx = r[2*cur_node_particle+0];
+							double cy = r[2*cur_node_particle+1];
+
+							node[cur_node].particle_id = -1;
+							node[new_node_id].particle_id = cur_node_particle;
+							node[new_node_id].particles_contained = 1;
+							node[new_node_id].mass = m[cur_node_particle];
+							node[new_node_id].mass_x = m[cur_node_particle]*r[2*cur_node_particle+0];
+							node[new_node_id].mass_y = m[cur_node_particle]*r[2*cur_node_particle+1];
+							node[new_node_id].parent = cur_node;
+
+							int quadrant = cx >= current_bound_center_x ? (cy >= current_bound_center_y ? 1 : 4) : (cy >= current_bound_center_y ? 2 : 3);
+
+							if(quadrant == 1) {
+								node[cur_node].child1 = new_node_id;
+								node[cur_node].child2 = new_node_id_1;
+								node[cur_node].child3 = new_node_id_2;
+								node[cur_node].child4 = new_node_id_3;
+							}
+							if(quadrant == 2) {
+								node[cur_node].child1 = new_node_id_1;
+								node[cur_node].child2 = new_node_id;
+								node[cur_node].child3 = new_node_id_2;
+								node[cur_node].child4 = new_node_id_3;
+							}
+							if(quadrant == 3) {
+								node[cur_node].child1 = new_node_id_1;
+								node[cur_node].child2 = new_node_id_2;
+								node[cur_node].child3 = new_node_id;
+								node[cur_node].child4 = new_node_id_3;
+							}
+							if(quadrant == 4) {
+								node[cur_node].child1 = new_node_id_1;
+								node[cur_node].child2 = new_node_id_1;
+								node[cur_node].child3 = new_node_id_3;
+								node[cur_node].child4 = new_node_id;
+							}
+						}
+					} else {
+						// node is subdivided
+						//std::cout << "NODE " << cur_node << " IS SUBDIVIDED" << std::endl;
+
+						// move into appropriate child
+						int quadrant = rx >= current_bound_center_x ? (ry >= current_bound_center_y ? 1 : 4) : (ry >= current_bound_center_y ? 2 : 3);
+						if(quadrant == 1) {
+							cur_node = node[cur_node].child1;
+							current_bound_min_x = current_bound_center_x;
+							current_bound_min_y = current_bound_center_y;
+						}
+						if(quadrant == 2) {
+							cur_node = node[cur_node].child2;
+							current_bound_max_x = current_bound_center_x;
+							current_bound_min_y = current_bound_center_y;
+						}
+						if(quadrant == 3) {
+							cur_node = node[cur_node].child3;
+							current_bound_max_x = current_bound_center_x;
+							current_bound_max_y = current_bound_center_y;
+						}
+						if(quadrant == 4) {
+							cur_node = node[cur_node].child4;
+							current_bound_min_x = current_bound_center_x;
+							current_bound_max_y = current_bound_center_y;
+						}
+					}
+				}
+			}
+
+
+			for(int i = 0; i < node.size(); i++) {
+				node[i].mass_x /= node[i].mass != 0.0 ? node[i].mass : 1.0;
+				node[i].mass_y /= node[i].mass != 0.0 ? node[i].mass : 1.0;
+			}
+
+			//std::cout << "Done builidng tree" << std::endl;
+		}
+
+		void UpdateAcceleration() {
+			const float theta = 1.0;
+
+			for(int i = 0; i < (2 * N); i++) a[i] = (float)0;
+
+			for(int i = 0; i < N; i++) {
+				//std::cout << "a" << i << std::endl;
+				std::stack<int> to_visit;
+
+				to_visit.push(0);
+
+				float rx = r[2 * i + 0];
+				float ry = r[2 * i + 1];
+
+				//if(bound_min_x > rx || rx > bound_max_x || bound_min_y > ry || ry > bound_max_y) continue;
+
+				//width / distance falls below a chosen threshold (a parameter named theta),
+
+				float domain_width = (bound_max_x - bound_min_x);
+
+				while(!to_visit.empty()) {
+					int cur_node = to_visit.top();
+
+					//std::cout << "visiting " << cur_node << std::endl;
+					to_visit.pop();
+
+					float width = exp2f((float)-node[cur_node].depth) * domain_width;
+
+					float dx = (rx - node[cur_node].mass_x);
+					float dy = (ry - node[cur_node].mass_y);
+					float d2 = (dx*dx)+(dy*dy);
+					float d1 = sqrtf(d2);
+
+					if((width / d1 < theta) || (node[cur_node].child1 != -1 && node[cur_node].child2 != -1 && node[cur_node].child3 != -1 && node[cur_node].child4 != -1)) {
+						// calculate forces
+						//std::cout << "guh" << std::endl;
+						a[2 * i + 0] += (dx/d1) * G_SI * node[cur_node].mass * m[2 * i + 0] * ((float)1 / d2);
+						a[2 * i + 1] += (dy/d1) * G_SI * node[cur_node].mass * m[2 * i + 0] * ((float)1 / d2);
+					} else {
+						// visit child nodes
+						// if node exists, add it
+
+						//std::cout << "gah" << std::endl;
+						if(node[cur_node].child1 != -1) to_visit.push(node[cur_node].child1);
+						if(node[cur_node].child2 != -1) to_visit.push(node[cur_node].child2);
+						if(node[cur_node].child3 != -1) to_visit.push(node[cur_node].child3);
+						if(node[cur_node].child4 != -1) to_visit.push(node[cur_node].child4);
+					}
+				}
+
+				//std::cout << "b" << std::endl;
+			}
+			//std::cout << "c" << std::endl;
+		}
+};
 
 /*
 // exact bias: 0.020888578919738908
@@ -68,12 +341,12 @@ void UpdateAcceleration(unsigned int N, float* m, float* r, float* v, float* a) 
 				float r2 = (d[0] * d[0]) + (d[1] * d[1]);
 				float r1  = sqrtf(r2);
 
-				a[2 * i + 0] += d[0] * G_SI * m1 * m2 * ((float)1 / (sqrtf(r1) * r2));
-				a[2 * i + 1] += d[1] * G_SI * m1 * m2 * ((float)1 / (sqrtf(r1) * r2));
+				a[2 * i + 0] += (d[0]/r1) * G_SI * m1 * m2 * ((float)1 / r2);
+				a[2 * i + 1] += (d[1]/r1) * G_SI * m1 * m2 * ((float)1 / r2);
 			}
 
-			a[2 * i + 0] += -0.001 * xi[0];
-			a[2 * i + 1] += -0.001 * xi[1];
+			//a[2 * i + 0] += -0.001 * xi[0];
+			//a[2 * i + 1] += -0.001 * xi[1];
 		}
 	}
 }
@@ -85,7 +358,7 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	unsigned int N = 2048; // number of particles
+	unsigned int N = 1024; // number of particles
 
 	double dt = 0.06666666666666666666666666666667;
 	//double dt = 0.66666666666666666666666666666667;
@@ -120,19 +393,35 @@ int main(int argc, char** argv) {
 	float* v = (float*)malloc(sizeof(float) * (size_t)N * (size_t)2); // Particle velocities
 	float* a = (float*)malloc(sizeof(float) * (size_t)N * (size_t)2); // Particle accelerations
 
+	BarnesHut barneshut(-10.0, -10.0, 10.0, 10.0);
+
+	barneshut.N = N;
+	barneshut.m = m;
+	barneshut.r = r;
+	barneshut.v = v;
+	barneshut.a = a;
+
 	// initialize particle mass
 	//for(unsigned int i = 0; i < N; i++) m[i] = 10.0 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
-	for(unsigned int i = 0; i < N; i++) m[i] = 100000.0/N;
+	for(unsigned int i = 0; i < N; i++) m[i] = 10.0/N;
 
 	std::srand(1);
+
+	std::rand();
+	std::rand();
+	std::rand();
 
 	// initialize particle position
 	for(unsigned int i = 0; i < (2 * N); i++) r[i] = 1.0 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
 
 	std::srand(2);
 
+	std::rand();
+	std::rand();
+	std::rand();
+
 	// initialize particle velocity
-	for(unsigned int i = 0; i < (2 * N); i++) v[i] = 0.1 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
+	for(unsigned int i = 0; i < (2 * N); i++) v[i] = 0.01 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
 	//for(unsigned int i = 0; i < (2 * N); i++) v[i] = 0.0;
 	//for(unsigned int i = 0; i < (2 * N); i++) {
 	//	v[2 * i + 0] =  0.01 * r[2 * i + 1] / sqrtf(r[2 * i + 0]*r[2 * i + 0]+r[2 * i + 1]*r[2 * i + 1]);
@@ -197,19 +486,28 @@ int main(int argc, char** argv) {
 		for(unsigned int i = 0; i < (2 * N); i++) v[i] += 0.5 * dt * a[i]; // 1/2 kick
 		//v = v + (0.5 * dt * a); // 1/2 kick
 
-		for(unsigned int i = 0; i < (2 * N); i++) v[i] *= 0.99; // drift
+		//for(unsigned int i = 0; i < (2 * N); i++) v[i] *= 0.99; // drift
 
 		//#pragma omp simd
 		for(unsigned int i = 0; i < (2 * N); i++) r[i] += dt * v[i]; // drift
 		//r = r + (dt * v); // drift
 
-		UpdateAcceleration(N, m, r, v, a); // update acceleration
+		//UpdateAcceleration(N, m, r, v, a); // update acceleration
+
+		//std::cout << "d" << std::endl;
+		barneshut.Build();
+		barneshut.UpdateAcceleration();
+		//std::cout << "e" << std::endl;
+
+		for(unsigned int i = 0; i < (2 * N); i++) if(r[i] != r[i]) r[i] = 0.5 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
+		for(unsigned int i = 0; i < (2 * N); i++) if(v[i] != v[i]) v[i] = 0.5 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
+		for(unsigned int i = 0; i < (2 * N); i++) if(a[i] != a[i]) a[i] = 0.5 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
 
 		//#pragma omp simd
 		for(unsigned int i = 0; i < (2 * N); i++) v[i] += 0.5 * dt * a[i]; // 1/2 kick
 		//v = v + (0.5 * dt * a); // 1/2 kick
 
-		for(unsigned int i = 0; i < (2 * N); i++) v[i] *= 0.99; // drift
+		//for(unsigned int i = 0; i < (2 * N); i++) v[i] *= 0.99; // drift
 
 		t += dt;
 	}

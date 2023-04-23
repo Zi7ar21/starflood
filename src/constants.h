@@ -15,4 +15,5 @@
 // Physical Constants
 
 // 2018 CODATA-recommended value: 6.67430(15)*10^-11 m^3 kg^-1 s^-2
-#define G_SI 6.6743015e-11
+//#define G_SI 6.6743015e-11
+#define G_SI 1.0

@@ -9,7 +9,7 @@ mkdir -p ./out && \
 rm -f ./render.mp4 && \
 echo "Compiling..." && \
 echo "" && \
-g++ -Ieigen-3.4.0 -march=native -O2 -pedantic -std=c++11 -Wall -Wextra -Wshadow -o build/starflood.out src/image.cpp src/main.cpp && \
+/usr/bin/g++ -O0 -g -pedantic -std=c++11 -Wall -Wextra -Wshadow -o build/starflood.out src/image.cpp src/main.cpp  && \
 #/usr/bin/time -v g++ -Ieigen-3.4.0 -march=native -O2 -pedantic -std=c++11 -Wall -Wextra -Wshadow -o build/starflood.out src/image.cpp src/main.cpp && \
 echo "" && \
 echo "Running..." && \

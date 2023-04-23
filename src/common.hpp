@@ -204,12 +204,4 @@ namespace Starflood {
 	}
 	*/
 
-	class Tree {
-		private:
-			//uint32_t ;
-
-		public:
-			Tree() {
-			}
-	};
 }
