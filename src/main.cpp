@@ -5,12 +5,12 @@
 #include <stack>
 #include <vector>
 
-//#include <Eigen/Core>
-
 #include "common.hpp"
 #include "config.h"
 #include "constants.h"
 #include "image.hpp"
+
+typedef float Real;
 
 class Node {
 	public:
@@ -34,7 +34,7 @@ class Node {
 
 class BarnesHut {
 	public:
-		unsigned int N = 256;
+		unsigned int N;
 		float* m;
 		float* r;
 		float* v;
@@ -60,8 +60,8 @@ class BarnesHut {
 			node[0].particle_id = 0;
 			node[0].particles_contained = 1;
 			node[0].mass = m[0];
-			node[0].mass_x = m[0]*r[2*0+0];
-			node[0].mass_y = m[0]*r[2*0+1];
+			node[0].mass_x = m[0] * r[2 * 0 + 0];
+			node[0].mass_y = m[0] * r[2 * 0 + 1];
 
 			//std::cout << "i = 0" << std::endl;
 			//std::cout << "rx = " << r[2*0+0] << std::endl;
@@ -103,11 +103,7 @@ class BarnesHut {
 							// node doesn't contain a particle
 							//std::cout << "NODE " << cur_node << " DOESN'T CONTAIN A PARTICLE" << std::endl;
 
-							node[cur_node].particle_id = 0;
-							node[cur_node].particles_contained = 1;
-							node[cur_node].mass = m[i];
-							node[cur_node].mass_x = m[i]*r[2*i+0];
-							node[cur_node].mass_y = m[i]*r[2*i+1];
+							node[cur_node].particle_id = i;
 
 							while(true) {
 								if(node[cur_node].parent < 0) {
@@ -117,8 +113,8 @@ class BarnesHut {
 									// this node is not the root node
 									node[cur_node].particles_contained += 1;
 									node[cur_node].mass += m[i];
-									node[cur_node].mass_x += m[i]*r[2*i+0];
-									node[cur_node].mass_y += m[i]*r[2*i+1];
+									node[cur_node].mass_x += m[i] * r[2 * i + 0];
+									node[cur_node].mass_y += m[i] * r[2 * i + 1];
 									cur_node = node[cur_node].parent;
 								}
 							}
@@ -150,15 +146,15 @@ class BarnesHut {
 
 							int cur_node_particle = node[cur_node].particle_id;
 
-							double cx = r[2*cur_node_particle+0];
-							double cy = r[2*cur_node_particle+1];
+							double cx = r[2 * cur_node_particle + 0];
+							double cy = r[2 * cur_node_particle + 1];
 
 							node[cur_node].particle_id = -1;
 							node[new_node_id].particle_id = cur_node_particle;
 							node[new_node_id].particles_contained = 1;
 							node[new_node_id].mass = m[cur_node_particle];
-							node[new_node_id].mass_x = m[cur_node_particle]*r[2*cur_node_particle+0];
-							node[new_node_id].mass_y = m[cur_node_particle]*r[2*cur_node_particle+1];
+							node[new_node_id].mass_x = m[cur_node_particle] * r[2 * cur_node_particle + 0];
+							node[new_node_id].mass_y = m[cur_node_particle] * r[2 * cur_node_particle + 1];
 							node[new_node_id].parent = cur_node;
 
 							int quadrant = cx >= current_bound_center_x ? (cy >= current_bound_center_y ? 1 : 4) : (cy >= current_bound_center_y ? 2 : 3);
@@ -218,17 +214,17 @@ class BarnesHut {
 				}
 			}
 
-
 			for(int i = 0; i < node.size(); i++) {
-				node[i].mass_x /= node[i].mass != 0.0 ? node[i].mass : 1.0;
-				node[i].mass_y /= node[i].mass != 0.0 ? node[i].mass : 1.0;
+				node[i].mass /= (node[i].particles_contained > 1) ? (double)node[i].particles_contained : 1.0;
+				node[i].mass_x /= (node[i].particles_contained > 1) ? (double)node[i].particles_contained : 1.0;
+				node[i].mass_y /= (node[i].particles_contained > 1) ? (double)node[i].particles_contained : 1.0;
 			}
 
 			//std::cout << "Done builidng tree" << std::endl;
 		}
 
 		void UpdateAcceleration() {
-			const float theta = 1.0;
+			const float theta = 0.01;
 
 			for(int i = 0; i < (2 * N); i++) a[i] = (float)0;
 
@@ -255,16 +251,19 @@ class BarnesHut {
 
 					float width = exp2f((float)-node[cur_node].depth) * domain_width;
 
-					float dx = (rx - node[cur_node].mass_x);
-					float dy = (ry - node[cur_node].mass_y);
+					float dx = (node[cur_node].mass_x - rx);
+					float dy = (node[cur_node].mass_y - ry);
 					float d2 = (dx*dx)+(dy*dy);
+					if(d2 < 0.001) continue;
 					float d1 = sqrtf(d2);
 
-					if((width / d1 < theta) || (node[cur_node].child1 != -1 && node[cur_node].child2 != -1 && node[cur_node].child3 != -1 && node[cur_node].child4 != -1)) {
-						// calculate forces
-						//std::cout << "guh" << std::endl;
-						a[2 * i + 0] += (dx/d1) * G_SI * node[cur_node].mass * m[2 * i + 0] * ((float)1 / d2);
-						a[2 * i + 1] += (dy/d1) * G_SI * node[cur_node].mass * m[2 * i + 0] * ((float)1 / d2);
+					if(((width / d1) < theta) || (node[cur_node].child1 == -1 && node[cur_node].child2 == -1 && node[cur_node].child3 == -1 && node[cur_node].child4 == -1)) {
+						if(node[cur_node].particle_id > -1) {
+							// calculate forces
+							//std::cout << "guh" << std::endl;
+							a[2 * i + 0] += (dx/d1) * G_SI * node[cur_node].mass * m[i] * (1.0 / d2);
+							a[2 * i + 1] += (dy/d1) * G_SI * node[cur_node].mass * m[i] * (1.0 / d2);
+						}
 					} else {
 						// visit child nodes
 						// if node exists, add it
@@ -358,9 +357,9 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	unsigned int N = 1024; // number of particles
+	unsigned int N = 256; // number of particles
 
-	double dt = 0.06666666666666666666666666666667;
+	double dt = 0.006666666666666666666666666666667;
 	//double dt = 0.66666666666666666666666666666667;
 	//double dt = 1.0;
 
@@ -403,7 +402,7 @@ int main(int argc, char** argv) {
 
 	// initialize particle mass
 	//for(unsigned int i = 0; i < N; i++) m[i] = 10.0 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
-	for(unsigned int i = 0; i < N; i++) m[i] = 10.0/N;
+	for(unsigned int i = 0; i < N; i++) m[i] = (Real)((long double)100.0 / (long double)N);
 
 	std::srand(1);
 
@@ -412,7 +411,7 @@ int main(int argc, char** argv) {
 	std::rand();
 
 	// initialize particle position
-	for(unsigned int i = 0; i < (2 * N); i++) r[i] = 1.0 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
+	for(unsigned int i = 0; i < (2 * N); i++) r[i] = 1.0 * ((2.0 * ((long double)std::rand() / (long double)RAND_MAX)) - 1.0);
 
 	std::srand(2);
 
@@ -430,7 +429,7 @@ int main(int argc, char** argv) {
 
 	UpdateAcceleration(N, m, r, v, a); // update acceleration
 
-	double t = 0.0;
+	Real t = 0.0;
 
 	for(int n = 1; n < 300; n++) {
 		//#pragma omp simd
@@ -483,7 +482,7 @@ int main(int argc, char** argv) {
 		//UpdateSimulation(simulation);
 
 		//#pragma omp simd
-		for(unsigned int i = 0; i < (2 * N); i++) v[i] += 0.5 * dt * a[i]; // 1/2 kick
+		for(unsigned int i = 0; i < (2 * N); i++) v[i] += (Real)0.5 * dt * a[i]; // 1/2 kick
 		//v = v + (0.5 * dt * a); // 1/2 kick
 
 		//for(unsigned int i = 0; i < (2 * N); i++) v[i] *= 0.99; // drift
@@ -496,6 +495,7 @@ int main(int argc, char** argv) {
 
 		//std::cout << "d" << std::endl;
 		barneshut.Build();
+
 		barneshut.UpdateAcceleration();
 		//std::cout << "e" << std::endl;
 
@@ -504,7 +504,7 @@ int main(int argc, char** argv) {
 		for(unsigned int i = 0; i < (2 * N); i++) if(a[i] != a[i]) a[i] = 0.5 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
 
 		//#pragma omp simd
-		for(unsigned int i = 0; i < (2 * N); i++) v[i] += 0.5 * dt * a[i]; // 1/2 kick
+		for(unsigned int i = 0; i < (2 * N); i++) v[i] += (Real)0.5 * dt * a[i]; // 1/2 kick
 		//v = v + (0.5 * dt * a); // 1/2 kick
 
 		//for(unsigned int i = 0; i < (2 * N); i++) v[i] *= 0.99; // drift
