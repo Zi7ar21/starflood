@@ -189,7 +189,7 @@ class BarnesHut {
 							}
 							if(quadrant == 4) {
 								node[cur_node].child1 = new_node_id_1;
-								node[cur_node].child2 = new_node_id_1;
+								node[cur_node].child2 = new_node_id_2;
 								node[cur_node].child3 = new_node_id_3;
 								node[cur_node].child4 = new_node_id;
 							}
@@ -234,7 +234,7 @@ class BarnesHut {
 		}
 
 		void UpdateAcceleration() {
-			const float theta = 0.5;
+			const float theta = 1.0;
 
 			for(int i = 0; i < (2 * N); i++) a[i] = (float)0;
 
@@ -328,7 +328,9 @@ def W( x, y, z, h ):
 //float W(float x, float y, float z) {
 //}
 
-void UpdateAcceleration(unsigned int N, float* m, float* r, float* v, float* a) {
+void UpdateAcceleration(unsigned int N, Real* m, Real* r, Real* v, Real* a) {
+	for(unsigned int i = 0; i < (2 * N); i++) a[i] = (Real)0;
+
 	// Compute Forces (O(N^2), very slow...)
 	{
 		for(unsigned int i = 0; i < N; i++) {
@@ -362,7 +364,7 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	unsigned int N = 1024; // number of particles
+	unsigned int N = 10000; // number of particles
 
 	double dt = 0.03333333333333333333333333333333; // 1/30
 	//double dt = 0.66666666666666666666666666666667;
@@ -412,8 +414,6 @@ int main(int argc, char** argv) {
 	std::srand(1);
 
 	std::rand();
-	std::rand();
-	std::rand();
 
 	// initialize particle position
 	for(unsigned int i = 0; i < (2 * N); i++) r[i] = 1.0 * ((2.0 * ((long double)std::rand() / (long double)RAND_MAX)) - 1.0);
@@ -421,18 +421,49 @@ int main(int argc, char** argv) {
 	std::srand(2);
 
 	std::rand();
-	std::rand();
-	std::rand();
 
 	// initialize particle velocity
-	for(unsigned int i = 0; i < (2 * N); i++) v[i] = 0.01 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
+	for(unsigned int i = 0; i < (2 * N); i++) v[i] = 0.01 * ((2.0 * ((long double)std::rand() / (long double)RAND_MAX)) - 1.0);
+	//for(unsigned int i = 0; i < (2 * N); i++) v[i] = (Real)0;
 	//for(unsigned int i = 0; i < (2 * N); i++) v[i] = 0.0;
 	//for(unsigned int i = 0; i < (2 * N); i++) {
 	//	v[2 * i + 0] =  0.01 * r[2 * i + 1] / sqrtf(r[2 * i + 0]*r[2 * i + 0]+r[2 * i + 1]*r[2 * i + 1]);
 	//	v[2 * i + 1] = -0.01 * r[2 * i + 0] / sqrtf(r[2 * i + 0]*r[2 * i + 0]+r[2 * i + 1]*r[2 * i + 1]);
 	//}
 
-	UpdateAcceleration(N, m, r, v, a); // update acceleration
+	//for(unsigned int i = 0; i < (2 * N); i++) a[i] = (Real)0;
+
+	//UpdateAcceleration(N, m, r, v, a); // update acceleration
+
+	std::srand(1); std::rand();
+	//for(unsigned int i = 0; i < (2 * N); i++) if(r[i] != r[i]) r[i] = 1.0 * ((2.0 * ((long double)std::rand() / (long double)RAND_MAX)) - 1.0);
+
+	std::srand(2); std::rand();
+	//for(unsigned int i = 0; i < (2 * N); i++) if(v[i] != v[i]) v[i] = 0.1 * ((2.0 * ((long double)std::rand() / (long double)RAND_MAX)) - 1.0);
+
+	//for(unsigned int i = 0; i < (2 * N); i++) if(a[i] != a[i]) a[i] = (Real)0;
+
+	Real min_x = r[2 * 0 + 0], max_x = r[2 * 0 + 0], min_y = r[2 * 0 + 1], max_y = r[2 * 0 + 1];
+
+	for(unsigned int i = 1; i < N; i++) {
+		min_x = std::min(min_x, r[2 * i + 0]);
+		max_x = std::max(max_x, r[2 * i + 0]);
+		min_y = std::min(min_y, r[2 * i + 1]);
+		max_y = std::max(max_y, r[2 * i + 1]);
+	}
+
+	barneshut.bound_min_x = std::max(min_x, (Real)-100.0);
+	barneshut.bound_max_x = std::min(max_x, (Real) 100.0);
+	barneshut.bound_min_y = std::max(min_y, (Real)-100.0);
+	barneshut.bound_max_y = std::min(max_y, (Real) 100.0);
+
+	//std::cout << "d" << std::endl;
+	barneshut.Build();
+
+	//std::cout << "e" << std::endl;
+
+	barneshut.UpdateAcceleration();
+	//std::cout << "f" << std::endl;
 
 	Real t = 0.0;
 
@@ -467,9 +498,9 @@ int main(int argc, char** argv) {
 			int coord_y = (int)uv_y;
 
 			if(0 <= coord_x && coord_x < ImageSizeX && 0 <= coord_y && coord_y < ImageSizeY) {
-				image.data[coord_x + ImageSizeX * coord_y].r += 1.0;
-				image.data[coord_x + ImageSizeX * coord_y].g += 1.0;
-				image.data[coord_x + ImageSizeX * coord_y].b += 1.0;
+				image.data[coord_x + ImageSizeX * coord_y].r += 0.5;
+				image.data[coord_x + ImageSizeX * coord_y].g += 0.5;
+				image.data[coord_x + ImageSizeX * coord_y].b += 0.5;
 			}
 		}
 
@@ -490,7 +521,7 @@ int main(int argc, char** argv) {
 		for(unsigned int i = 0; i < (2 * N); i++) v[i] += (Real)0.5 * dt * a[i]; // 1/2 kick
 		//v = v + (0.5 * dt * a); // 1/2 kick
 
-		//for(unsigned int i = 0; i < (2 * N); i++) v[i] *= 0.99; // drift
+		//for(unsigned int i = 0; i < (2 * N); i++) v[i] *= 0.99;
 
 		//#pragma omp simd
 		for(unsigned int i = 0; i < (2 * N); i++) r[i] += dt * v[i]; // drift
@@ -498,7 +529,10 @@ int main(int argc, char** argv) {
 
 		//UpdateAcceleration(N, m, r, v, a); // update acceleration
 
-		Real min_x = r[2 * 0 + 0], max_x = r[2 * 0 + 0], min_y = r[2 * 0 + 1], max_y = r[2 * 0 + 1];
+		min_x = r[2 * 0 + 0];
+		max_x = r[2 * 0 + 0];
+		min_y = r[2 * 0 + 1];
+		max_y = r[2 * 0 + 1];
 
 		for(unsigned int i = 1; i < N; i++) {
 			min_x = std::min(min_x, r[2 * i + 0]);
@@ -519,15 +553,19 @@ int main(int argc, char** argv) {
 		//std::cout << "e" << std::endl;
 
 		// Re-initialize NaN's
-		for(unsigned int i = 0; i < (2 * N); i++) if(r[i] != r[i]) r[i] = 0.01 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
-		for(unsigned int i = 0; i < (2 * N); i++) if(v[i] != v[i]) v[i] = 0.01 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
-		for(unsigned int i = 0; i < (2 * N); i++) if(a[i] != a[i]) a[i] = 0.01 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
+		std::srand(1); std::rand();
+		//for(unsigned int i = 0; i < (2 * N); i++) if(r[i] != r[i]) r[i] = 1.0 * ((2.0 * ((long double)std::rand() / (long double)RAND_MAX)) - 1.0);
+
+		std::srand(2); std::rand();
+		//for(unsigned int i = 0; i < (2 * N); i++) if(v[i] != v[i]) v[i] = 0.1 * ((2.0 * ((long double)std::rand() / (long double)RAND_MAX)) - 1.0);
+
+		//for(unsigned int i = 0; i < (2 * N); i++) if(a[i] != a[i]) a[i] = (Real)0;
 
 		//#pragma omp simd
 		for(unsigned int i = 0; i < (2 * N); i++) v[i] += (Real)0.5 * dt * a[i]; // 1/2 kick
 		//v = v + (0.5 * dt * a); // 1/2 kick
 
-		//for(unsigned int i = 0; i < (2 * N); i++) v[i] *= 0.99; // drift
+		//for(unsigned int i = 0; i < (2 * N); i++) v[i] *= 0.99;
 
 		t += dt;
 	}
