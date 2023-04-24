@@ -10,17 +10,19 @@
 #include "constants.h"
 #include "image.hpp"
 
+// Real number type (float or double)
 typedef float Real;
 
+// Barnes hut tree node
 class Node {
 	public:
-		int id;
+		int id; // node identifier
 		int parent; // <0: this is the root node
 		int child1; // <0: not allocated
 		int child2; // <0: not allocated
 		int child3; // <0: not allocated
 		int child4; // <0: not allocated
-		int depth;
+		int depth; // 0: root
 
 		int particle_id; // <0: no particles, >=0: particle id
 
@@ -34,16 +36,17 @@ class Node {
 
 class BarnesHut {
 	public:
-		unsigned int N;
-		float* m;
-		float* r;
-		float* v;
-		float* a;
+		unsigned int N; // number of particles in the simulation
+		Real* m; // particle mass buffer
+		Real* r; // particle position buffer
+		Real* v; // particle velocity buffer
+		Real* a; // particle acceleration buffer
 
-		double bound_min_x;
-		double bound_min_y;
-		double bound_max_x;
-		double bound_max_y;
+		// Tree bounds
+		Real bound_min_x;
+		Real bound_min_y;
+		Real bound_max_x;
+		Real bound_max_y;
 
 		std::vector<Node> node;
 
@@ -52,13 +55,15 @@ class BarnesHut {
 		}
 
 		void Build() {
-			node.clear();
+			node.clear(); // reset tree
 
-			node.push_back(Node(0));
+			node.push_back(Node(0)); // create root node
 
+			// initialize the root node
 			node[0].depth = 0;
 			node[0].particle_id = 0;
 			node[0].particles_contained = 1;
+
 			node[0].mass = m[0];
 			node[0].mass_x = m[0] * r[2 * 0 + 0];
 			node[0].mass_y = m[0] * r[2 * 0 + 1];
@@ -67,6 +72,7 @@ class BarnesHut {
 			//std::cout << "rx = " << r[2*0+0] << std::endl;
 			//std::cout << "ry = " << r[2*0+1] << std::endl;
 
+			// insert the rest of the particles
 			for(int i = 1; i < N; i++) {
 				float rx = r[2 * i + 0];
 				float ry = r[2 * i + 1];
@@ -74,20 +80,23 @@ class BarnesHut {
 				//std::cout << "rx = " << rx << std::endl;
 				//std::cout << "ry = " << ry << std::endl;
 
-				if((bound_min_x > rx) || (rx > bound_max_x) || (bound_min_y > ry) || (ry > bound_max_y)) continue;
+				if((bound_min_x > rx) || (rx > bound_max_x) || (bound_min_y > ry) || (ry > bound_max_y)) continue; // skip if out of bounds
 
-				int cur_node = 0;
+				int cur_node = 0; // current node identifier
 
-				double current_bound_min_x = bound_min_x;
-				double current_bound_min_y = bound_min_y;
-				double current_bound_max_x = bound_max_x;
-				double current_bound_max_y = bound_max_y;
+				// current node bounds
+				Real current_bound_min_x = bound_min_x;
+				Real current_bound_min_y = bound_min_y;
+				Real current_bound_max_x = bound_max_x;
+				Real current_bound_max_y = bound_max_y;
 
 				while(true) {
 					//std::cout << "INSIDE NODE " << cur_node << std::endl;
 
+					// Find the center of the current node
 					double current_bound_center_x = 0.5 * (current_bound_max_x + current_bound_min_x);
 					double current_bound_center_y = 0.5 * (current_bound_max_y + current_bound_min_y);
+
 					//std::cout << "current_bound_min_x: " << current_bound_min_x << std::endl;
 					//std::cout << "current_bound_min_y: " << current_bound_min_y << std::endl;
 					//std::cout << "current_bound_max_x: " << current_bound_max_x << std::endl;
@@ -105,6 +114,7 @@ class BarnesHut {
 
 							node[cur_node].particle_id = i;
 
+							// update mass in this and parent nodes
 							while(true) {
 								if(node[cur_node].parent < 0) {
 									// this node is the root node
@@ -215,7 +225,7 @@ class BarnesHut {
 			}
 
 			for(int i = 0; i < node.size(); i++) {
-				node[i].mass /= (node[i].particles_contained > 1) ? (double)node[i].particles_contained : 1.0;
+				// divide the sum of position times mass by the number of masses (final step in calculating center of mass)
 				node[i].mass_x /= (node[i].particles_contained > 1) ? (double)node[i].particles_contained : 1.0;
 				node[i].mass_y /= (node[i].particles_contained > 1) ? (double)node[i].particles_contained : 1.0;
 			}
@@ -224,7 +234,7 @@ class BarnesHut {
 		}
 
 		void UpdateAcceleration() {
-			const float theta = 0.01;
+			const float theta = 0.5;
 
 			for(int i = 0; i < (2 * N); i++) a[i] = (float)0;
 
@@ -249,20 +259,20 @@ class BarnesHut {
 					//std::cout << "visiting " << cur_node << std::endl;
 					to_visit.pop();
 
-					float width = exp2f((float)-node[cur_node].depth) * domain_width;
+					Real width = exp2f((float)-node[cur_node].depth) * domain_width;
 
-					float dx = (node[cur_node].mass_x - rx);
-					float dy = (node[cur_node].mass_y - ry);
-					float d2 = (dx*dx)+(dy*dy);
-					if(d2 < 0.001) continue;
-					float d1 = sqrtf(d2);
+					Real dx = (node[cur_node].mass_x - rx);
+					Real dy = (node[cur_node].mass_y - ry);
+					Real d2 = (dx*dx)+(dy*dy);
+					if(d2 < (Real)0.001) continue; // too close
+					Real d1 = sqrtf(d2);
 
 					if(((width / d1) < theta) || (node[cur_node].child1 == -1 && node[cur_node].child2 == -1 && node[cur_node].child3 == -1 && node[cur_node].child4 == -1)) {
 						if(node[cur_node].particle_id > -1) {
 							// calculate forces
 							//std::cout << "guh" << std::endl;
-							a[2 * i + 0] += (dx/d1) * G_SI * node[cur_node].mass * m[i] * (1.0 / d2);
-							a[2 * i + 1] += (dy/d1) * G_SI * node[cur_node].mass * m[i] * (1.0 / d2);
+							a[2 * i + 0] += (dx / d1) * G_SI * node[cur_node].mass * m[i] * (1.0 / d2);
+							a[2 * i + 1] += (dy / d1) * G_SI * node[cur_node].mass * m[i] * (1.0 / d2);
 						}
 					} else {
 						// visit child nodes
@@ -324,8 +334,6 @@ void UpdateAcceleration(unsigned int N, float* m, float* r, float* v, float* a) 
 		for(unsigned int i = 0; i < N; i++) {
 			float m1 = m[i];
 
-			float xi[2] = {{r[2 * i + 0]}, {r[2 * i + 1]}};
-
 			//#pragma omp parallel for
 			for(unsigned int j = 0; j < N; j++) {
 				if(i == j) continue;
@@ -333,19 +341,16 @@ void UpdateAcceleration(unsigned int N, float* m, float* r, float* v, float* a) 
 				float m2 = m[j];
 
 				float d[2] = {
-					{r[2 * j + 0] - xi[0]},
-					{r[2 * j + 1] - xi[1]},
+					{r[2 * j + 0] - r[2 * i + 0]},
+					{r[2 * j + 1] - r[2 * i + 1]},
 				};
 
 				float r2 = (d[0] * d[0]) + (d[1] * d[1]);
 				float r1  = sqrtf(r2);
 
-				a[2 * i + 0] += (d[0]/r1) * G_SI * m1 * m2 * ((float)1 / r2);
-				a[2 * i + 1] += (d[1]/r1) * G_SI * m1 * m2 * ((float)1 / r2);
+				a[2 * i + 0] += (d[0] / r1) * G_SI * m1 * m2 * (1.0 / r2);
+				a[2 * i + 1] += (d[1] / r1) * G_SI * m1 * m2 * (1.0 / r2);
 			}
-
-			//a[2 * i + 0] += -0.001 * xi[0];
-			//a[2 * i + 1] += -0.001 * xi[1];
 		}
 	}
 }
@@ -387,10 +392,10 @@ int main(int argc, char** argv) {
 	//simulation.Initialize();
 
 	// row-major
-	float* m = (float*)malloc(sizeof(float) * (size_t)N * (size_t)1); // Particle masses
-	float* r = (float*)malloc(sizeof(float) * (size_t)N * (size_t)2); // Particle positions
-	float* v = (float*)malloc(sizeof(float) * (size_t)N * (size_t)2); // Particle velocities
-	float* a = (float*)malloc(sizeof(float) * (size_t)N * (size_t)2); // Particle accelerations
+	Real* m = (Real*)malloc(sizeof(Real) * (size_t)N * (size_t)1); // Particle masses
+	Real* r = (Real*)malloc(sizeof(Real) * (size_t)N * (size_t)2); // Particle positions
+	Real* v = (Real*)malloc(sizeof(Real) * (size_t)N * (size_t)2); // Particle velocities
+	Real* a = (Real*)malloc(sizeof(Real) * (size_t)N * (size_t)2); // Particle accelerations
 
 	BarnesHut barneshut(-10.0, -10.0, 10.0, 10.0);
 
@@ -493,15 +498,30 @@ int main(int argc, char** argv) {
 
 		//UpdateAcceleration(N, m, r, v, a); // update acceleration
 
+		Real min_x = r[2 * 0 + 0], max_x = r[2 * 0 + 0], min_y = r[2 * 0 + 1], max_y = r[2 * 0 + 1];
+
+		for(unsigned int i = 1; i < N; i++) {
+			min_x = std::min(min_x, r[2 * i + 0]);
+			max_x = std::max(max_x, r[2 * i + 0]);
+			min_y = std::min(min_y, r[2 * i + 1]);
+			max_y = std::max(max_y, r[2 * i + 1]);
+		}
+
+		barneshut.bound_min_x = std::max(min_x, (Real)-100.0);
+		barneshut.bound_max_x = std::min(max_x, (Real) 100.0);
+		barneshut.bound_min_y = std::max(min_y, (Real)-100.0);
+		barneshut.bound_max_y = std::min(max_y, (Real) 100.0);
+
 		//std::cout << "d" << std::endl;
 		barneshut.Build();
 
 		barneshut.UpdateAcceleration();
 		//std::cout << "e" << std::endl;
 
-		for(unsigned int i = 0; i < (2 * N); i++) if(r[i] != r[i]) r[i] = 0.5 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
-		for(unsigned int i = 0; i < (2 * N); i++) if(v[i] != v[i]) v[i] = 0.5 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
-		for(unsigned int i = 0; i < (2 * N); i++) if(a[i] != a[i]) a[i] = 0.5 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
+		// Re-initialize NaN's
+		for(unsigned int i = 0; i < (2 * N); i++) if(r[i] != r[i]) r[i] = 0.01 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
+		for(unsigned int i = 0; i < (2 * N); i++) if(v[i] != v[i]) v[i] = 0.01 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
+		for(unsigned int i = 0; i < (2 * N); i++) if(a[i] != a[i]) a[i] = 0.01 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
 
 		//#pragma omp simd
 		for(unsigned int i = 0; i < (2 * N); i++) v[i] += (Real)0.5 * dt * a[i]; // 1/2 kick
@@ -512,12 +532,12 @@ int main(int argc, char** argv) {
 		t += dt;
 	}
 
-	//free(m);
-	//free(x);
-	//free(v);
-	//free(a);
+	std::cout << "Freeing allocated memory..." << std::endl;
 
-	//simulation.Deallocate();
+	free(m);
+	free(r);
+	free(v);
+	free(a);
 
 	std::cout << "Finished!" << std::endl;
 
