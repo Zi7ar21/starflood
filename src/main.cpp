@@ -264,7 +264,7 @@ class BarnesHut {
 					Real dx = (node[cur_node].mass_x - rx);
 					Real dy = (node[cur_node].mass_y - ry);
 					Real d2 = (dx*dx)+(dy*dy);
-					if(d2 < (Real)0.001) continue; // too close
+					if(d2 < (Real)(0.1 * 0.1)) continue; // too close
 					Real d1 = sqrtf(d2);
 
 					if(((width / d1) < theta) || (node[cur_node].child1 == -1 && node[cur_node].child2 == -1 && node[cur_node].child3 == -1 && node[cur_node].child4 == -1)) {
@@ -362,9 +362,9 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	unsigned int N = 256; // number of particles
+	unsigned int N = 1024; // number of particles
 
-	double dt = 0.006666666666666666666666666666667;
+	double dt = 0.03333333333333333333333333333333; // 1/30
 	//double dt = 0.66666666666666666666666666666667;
 	//double dt = 1.0;
 
@@ -397,7 +397,7 @@ int main(int argc, char** argv) {
 	Real* v = (Real*)malloc(sizeof(Real) * (size_t)N * (size_t)2); // Particle velocities
 	Real* a = (Real*)malloc(sizeof(Real) * (size_t)N * (size_t)2); // Particle accelerations
 
-	BarnesHut barneshut(-10.0, -10.0, 10.0, 10.0);
+	BarnesHut barneshut(-1.0, -1.0, 1.0, 1.0);
 
 	barneshut.N = N;
 	barneshut.m = m;
@@ -407,7 +407,7 @@ int main(int argc, char** argv) {
 
 	// initialize particle mass
 	//for(unsigned int i = 0; i < N; i++) m[i] = 10.0 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
-	for(unsigned int i = 0; i < N; i++) m[i] = (Real)((long double)100.0 / (long double)N);
+	for(unsigned int i = 0; i < N; i++) m[i] = (Real)((long double)10.0 / (long double)N);
 
 	std::srand(1);
 
