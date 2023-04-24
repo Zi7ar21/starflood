@@ -264,7 +264,7 @@ class BarnesHut {
 					Real dx = (node[cur_node].mass_x - rx);
 					Real dy = (node[cur_node].mass_y - ry);
 					Real d2 = (dx*dx)+(dy*dy);
-					if(d2 < (Real)(0.1 * 0.1)) continue; // too close
+					if(d2 < (Real)(0.01 * 0.01)) continue; // too close
 					Real d1 = sqrtf(d2);
 
 					if(((width / d1) < theta) || (node[cur_node].child1 == -1 && node[cur_node].child2 == -1 && node[cur_node].child3 == -1 && node[cur_node].child4 == -1)) {
@@ -366,7 +366,7 @@ int main(int argc, char** argv) {
 
 	unsigned int N = 10000; // number of particles
 
-	double dt = 0.03333333333333333333333333333333; // 1/30
+	double dt = 0.01;
 	//double dt = 0.66666666666666666666666666666667;
 	//double dt = 1.0;
 
@@ -409,7 +409,7 @@ int main(int argc, char** argv) {
 
 	// initialize particle mass
 	//for(unsigned int i = 0; i < N; i++) m[i] = 10.0 * ((2.0 * ((double)std::rand() / (double)RAND_MAX)) - 1.0);
-	for(unsigned int i = 0; i < N; i++) m[i] = (Real)((long double)10.0 / (long double)N);
+	for(unsigned int i = 0; i < N; i++) m[i] = (Real)((long double)500.0 / (long double)N);
 
 	std::srand(1);
 
@@ -427,9 +427,13 @@ int main(int argc, char** argv) {
 	//for(unsigned int i = 0; i < (2 * N); i++) v[i] = (Real)0;
 	//for(unsigned int i = 0; i < (2 * N); i++) v[i] = 0.0;
 	//for(unsigned int i = 0; i < (2 * N); i++) {
-	//	v[2 * i + 0] =  0.01 * r[2 * i + 1] / sqrtf(r[2 * i + 0]*r[2 * i + 0]+r[2 * i + 1]*r[2 * i + 1]);
-	//	v[2 * i + 1] = -0.01 * r[2 * i + 0] / sqrtf(r[2 * i + 0]*r[2 * i + 0]+r[2 * i + 1]*r[2 * i + 1]);
+	//	v[2 * i + 0] =  0.1 * r[2 * i + 1] / sqrtf(r[2 * i + 0]*r[2 * i + 0]+r[2 * i + 1]*r[2 * i + 1]);
+	//	v[2 * i + 1] = -001 * r[2 * i + 0] / sqrtf(r[2 * i + 0]*r[2 * i + 0]+r[2 * i + 1]*r[2 * i + 1]);
 	//}
+	for(unsigned int i = 0; i < (2 * N); i++) {
+		v[2 * i + 0] =  0.1 * r[2 * i + 1] / (r[2 * i + 0]*r[2 * i + 0]+r[2 * i + 1]*r[2 * i + 1]);
+		v[2 * i + 1] = -0.1 * r[2 * i + 0] / (r[2 * i + 0]*r[2 * i + 0]+r[2 * i + 1]*r[2 * i + 1]);
+	}
 
 	//for(unsigned int i = 0; i < (2 * N); i++) a[i] = (Real)0;
 
@@ -452,10 +456,10 @@ int main(int argc, char** argv) {
 		max_y = std::max(max_y, r[2 * i + 1]);
 	}
 
-	barneshut.bound_min_x = std::max(min_x, (Real)-100.0);
-	barneshut.bound_max_x = std::min(max_x, (Real) 100.0);
-	barneshut.bound_min_y = std::max(min_y, (Real)-100.0);
-	barneshut.bound_max_y = std::min(max_y, (Real) 100.0);
+	barneshut.bound_min_x = std::max(min_x, (Real)-10.0);
+	barneshut.bound_max_x = std::min(max_x, (Real) 10.0);
+	barneshut.bound_min_y = std::max(min_y, (Real)-10.0);
+	barneshut.bound_max_y = std::min(max_y, (Real) 10.0);
 
 	//std::cout << "d" << std::endl;
 	barneshut.Build();
@@ -467,7 +471,10 @@ int main(int argc, char** argv) {
 
 	Real t = 0.0;
 
-	for(int n = 1; n < 300; n++) {
+	#define FRAME_INTERVAL 4
+
+	for(int n = 1; n < 1200; n++) {
+		if(n % FRAME_INTERVAL == 0) {
 		//#pragma omp simd
 		for(unsigned int i = 0; i < (ImageSizeX * ImageSizeY); i++) image.data[i] = RGBA32F(0.0, 0.0, 0.0, 1.0); // Clear image buffer
 
@@ -508,11 +515,12 @@ int main(int argc, char** argv) {
 		{
 			char filename[80];
 
-			sprintf(filename, "out/IMG_%04d.tga", n);
+			sprintf(filename, "out/IMG_%04d.tga", n / FRAME_INTERVAL);
 			//sprintf(filename, "out/IMG_%04d.hdr", n);
 
 			WriteImageBuffer(image, filename);
 			//WriteImageBufferHDR(image, filename);
+		}
 		}
 
 		//UpdateSimulation(simulation);
@@ -541,10 +549,10 @@ int main(int argc, char** argv) {
 			max_y = std::max(max_y, r[2 * i + 1]);
 		}
 
-		barneshut.bound_min_x = std::max(min_x, (Real)-100.0);
-		barneshut.bound_max_x = std::min(max_x, (Real) 100.0);
-		barneshut.bound_min_y = std::max(min_y, (Real)-100.0);
-		barneshut.bound_max_y = std::min(max_y, (Real) 100.0);
+		barneshut.bound_min_x = std::max(min_x, (Real)-10.0);
+		barneshut.bound_max_x = std::min(max_x, (Real) 10.0);
+		barneshut.bound_min_y = std::max(min_y, (Real)-10.0);
+		barneshut.bound_max_y = std::min(max_y, (Real) 10.0);
 
 		//std::cout << "d" << std::endl;
 		barneshut.Build();
