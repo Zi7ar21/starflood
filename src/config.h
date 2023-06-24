@@ -1,3 +1,3 @@
 #pragma once
 
-//#define STARFLOOD_USE_DOUBLE
+#define FRAME_INTERVAL 1

@@ -10,3 +10,5 @@ project(starflood VERSION 1.0)
 add_executable(starflood src/image.cpp src/main.cpp)
 
 target_include_directories(starflood PUBLIC src)
+
+add_compile_options(-Wall -Wextra -Wpedantic -Wshadow)

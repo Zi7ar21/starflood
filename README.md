@@ -1,6 +1,6 @@
 # Starflood
 
-Starflood is an open-source sph code.
+Starflood is an open-source ~~SPH~~ N-body code.
 
 ## Installation
 
