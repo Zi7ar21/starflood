@@ -1,6 +1,17 @@
 # Starflood
 
-Starflood is an open-source ~~SPH~~ N-body code.
+Starflood is a free and open-source ~~SPH~~ N-body code written in C/C++.
+
+## Features
+
+- Decently optimized low-level C/C++ code with high-level parallelism via [OpenMP](www.openmp.org)
+- Rendering the simulation
+
+### Planned
+
+- Barnes-Hut
+- Ability to toggle between 2D/3D simulations
+- Smoothed-particle hydrodynamics (SPH)
 
 ## Installation
 

@@ -1,7 +1,8 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <math.h>
+#include <cstdio>
+#include <cstdint>
+#include <cstdlib>
+#include <cmath>
+#include <chrono>
 
 #include "config.h"
 #include "types.h"
@@ -34,16 +35,36 @@ void particle_particle(real* a, real* x, real* m, int N) {
 	for(int i = 0; i < 2 * N; i++) a[i] *= G * m[i / 2];
 }
 
-int main(void) {
+int main(int argc, char** argv) {
 	real* x; // position buffer
 	real* v; // velocity buffer
 	real* a; // acceleration buffer
 	real* m; // mass buffer
 	float* image; // image buffer
 
-	int image_size_x = 512, image_size_y = 512; // image size
 	int N = 1000; // number of bodies
 	real dt = (real)0.1; // timestep size
+	int image_size_x = 512, image_size_y = 512; // image size
+
+	if(argc > 1) {
+		printf("%s: invalid option \'%s\'\n", argv[0], argv[1]);
+
+		return EXIT_FAILURE;
+	}
+
+	printf(
+	"+---------------+\n"
+	"|   Starflood   |\n"
+	"+---------------+\n"
+	"\n"
+	"Parameters:\n"
+	"{\n"
+	"  N: %d\n"
+	"  dt: %f\n"
+	"  Image Size: %dx%d\n"
+	"}\n\n", N, dt, image_size_x, image_size_y);
+
+	fflush(stdout);
 
 	size_t x_size = (size_t)N * (size_t)2 * sizeof(real);
 	size_t v_size = (size_t)N * (size_t)2 * sizeof(real);
@@ -54,7 +75,7 @@ int main(void) {
 
 	// allocate memory
 	{
-		printf("Allocating %zu B...", t_size);
+		printf("Allocating %zu B of memory for simulation...", t_size);
 
 		fflush(stdout);
 
@@ -101,7 +122,7 @@ int main(void) {
 
 		printf(" Done!\n");
 
-		printf("Allocating %zu B...", image_size);
+		printf("Allocating %zu B of memory for rendering...", image_size);
 
 		fflush(stdout);
 
@@ -150,11 +171,23 @@ int main(void) {
 		particle_particle(a, x, m, N); // update acceleration
 	}
 
+	std::chrono::time_point<std::chrono::high_resolution_clock> t0, t1;
+
+	FILE* diagfile = fopen("./log.csv", "w");
+
+	fprintf(diagfile, "\"n\",\"Render Time (ms)\",\"First 1/2 Kick\",\"Drift\",\"Update Acceleration\",\"Second 1/2 Kick\"\n");
+
+	fflush(diagfile);
+
 	// run and render simulation
 	for(int n = 0; n < 100; n++) {
+		fprintf(diagfile, "%d,", n);
+
 		// render simulation
 		//if(n % FRAME_INTERVAL == 0) {
 		if(true) {
+			t0 = std::chrono::high_resolution_clock::now();
+
 			#pragma omp simd
 			for(int i = 0; i < (3 * image_size_x * image_size_y); i++) image[i] = 0.0f;
 
@@ -176,28 +209,52 @@ int main(void) {
 				}
 			}
 
+			t1 = std::chrono::high_resolution_clock::now();
+
+			fprintf(diagfile, "%f,", (double)((std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0)).count()) / 1000000.0);
+
 			char filename[sizeof "./out1/img_0000.hdr"];
 
 			sprintf(filename, "./out/img_%04d.hdr", n);
 
 			write_image_hdr(filename, image_size_x, image_size_y, image);
+		} else {
+			fprintf(diagfile, "0.0,");
 		}
 
+		t0 = std::chrono::high_resolution_clock::now();
+		// VERY FAST
 		#pragma omp simd
 		for(int i = 0; i < 2 * N; i++) v[i] += (real)0.5 * dt * a[i]; // (1/2) kick
+		t1 = std::chrono::high_resolution_clock::now();
+		fprintf(diagfile, "%f,", (double)((std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0)).count()) / 1000000.0);
 
+		t0 = std::chrono::high_resolution_clock::now();
+		// VERY FAST
 		#pragma omp simd
 		for(int i = 0; i < 2 * N; i++) x[i] += dt * v[i]; // drift
+		t1 = std::chrono::high_resolution_clock::now();
+		fprintf(diagfile, "%f,", (double)((std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0)).count()) / 1000000.0);
 
+		t0 = std::chrono::high_resolution_clock::now();
+		// VERY SLOW
 		particle_particle(a, x, m, N); // update acceleration
+		t1 = std::chrono::high_resolution_clock::now();
+		fprintf(diagfile, "%f,", (double)((std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0)).count()) / 1000000.0);
 
+		t0 = std::chrono::high_resolution_clock::now();
+		// VERY FAST
 		#pragma omp simd
 		for(int i = 0; i < 2 * N; i++) v[i] += (real)0.5 * dt * a[i]; // (1/2) kick
+		t1 = std::chrono::high_resolution_clock::now();
+		fprintf(diagfile, "%f\n", (double)((std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0)).count()) / 1000000.0);
 	}
+
+	fclose(diagfile);
 
 	// clean up
 	{
-		printf("Freeing %zu B...", image_size + t_size);
+		printf("Freeing %zu B of memory...", image_size + t_size);
 
 		fflush(stdout);
 
