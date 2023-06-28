@@ -2,12 +2,15 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cmath>
-#include <chrono>
 
 #include "config.h"
 #include "types.h"
 #include "image.h"
 #include "rng.h"
+
+#ifdef STARFLOOD_ENABLE_PROFILING
+#include <chrono>
+#endif
 
 //const real G = 6.6743015e-11; // 2018 CODATA-recommended value of the gravitational constant: 6.67430(15)e-11*m^3*kg^-1*s^-2
 const real G = (real)1;
@@ -171,22 +174,28 @@ int main(int argc, char** argv) {
 		particle_particle(a, x, m, N); // update acceleration
 	}
 
+	#ifdef STARFLOOD_ENABLE_PROFILING
 	std::chrono::time_point<std::chrono::high_resolution_clock> t0, t1;
 
 	FILE* diagfile = fopen("./log.csv", "w");
 
-	fprintf(diagfile, "\"n\",\"Render Time (ms)\",\"First 1/2 Kick\",\"Drift\",\"Update Acceleration\",\"Second 1/2 Kick\"\n");
+	fprintf(diagfile, "\"n\",\"Render Time (ms)\",\"First 1/2 Kick (ms)\",\"Drift (ms)\",\"Update Acceleration (ms)\",\"Second 1/2 Kick (ms)\"\n");
 
 	fflush(diagfile);
+	#endif
 
 	// run and render simulation
 	for(int n = 0; n < 100; n++) {
+		#ifdef STARFLOOD_ENABLE_PROFILING
 		fprintf(diagfile, "%d,", n);
+		#endif
 
 		// render simulation
 		//if(n % FRAME_INTERVAL == 0) {
 		if(true) {
+			#ifdef STARFLOOD_ENABLE_PROFILING
 			t0 = std::chrono::high_resolution_clock::now();
+			#endif
 
 			#pragma omp simd
 			for(int i = 0; i < (3 * image_size_x * image_size_y); i++) image[i] = 0.0f;
@@ -209,48 +218,71 @@ int main(int argc, char** argv) {
 				}
 			}
 
+			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = std::chrono::high_resolution_clock::now();
 
 			fprintf(diagfile, "%f,", (double)((std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0)).count()) / 1000000.0);
+			#endif
 
 			char filename[sizeof "./out1/img_0000.hdr"];
 
 			sprintf(filename, "./out/img_%04d.hdr", n);
 
 			write_image_hdr(filename, image_size_x, image_size_y, image);
-		} else {
+		}
+		#ifdef STARFLOOD_ENABLE_PROFILING
+		else {
 			fprintf(diagfile, "0.0,");
 		}
+		#endif
 
+		#ifdef STARFLOOD_ENABLE_PROFILING
 		t0 = std::chrono::high_resolution_clock::now();
+		#endif
 		// VERY FAST
 		#pragma omp simd
 		for(int i = 0; i < 2 * N; i++) v[i] += (real)0.5 * dt * a[i]; // (1/2) kick
+		#ifdef STARFLOOD_ENABLE_PROFILING
 		t1 = std::chrono::high_resolution_clock::now();
 		fprintf(diagfile, "%f,", (double)((std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0)).count()) / 1000000.0);
+		#endif
 
+		#ifdef STARFLOOD_ENABLE_PROFILING
 		t0 = std::chrono::high_resolution_clock::now();
+		#endif
 		// VERY FAST
 		#pragma omp simd
 		for(int i = 0; i < 2 * N; i++) x[i] += dt * v[i]; // drift
+		#ifdef STARFLOOD_ENABLE_PROFILING
 		t1 = std::chrono::high_resolution_clock::now();
 		fprintf(diagfile, "%f,", (double)((std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0)).count()) / 1000000.0);
+		#endif
 
+		#ifdef STARFLOOD_ENABLE_PROFILING
 		t0 = std::chrono::high_resolution_clock::now();
+		#endif
 		// VERY SLOW
 		particle_particle(a, x, m, N); // update acceleration
+		#ifdef STARFLOOD_ENABLE_PROFILING
 		t1 = std::chrono::high_resolution_clock::now();
 		fprintf(diagfile, "%f,", (double)((std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0)).count()) / 1000000.0);
+		#endif
 
+		#ifdef STARFLOOD_ENABLE_PROFILING
 		t0 = std::chrono::high_resolution_clock::now();
+		#endif
 		// VERY FAST
 		#pragma omp simd
 		for(int i = 0; i < 2 * N; i++) v[i] += (real)0.5 * dt * a[i]; // (1/2) kick
+		#ifdef STARFLOOD_ENABLE_PROFILING
 		t1 = std::chrono::high_resolution_clock::now();
 		fprintf(diagfile, "%f\n", (double)((std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0)).count()) / 1000000.0);
+		#endif
 	}
 
+	#ifdef STARFLOOD_ENABLE_PROFILING
 	fclose(diagfile);
+	#endif
 
 	// clean up
 	{
