@@ -1,5 +1,5 @@
 #pragma once
 
-#define FRAME_INTERVAL 1
+#define STARFLOOD_FRAME_INTERVAL 1
 
 #define STARFLOOD_ENABLE_PROFILING

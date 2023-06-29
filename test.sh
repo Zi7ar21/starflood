@@ -20,7 +20,7 @@ echo "" && \
 /usr/bin/time -v build/starflood.out && \
 echo "" && \
 echo "Encoding render.mp4..." && \
-ffmpeg -framerate 100 -i out/img_%04d.hdr -c:v libx264 -preset slow -crf 17 -an -sn -pix_fmt yuv420p render.mp4 && \
-#/usr/bin/time -v ffmpeg -framerate 100 -i out/img_%04d.hdr -c:v libx264 -preset slow -crf 17 -an -sn -pix_fmt yuv420p render.mp4 && \
+ffmpeg -framerate 10 -i out/img_%04d.hdr -c:v libx264 -preset slow -crf 17 -an -sn -pix_fmt yuv420p render.mp4 && \
+#/usr/bin/time -v ffmpeg -framerate 10 -i out/img_%04d.hdr -c:v libx264 -preset slow -crf 17 -an -sn -pix_fmt yuv420p render.mp4 && \
 echo "" && \
 echo "Finished!"
