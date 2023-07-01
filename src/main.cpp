@@ -8,9 +8,8 @@
 #include "types.h"
 #include "image.h"
 #include "rng.h"
-
-//const real G = 6.6743015e-11; // 2018 CODATA-recommended value of the gravitational constant: 6.67430(15)e-11*m^3*kg^-1*s^-2
-const real G = (real)1;
+#include "barneshut.h"
+#include "constants.h"
 
 // particle-particle solver, O(N^2)
 void particle_particle(real* a, real* x, real* m, int N) {
@@ -181,7 +180,8 @@ int main(int argc, char** argv) {
 			for(int i = 0; i < N; i++) m[i] = m0;
 		}
 
-		particle_particle(a, x, m, N); // update acceleration
+		//particle_particle(a, x, m, N); // update acceleration
+		barnes_hut(a, x, m, N); // update acceleration
 
 		printf(" Done!\n\n");
 
@@ -317,7 +317,8 @@ int main(int argc, char** argv) {
 			#endif
 
 			// VERY SLOW
-			particle_particle(a, x, m, N); // update acceleration
+			//particle_particle(a, x, m, N); // update acceleration
+			barnes_hut(a, x, m, N); // update acceleration
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
