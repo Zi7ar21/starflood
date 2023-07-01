@@ -20,15 +20,15 @@ void particle_particle(real* a, real* x, real* m, int N) {
 	// the problematic part
 	#pragma omp parallel for schedule(dynamic,1024)
 	for(int i = 0; i < N; i++) {
-		for(int j = 0; j < N; j++) {
+		for(int j = 0; j < (N/4); j++) {
 			if(i == j) continue; // don't calculate forces with itself
 
 			real dx = x[2 * j + 0] - x[2 * i + 0], dy = x[2 * j + 1] - x[2 * i + 1];
 
 			real r2 = dx*dx+dy*dy;
 
-			a[2 * i + 0] += (m[j] * dx) / ((real)sqrtf(r2) * (r2 + (real)0.001));
-			a[2 * i + 1] += (m[j] * dy) / ((real)sqrtf(r2) * (r2 + (real)0.001));
+			a[2 * i + 0] += (real)4.0 * (m[j] * dx) / ((real)sqrtf(r2) * (r2 + (real)0.001));
+			a[2 * i + 1] += (real)4.0 * (m[j] * dy) / ((real)sqrtf(r2) * (r2 + (real)0.001));
 		}
 	}
 
@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
 	double t0, t1; // used for timing execution
 
 	int num_timesteps = 200;
-	int N = 4096; // number of bodies
+	int N = 16384; // number of bodies
 	real dt = (real)0.1; // timestep size
 	int image_size_x = 512, image_size_y = 512; // image size
 
