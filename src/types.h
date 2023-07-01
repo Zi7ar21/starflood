@@ -2,4 +2,4 @@
 
 #include "config.h"
 
-typedef float real;
+typedef double real;

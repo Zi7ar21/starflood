@@ -38,9 +38,9 @@ void particle_particle(real* a, real* x, real* m, int N) {
 int main(int argc, char** argv) {
 	double t0, t1; // used for timing execution
 
-	int num_timesteps = 200;
-	int N = 16384; // number of bodies
-	real dt = (real)0.1; // timestep size
+	int num_timesteps = 400;
+	int N = 4096; // number of bodies
+	real dt = (real)0.025; // timestep size
 	int image_size_x = 512, image_size_y = 512; // image size
 
 	// parse arguments
@@ -180,8 +180,11 @@ int main(int argc, char** argv) {
 			for(int i = 0; i < N; i++) m[i] = m0;
 		}
 
-		//particle_particle(a, x, m, N); // update acceleration
+		#ifndef STARFLOOD_USE_BARNES_HUT
+		particle_particle(a, x, m, N); // update acceleration
+		#else
 		barnes_hut(a, x, m, N); // update acceleration
+		#endif
 
 		printf(" Done!\n\n");
 
@@ -317,8 +320,11 @@ int main(int argc, char** argv) {
 			#endif
 
 			// VERY SLOW
-			//particle_particle(a, x, m, N); // update acceleration
+			#ifndef STARFLOOD_USE_BARNES_HUT
+			particle_particle(a, x, m, N); // update acceleration
+			#else
 			barnes_hut(a, x, m, N); // update acceleration
+			#endif
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
