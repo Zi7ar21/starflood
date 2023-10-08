@@ -7,6 +7,8 @@
 // OpenMP
 #include <omp.h>
 
+#define STARFLOOD_ENABLE_PROFILING
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
@@ -308,73 +310,163 @@ int main(int argc, char** argv) {
 
 	//const real dt = 0.1;
 
+	#ifdef STARFLOOD_ENABLE_PROFILING
+	FILE* diagfile = fopen("./log.csv", "w");
+
+	fprintf(diagfile, "\"n\",\"Clear Image (ms)\",\"Render Image (ms)\",\"Write Image (ms)\",\"First Kick (ms)\",\"Drift (ms)\",\"Update Acceleration (ms)\",\"Second Kick (ms)\"\n");
+
+	fflush(diagfile);
+	#endif
+
 	for(int step_num = 0; step_num < num_steps; step_num++) {
-		// render and write
+		printf("\rRunning simulation, %d/%d (%.2f%) completed...", step_num, num_steps, 100.0*((double)step_num/(double)num_steps));
+
+		fflush(stdout);
+
+		#ifdef STARFLOOD_ENABLE_PROFILING
+		fprintf(diagfile, "%d,", step_num);
+		#endif
+
+		// render and write the image
 		{
 			// clear the image buffer
-			//#pragma omp simd
-			for(int i = 0; i < (image_w * image_h) * 3; i++) image[i] = (float)0;
+			{
+				#ifdef STARFLOOD_ENABLE_PROFILING
+				t0 = omp_get_wtime();
+				#endif
 
-			for(int i = 0; i < N; i++) {
-				// vec2 uv = (fragCoord - 0.5 * resolution) / resolution.y
-				real t = 0.04*(real)step_num;
-				real uv[2] = {r[2 * i + 0]*cos(t)+r[2 * i + 2]*sin(t), r[2 * i + 1]};
+				//#pragma omp simd
+				for(int i = 0; i < (image_w * image_h) * 3; i++) image[i] = (float)0;
+			
+				#ifdef STARFLOOD_ENABLE_PROFILING
+				t1 = omp_get_wtime();
+				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+				#endif
+			}
 
-				uv[0] *= (real)2.0; // 0.05
-				uv[1] *= (real)2.0;
+			// render the image
+			{
+				#ifdef STARFLOOD_ENABLE_PROFILING
+				t0 = omp_get_wtime();
+				#endif
+			
+				for(int i = 0; i < N; i++) {
+					// vec2 uv = (fragCoord - 0.5 * resolution) / resolution.y
+					real t = 0.04*(real)step_num;
+					real uv[2] = {r[2 * i + 0]*cos(t)+r[2 * i + 2]*sin(t), r[2 * i + 1]};
 
-				int coord[2] = {
-				(int)((real)image_h * uv[0] + (real)0.5 * (real)image_w),
-				(int)((real)image_h * uv[1] + (real)0.5 * (real)image_h)};
+					uv[0] *= (real)2.0; // 0.05
+					uv[1] *= (real)2.0;
 
-				if(0 <= coord[0] && coord[0] < image_w && 0 <= coord[1] && coord[1] < image_h) {
-					image[3 * (image_w * coord[1] + coord[0]) + 0] += 0.5f;
-					image[3 * (image_w * coord[1] + coord[0]) + 1] += 0.5f;
-					image[3 * (image_w * coord[1] + coord[0]) + 2] += 0.5f;
+					int coord[2] = {
+					(int)((real)image_h * uv[0] + (real)0.5 * (real)image_w),
+					(int)((real)image_h * uv[1] + (real)0.5 * (real)image_h)};
+
+					if(0 <= coord[0] && coord[0] < image_w && 0 <= coord[1] && coord[1] < image_h) {
+						image[3 * (image_w * coord[1] + coord[0]) + 0] += 0.5f;
+						image[3 * (image_w * coord[1] + coord[0]) + 1] += 0.5f;
+						image[3 * (image_w * coord[1] + coord[0]) + 2] += 0.5f;
+					}
 				}
+
+				#ifdef STARFLOOD_ENABLE_PROFILING
+				t1 = omp_get_wtime();
+				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+				#endif
 			}
 
-			char file_name[FILENAME_MAX];
+			// write the image
+			{
+				char file_name[FILENAME_MAX];
 
-			snprintf(file_name, FILENAME_MAX, "out/step_%04d.hdr", step_num);
+				snprintf(file_name, FILENAME_MAX, "out/step_%04d.hdr", step_num);
+				#ifdef STARFLOOD_ENABLE_PROFILING
+				t0 = omp_get_wtime();
+				#endif
 
-			t0 = omp_get_wtime();
+				if(stbi_write_hdr(file_name, image_w, image_h, 3, image) == 0) {
+					printf("Failure on step %d\n", step_num);
+				}
 
-			if(stbi_write_hdr(file_name, image_w, image_h, 3, image) == 0) {
-				printf("Failure on step %d\n", step_num);
+				#ifdef STARFLOOD_ENABLE_PROFILING
+				t1 = omp_get_wtime();
+				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+				#endif
 			}
-
-			t1 = omp_get_wtime();
-
-			//fprintf(logfile, "%.6f,", 1000.0*(t1-t0));
 		}
 
 		// kick
 		{
+			#ifdef STARFLOOD_ENABLE_PROFILING
+			t0 = omp_get_wtime();
+			#endif
+
+			// VERY FAST
+			//#pragma omp simd
 			for(int i = 0; i < (N * 3); i++) v[i] += (real)0.5 * dt * a[i];
+
+			#ifdef STARFLOOD_ENABLE_PROFILING
+			t1 = omp_get_wtime();
+			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+			#endif
 		}
 
 		// drift
 		{
+			#ifdef STARFLOOD_ENABLE_PROFILING
+			t0 = omp_get_wtime();
+			#endif
+
+			// VERY FAST
+			//#pragma omp simd
 			for(int i = 0; i < (N * 3); i++) r[i] += dt * v[i];
+
+			#ifdef STARFLOOD_ENABLE_PROFILING
+			t1 = omp_get_wtime();
+			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+			#endif
 		}
 
-		/*
-		update accelerations
-				acc = getAcc( pos, vel, m, h, k, n, lmbda, nu )
-		*/
-		for(int i = 0; i < (N * 3); i++) a[i] = (real)0;
-		getAcc(r, v, rho, P, m, h, k, n, lambda, nu, a);
 		// update acceleration
-		//{
-		//	for(int i = 0; i < n * 3; i++) a[i] = (real)0;
-		//}
+		{
+			for(int i = 0; i < (N * 3); i++) a[i] = (real)0;
+
+			#ifdef STARFLOOD_ENABLE_PROFILING
+			t0 = omp_get_wtime();
+			#endif
+
+			getAcc(r, v, rho, P, m, h, k, n, lambda, nu, a);
+
+			#ifdef STARFLOOD_ENABLE_PROFILING
+			t1 = omp_get_wtime();
+			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+			#endif
+		}
 
 		// kick
 		{
+			#ifdef STARFLOOD_ENABLE_PROFILING
+			t0 = omp_get_wtime();
+			#endif
+
+			// VERY FAST
+			//#pragma omp simd
 			for(int i = 0; i < (N * 3); i++) v[i] += (real)0.5 * dt * a[i];
+
+			#ifdef STARFLOOD_ENABLE_PROFILING
+			t1 = omp_get_wtime();
+			fprintf(diagfile, "%.6f\n", 1000.0*(t1-t0));
+			#endif
 		}
 	}
+
+	printf("\rRunning simulation, %d/%d (100.00%) completed... Done!\n\n", num_steps, num_steps);
+
+	fflush(stdout);
+
+	#ifdef STARFLOOD_ENABLE_PROFILING
+	fclose(diagfile);
+	#endif
 
 	free(r);
 	free(v);
