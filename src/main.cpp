@@ -1,380 +1,387 @@
 #include <cstdio>
-#include <cstdint>
 #include <cstdlib>
-#include <cmath>
+#include <cstdint>
+
+//#include "rng.h"
+
+// OpenMP
 #include <omp.h>
 
-#include "config.h"
-#include "types.h"
-#include "image.h"
-#include "rng.h"
-#include "barneshut.h"
-#include "constants.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
-// particle-particle solver, O(N^2)
-void particle_particle(real* a, real* x, real* m, int N) {
-	#pragma omp simd
-	for(int i = 0; i < 2 * N; i++) a[i] = (real)0;
+#define     PI 3.1415926535897932384626433832795028841971693993751058209749445923
+#define INV_PI 0.3183098861837906715377675267450287240689192914809128974953346881
 
-	// the problematic part
-	#pragma omp parallel for schedule(dynamic,1024)
+#define     TAU 6.2831853071795864769252867665590057683943387987502116419498891846
+#define INV_TAU 0.1591549430918953357688837633725143620344596457404564487476673441
+
+double gaussian2d(double x0, double x1, double sigma) {
+	sigma = sigma > 0.0 ? sigma : 1.0;
+	double sigma0 = 1.0 / sigma;
+	double sigma1 = 1.0 / (2.0*sigma*sigma);
+	return sigma0*INV_TAU*exp(-sigma1*((x0*x0)+(x1*x1)));
+}
+
+// Triple32 Hash: https://nullprogram.com/blog/2018/07/31/
+// this hash in particular is remarkable because it's a statistically perfect 32-bit integer hash (of this kind)
+inline uint32_t triple32(uint32_t x) {
+	x ^= x >> (uint32_t)17u;
+	x *= (uint32_t)0xED5AD4BBu;
+	x ^= x >> (uint32_t)11u;
+	x *= (uint32_t)0xAC4C1B51u;
+	x ^= x >> (uint32_t)15u;
+	x *= (uint32_t)0x31848BABu;
+	x ^= x >> (uint32_t)14u;
+	return x;
+}
+
+float urand(uint32_t* ns) {
+	uint32_t _ns = *ns;
+
+	_ns = triple32(_ns);
+
+	*ns = _ns;
+
+	return (2.32830629776081821092e-10f)*(float)_ns;
+}
+#define N 1000
+
+typedef double real;
+
+real W(real x, real y, real z, real h) {
+	/*
+	Gausssian Smoothing kernel (3D)
+	x     is a vector/matrix of x positions
+	y     is a vector/matrix of y positions
+	z     is a vector/matrix of z positions
+	h     is the smoothing length
+	w     is the evaluated smoothing function
+	*/
+
+	real r = sqrt(x*x+y*y+z*z);
+
+	real w = pow((1.0/(h*sqrt(PI))),3.0) * exp( -(r*r)/ (h*h));
+
+	return w;
+}
+
+void gradW(real x, real y, real z, real h, real* grad) {
+	/*
+	Gradient of the Gausssian Smoothing kernel (3D)
+	x     is a vector/matrix of x positions
+	y     is a vector/matrix of y positions
+	z     is a vector/matrix of z positions
+	h     is the smoothing length
+	wx, wy, wz     is the evaluated gradient
+	*/
+
+	real r = sqrt(x*x+y*y+z*z);
+
+	const real a = -0.0718348488500666246756327934510771021128743773739306898485328149; // -2/(5pi^(3/2))
+
+	real poo = a*exp(-(r*r) / (h*h))*(1.0 / h);
+	grad[0] = poo * x;
+	grad[1] = poo * y;
+	grad[2] = poo * z;
+
+	//return wx, wy, wz;
+}
+
+/*
+def getPairwiseSeparations( ri, rj ) {
+	"""
+	Get pairwise desprations between 2 sets of coordinates
+	ri    is an M x 3 matrix of positions
+	rj    is an N x 3 matrix of positions
+	dx, dy, dz   are M x N matrices of separations
+	"""
+	
+	M = ri.shape[0]
+	N = rj.shape[0]
+	
+	# positions ri = (x,y,z)
+	rix = ri[:,0].reshape((M,1))
+	riy = ri[:,1].reshape((M,1))
+	riz = ri[:,2].reshape((M,1))
+	
+	# other set of points positions rj = (x,y,z)
+	rjx = rj[:,0].reshape((N,1))
+	rjy = rj[:,1].reshape((N,1))
+	rjz = rj[:,2].reshape((N,1))
+	
+	# matrices that store all pairwise particle separations: r_i - r_j
+	dx = rix - rjx.T
+	dy = riy - rjy.T
+	dz = riz - rjz.T
+	
+	return dx, dy, dz
+}
+*/
+
+real getDensity(real* x, real* r, real m, real h) {
+	/*
+	Get Density at sampling loctions from SPH particle distribution
+	r     is an M x 3 matrix of sampling locations
+	pos   is an N x 3 matrix of SPH particle positions
+	m     is the particle mass
+	h     is the smoothing length
+	rho   is M x 1 vector of densities
+	*/
+
+	/*
+	//M = r.shape[0];
+
+	dx, dy, dz = getPairwiseSeparations( r, pos );
+
+	rho = np.sum( m * W(dx, dy, dz, h), 1 ).reshape((M,1));
+
+	real rho = 0;
+
 	for(int i = 0; i < N; i++) {
+		rho += m * W(dx, dy, dz, h);
+	}
+
+	return rho;
+	*/
+
+	double rho = (double)0;
+
+	for(int i = 0; i < N; i++) {
+		rho += m * W(r[3*i+0]-x[0], r[3*i+1]-x[1], r[3*i+2]-x[2], h);
+	}
+
+	return rho;
+}
+
+real getPressure(real rho, real k, real n) {
+	/*
+	Equation of State
+	rho   vector of densities
+	k     equation of state constant
+	n     polytropic index
+	P     pressure
+	*/
+
+	real P = k * pow(rho, 1.0+1.0/n);
+
+	return P;
+}
+
+void getAcc(real* r, real* v, real* rho, real* P, real m, real h, real k, real n, real lambda, real nu, real* a) {
+	/*
+	Calculate the acceleration on each SPH particle
+	pos   is an N x 3 matrix of positions
+	vel   is an N x 3 matrix of velocities
+	m     is the particle mass
+	h     is the smoothing length
+	k     equation of state constant
+	n     polytropic index
+	lmbda external force constant
+	nu    viscosity
+	a     is N x 3 matrix of accelerations
+	*/
+
+	//N = pos.shape[0];
+
+	// Calculate densities at the position of the particles
+	for(int i = 0; i < N; i++) {
+		real cr[3] = {r[3*i+0], r[3*i+1], r[3*i+2]};
+
+		rho[i] = getDensity(cr, r, m, h);
+	}
+
+	// Get the pressures
+	for(int i = 0; i < N; i++) P[i] = getPressure(rho[i], k, n);
+
+	for(int i = 0; i < N; i++) {
+		a[3*i+0] = (real)0;
+		a[3*i+0] = (real)0;
+		a[3*i+0] = (real)0;
+
 		for(int j = 0; j < N; j++) {
-			if(i == j) continue; // don't calculate forces with itself
+			if(i == j) continue;
 
-			real dx = x[2 * j + 0] - x[2 * i + 0], dy = x[2 * j + 1] - x[2 * i + 1];
+			real dx = r[3*j+0]-r[3*i+0];
+			real dy = r[3*j+1]-r[3*i+1];
+			real dz = r[3*j+2]-r[3*i+2];
+			real grad[3];
+			gradW(dx,dy,dz,h,grad);
+			a[3*i+0] += m*((P[i]/(rho[i]*rho[i]))+(P[j]/(rho[j]*rho[j])))*grad[0];
+			a[3*i+1] += m*((P[i]/(rho[i]*rho[i]))+(P[j]/(rho[j]*rho[j])))*grad[1];
+			a[3*i+2] += m*((P[i]/(rho[i]*rho[i]))+(P[j]/(rho[j]*rho[j])))*grad[2];
 
-			real r2 = dx*dx+dy*dy;
+			// Get pairwise distances and gradients
 
-			a[2 * i + 0] += (m[j] * dx) / ((real)sqrtf(r2) * (r2 + (real)0.001));
-			a[2 * i + 1] += (m[j] * dy) / ((real)sqrtf(r2) * (r2 + (real)0.001));
+
+			// Add Pressure contribution to accelerations
+			//ax = - np.sum( m * ( P/(rho**2) + P.T/rho.T**2  ) * dWx, 1).reshape((N,1));
+			//ay = - np.sum( m * ( P/(rho**2) + P.T/rho.T**2  ) * dWy, 1).reshape((N,1));
+			//az = - np.sum( m * ( P/(rho**2) + P.T/rho.T**2  ) * dWz, 1).reshape((N,1));
+
+			// pack together the acceleration components
+			//a = np.hstack((ax,ay,az));
 		}
 	}
 
-	#pragma omp simd
-	for(int i = 0; i < 2 * N; i++) a[i] *= G * m[i / 2];
+	// Add external potential force
+	for(int i = 0; i < (N * 3); i++) a[i] -= lambda * r[i];
+
+	// Add viscosity
+	for(int i = 0; i < (N * 3); i++) a[i] -= nu * v[i];
+
+	//return a;
 }
 
 int main(int argc, char** argv) {
-	double t0, t1; // used for timing execution
-
-	int num_timesteps = 400;
-	int N = 4096; // number of bodies
-	real dt = (real)0.025; // timestep size
-	int image_size_x = 512, image_size_y = 512; // image size
-
-	// parse arguments
 	if(argc > 1) {
-		printf("%s: invalid option \'%s\'\n", argv[0], argv[1]);
+		printf("%s: Invalid Parameter '%s'\n", argv[0], argv[1]);
 
 		return EXIT_FAILURE;
 	}
 
-	int max_threads = omp_get_max_threads();
+	//const int N = 400; // number of particles
+	const real dt = 0.04; // timestep
+	const real M = 2.0; // star mass
+	const real R = 0.75; // star radius
+	const real h = 0.1; // smoothing length
+	const real k = 0.1; // equation of state constant
+	const real n = 1.0; // polytropic index
+	const real nu = 0.5; // damping
 
-	printf(
-	"+---------------+\n"
-	"|   Starflood   |\n"
-	"+---------------+\n"
-	"\n"
-	"OpenMP will use a maximum of %d threads.\n"
-	"\n"
-	"Parameters:\n"
-	"{\n"
-	"  # timesteps: %d\n"
-	"  N: %d\n"
-	"  dt: %f\n"
-	"  Image Size: %dx%d\n"
-	"}\n\n", max_threads, num_timesteps, N, dt, image_size_x, image_size_y);
+	size_t r_size = (N * 3) * sizeof(real);
+	size_t v_size = (N * 3) * sizeof(real);
+	size_t a_size = (N * 3) * sizeof(real);
+	size_t t_size = (N * 3) * sizeof(real);
+	size_t P_size = (N * 1) * sizeof(real);
+	size_t rho_size = N * sizeof(real);
 
-	fflush(stdout);
+	real* r = (real*)malloc(r_size); // position buffer
+	real* v = (real*)malloc(v_size); // velocity buffer
+	real* a = (real*)malloc(a_size); // acceleration buffer
+	real* P = (real*)malloc(P_size); // pressure
+	real* rho = (real*)malloc(rho_size); // interpolated density
 
-	size_t x_size = (size_t)N * (size_t)2 * sizeof(real);
-	size_t v_size = (size_t)N * (size_t)2 * sizeof(real);
-	size_t a_size = (size_t)N * (size_t)2 * sizeof(real);
-	size_t m_size = (size_t)N * (size_t)1 * sizeof(real);
-	size_t t_size = x_size + v_size + a_size + m_size;
-	size_t image_size = (size_t)image_size_x * (size_t)image_size_y * (size_t)3 * sizeof(float); // RGB32F
+	for(int i = 0; i < n * 3; i++) a[i] = (real)0;
+	// Generate Initial Conditions
+	uint32_t ns = (uint32_t)1u;
 
-	// we store body properties in separate buffers so that we can update position & velocity VERY FAST using SIMD
-	real* x; // position buffer
-	real* v; // velocity buffer
-	real* a; // acceleration buffer
-	real* m; // mass buffer
-	float* image; // image buffer
+	real m = (real)((double)M/(double)N); // single particle mass
 
-	// allocate memory
-	{
-		printf("Allocating %zu B of memory for simulation...", t_size);
+	m = (real)0.5;
 
-		fflush(stdout);
+	//real lambda = 2.0*k*(1.0+n)*pow(PI, -3.0/(2.0*n)) * pow((M*gamma(5.0/2.0+n)/(R*R*R)/gamma(1.0+n)),(1.0/n)) / (R*R); // ~ 2.01
+	real lambda = 2.0;
 
-		x = (real*)malloc(x_size);
+	// randomly selected positions and velocities
+	for(int i = 0; i < N; i++) {
+		ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
 
-		if(x == NULL) {
-			perror(" malloc() returned NULL when allocating x! Error");
+		float z0 = urand(&ns);
+		float z1 = urand(&ns);
+		float z2 = urand(&ns);
+		float z3 = urand(&ns);
 
-			return EXIT_FAILURE;
-		}
-
-		v = (real*)malloc(v_size);
-
-		if(v == NULL) {
-			perror(" malloc() returned NULL when allocating v! Error");
-
-			free(x);
-
-			return EXIT_FAILURE;
-		}
-
-		a = (real*)malloc(a_size);
-
-		if(a == NULL) {
-			perror(" malloc() returned NULL when allocating a! Error");
-
-			free(v);
-			free(x);
-
-			return EXIT_FAILURE;
-		}
-
-		m = (real*)malloc(m_size);
-
-		if(m == NULL) {
-			perror(" malloc() returned NULL when allocating m! Error");
-
-			free(a);
-			free(v);
-			free(x);
-
-			return EXIT_FAILURE;
-		}
-
-		printf(" Done!\n\nAllocating %zu B of memory for rendering...", image_size);
-
-		fflush(stdout);
-
-		image = (float*)malloc(image_size);
-
-		printf(" Done!\n\n");
-
-		fflush(stdout);
+		r[3*i+0] = 0.1*sqrt(-2.0*log(z0))*cos(TAU*z2);
+		r[3*i+1] = 0.1*sqrt(-2.0*log(z0))*sin(TAU*z2);
+		r[3*i+2] = 0.1*sqrt(-2.0*log(z1))*cos(TAU*z3);
 	}
 
-	// initialize simulation
-	{
-		printf("Initializing simulation...");
+	for(int i = 0; i < (N * 3); i++) v[i] = (real)0;
+	
+	// calculate initial gravitational accelerations
+	getAcc(r, v, rho, P, m, h, k, n, lambda, nu, a);
+	int image_w = 640, image_h = 480;
 
-		fflush(stdout);
+	double t0, t1;
 
-		rng_state_t ic_rng_state; // initial condition rng state
+	t0 = omp_get_wtime();
+	t1 = omp_get_wtime();
 
-		ic_rng_state.ns = (uint32_t)74u;
-		update_rng(&ic_rng_state);
+	size_t image_size = (image_w * image_h) * 3 * sizeof(float);
 
-		// initialize position
-		for(int i = 0; i < N; i++) {
-			x[2 * i + 0] = (real)(20.0f * (urand(&ic_rng_state) - 0.5f));
-			x[2 * i + 1] = (real)(20.0f * (urand(&ic_rng_state) - 0.5f));
-		}
+	float* image = (float*)malloc(image_size);
 
-		ic_rng_state.ns = (uint32_t)67u;
-		update_rng(&ic_rng_state);
+	stbi_flip_vertically_on_write(1);
 
-		// initialize velocity
-		//#pragma omp simd
-		//for(int i = 0; i < 2 * N; i++) v[i] = (real)0;
-		for(int i = 0; i < N; i++) {
-			v[2 * i + 0] = (real)(0.02f * (urand(&ic_rng_state) - 0.5f));
-			v[2 * i + 1] = (real)(0.02f * (urand(&ic_rng_state) - 0.5f));
-		}
+	const int num_steps = 600;
 
-		ic_rng_state.ns = (uint32_t)14u;
-		update_rng(&ic_rng_state);
+	//const real dt = 0.1;
 
-		// initialize mass
+	for(int step_num = 0; step_num < num_steps; step_num++) {
+		// render and write
 		{
-			real m0 = 100.0 / (double)N;
+			// clear the image buffer
+			//#pragma omp simd
+			for(int i = 0; i < (image_w * image_h) * 3; i++) image[i] = (float)0;
 
-			#pragma omp simd
-			for(int i = 0; i < N; i++) m[i] = m0;
-		}
+			for(int i = 0; i < N; i++) {
+				// vec2 uv = (fragCoord - 0.5 * resolution) / resolution.y
+				real t = 0.04*(real)step_num;
+				real uv[2] = {r[2 * i + 0]*cos(t)+r[2 * i + 2]*sin(t), r[2 * i + 1]};
 
-		#ifndef STARFLOOD_USE_BARNES_HUT
-		particle_particle(a, x, m, N); // update acceleration
-		#else
-		barnes_hut(a, x, m, N); // update acceleration
-		#endif
+				uv[0] *= (real)2.0; // 0.05
+				uv[1] *= (real)2.0;
 
-		printf(" Done!\n\n");
+				int coord[2] = {
+				(int)((real)image_h * uv[0] + (real)0.5 * (real)image_w),
+				(int)((real)image_h * uv[1] + (real)0.5 * (real)image_h)};
 
-		fflush(stdout);
-	}
-
-	#ifdef STARFLOOD_ENABLE_PROFILING
-	FILE* diagfile = fopen("./log.csv", "w");
-
-	fprintf(diagfile, "\"n\",\"Clear Image (ms)\",\"Render Image (ms)\",\"Write Image (ms)\",\"First Kick (ms)\",\"Drift (ms)\",\"Update Acceleration (ms)\",\"Second Kick (ms)\"\n");
-
-	fflush(diagfile);
-	#endif
-
-	// run and render simulation
-	for(int n = 0; n < num_timesteps; n++) {
-		printf("\rRunning simulation, %d/%d (%.2f%) completed...", n, num_timesteps, 100.0*((double)n/(double)num_timesteps));
-
-		fflush(stdout);
-
-		#ifdef STARFLOOD_ENABLE_PROFILING
-		fprintf(diagfile, "%d,", n);
-		#endif
-
-		// render simulation
-		if(n % STARFLOOD_FRAME_INTERVAL == 0) {
-			// clear image
-			{
-				#ifdef STARFLOOD_ENABLE_PROFILING
-				t0 = omp_get_wtime();
-				#endif
-
-				#pragma omp simd
-				for(int i = 0; i < (3 * image_size_x * image_size_y); i++) image[i] = 0.0f;
-
-				#ifdef STARFLOOD_ENABLE_PROFILING
-				t1 = omp_get_wtime();
-				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
-				#endif
-			}
-
-			// render image
-			{
-				#ifdef STARFLOOD_ENABLE_PROFILING
-				t0 = omp_get_wtime();
-				#endif
-
-				for(int i = 0; i < N; i++) {
-					// vec2 uv = (fragCoord - 0.5 * resolution) / resolution.y
-					real uv[2] = {x[2 * i + 0], x[2 * i + 1]};
-
-					uv[0] *= (real)0.025; // 0.05
-					uv[1] *= (real)0.025;
-
-					int coord[2] = {
-					(int)((real)image_size_y * uv[0] + (real)0.5 * (real)image_size_x),
-					(int)((real)image_size_y * uv[1] + (real)0.5 * (real)image_size_y)};
-
-					if(0 <= coord[0] && coord[0] < image_size_x && 0 <= coord[1] && coord[1] < image_size_y) {
-						image[3 * (image_size_x * coord[1] + coord[0]) + 0] += 0.5f;
-						image[3 * (image_size_x * coord[1] + coord[0]) + 1] += 0.5f;
-						image[3 * (image_size_x * coord[1] + coord[0]) + 2] += 0.5f;
-					}
+				if(0 <= coord[0] && coord[0] < image_w && 0 <= coord[1] && coord[1] < image_h) {
+					image[3 * (image_w * coord[1] + coord[0]) + 0] += 0.5f;
+					image[3 * (image_w * coord[1] + coord[0]) + 1] += 0.5f;
+					image[3 * (image_w * coord[1] + coord[0]) + 2] += 0.5f;
 				}
-
-				#ifdef STARFLOOD_ENABLE_PROFILING
-				t1 = omp_get_wtime();
-				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
-				#endif
 			}
 
-			// write image
-			{
-				#ifdef STARFLOOD_ENABLE_PROFILING
-				t0 = omp_get_wtime();
-				#endif
+			char file_name[FILENAME_MAX];
 
-				char filename[sizeof "./out1/img_0000.hdr"];
+			snprintf(file_name, FILENAME_MAX, "out/step_%04d.hdr", step_num);
 
-				sprintf(filename, "./out/img_%04d.hdr", n/STARFLOOD_FRAME_INTERVAL);
+			t0 = omp_get_wtime();
 
-				write_image_hdr(filename, image_size_x, image_size_y, image);
-
-				#ifdef STARFLOOD_ENABLE_PROFILING
-				t1 = omp_get_wtime();
-				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
-				#endif
+			if(stbi_write_hdr(file_name, image_w, image_h, 3, image) == 0) {
+				printf("Failure on step %d\n", step_num);
 			}
 
-		}
-		#ifdef STARFLOOD_ENABLE_PROFILING
-		else {
-			fprintf(diagfile, "0.000000,0.000000,0.000000,");
-		}
-		#endif
-
-		// First kick, VERY FAST
-		{
-			#ifdef STARFLOOD_ENABLE_PROFILING
-			t0 = omp_get_wtime();
-			#endif
-
-			// VERY FAST
-			#pragma omp simd
-			for(int i = 0; i < 2 * N; i++) v[i] += (real)0.5 * dt * a[i];
-
-			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
-			#endif
+
+			//fprintf(logfile, "%.6f,", 1000.0*(t1-t0));
 		}
 
-		// Drift, VERY FAST
+		// kick
 		{
-			#ifdef STARFLOOD_ENABLE_PROFILING
-			t0 = omp_get_wtime();
-			#endif
-
-			// VERY FAST
-			#pragma omp simd
-			for(int i = 0; i < 2 * N; i++) x[i] += dt * v[i];
-
-			#ifdef STARFLOOD_ENABLE_PROFILING
-			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
-			#endif
+			for(int i = 0; i < (N * 3); i++) v[i] += (real)0.5 * dt * a[i];
 		}
 
-		// Update acceleration, VERY SLOW
+		// drift
 		{
-			#ifdef STARFLOOD_ENABLE_PROFILING
-			t0 = omp_get_wtime();
-			#endif
-
-			// VERY SLOW
-			#ifndef STARFLOOD_USE_BARNES_HUT
-			particle_particle(a, x, m, N); // update acceleration
-			#else
-			barnes_hut(a, x, m, N); // update acceleration
-			#endif
-
-			#ifdef STARFLOOD_ENABLE_PROFILING
-			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
-			#endif
+			for(int i = 0; i < (N * 3); i++) r[i] += dt * v[i];
 		}
 
-		// Second kick, VERY FAST
+		/*
+		update accelerations
+				acc = getAcc( pos, vel, m, h, k, n, lmbda, nu )
+		*/
+		for(int i = 0; i < (N * 3); i++) a[i] = (real)0;
+		getAcc(r, v, rho, P, m, h, k, n, lambda, nu, a);
+		// update acceleration
+		//{
+		//	for(int i = 0; i < n * 3; i++) a[i] = (real)0;
+		//}
+
+		// kick
 		{
-			#ifdef STARFLOOD_ENABLE_PROFILING
-			t0 = omp_get_wtime();
-			#endif
-
-			// VERY FAST
-			#pragma omp simd
-			for(int i = 0; i < 2 * N; i++) v[i] += (real)0.5 * dt * a[i];
-
-			#ifdef STARFLOOD_ENABLE_PROFILING
-			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f\n", 1000.0*(t1-t0));
-			#endif
+			for(int i = 0; i < (N * 3); i++) v[i] += (real)0.5 * dt * a[i];
 		}
 	}
 
-	printf("\rRunning simulation, %d/%d (100.00%) completed... Done!\n\n", num_timesteps, num_timesteps);
-
-	fflush(stdout);
-
-	#ifdef STARFLOOD_ENABLE_PROFILING
-	fclose(diagfile);
-	#endif
-
-	// clean up
-	{
-		printf("Freeing %zu B of memory...", image_size + t_size);
-
-		fflush(stdout);
-
-		free(image);
-		free(m);
-		free(a);
-		free(v);
-		free(x);
-
-		printf(" Done!\n\n");
-
-		fflush(stdout);
-	}
-
-	printf("Finished!\n");
+	free(r);
+	free(v);
+	free(a);
+	free(P);
+	free(rho);
+	free(image);
 
 	return EXIT_SUCCESS;
 }
