@@ -1,6 +1,6 @@
 # Starflood
 
-Starflood is a free and open-source ~~SPH~~ N-body code written in C/C++.
+Starflood is an open-source SPH and N-body code(s) written in C/C++.
 
 ## Features
 
@@ -19,6 +19,13 @@ Starflood is a free and open-source ~~SPH~~ N-body code written in C/C++.
 - [Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
 - Volumetrically rendering SPH particles for eye candy visualization
 - A more standardized build system such as [CMake](https://cmake.org/)
+
+## Credits
+
+- Philip Mocz's Python SPH Guide https://github.com/pmocz/sph-python
+  - Used as a reference for the SPH algorithm, although the numpy syntax was a little hard to decipher...
+- stb https://github.com/nothings/stb
+  - `stb_image.h` and `stb_image_write.h`
 
 ## Installation
 
