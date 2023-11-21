@@ -1,33 +1,27 @@
 #include <cstdio>
 #include <cstdlib>
+#include <cmath>
+#include <vector>
+#include <stack>
 #include <cstdint>
-
-//#include "rng.h"
-
-// OpenMP
 #include <omp.h>
-
-#define STARFLOOD_ENABLE_PROFILING
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#define     PI 3.1415926535897932384626433832795028841971693993751058209749445923
-#define INV_PI 0.3183098861837906715377675267450287240689192914809128974953346881
+#define STARFLOOD_ENABLE_PROFILING
 
-#define     TAU 6.2831853071795864769252867665590057683943387987502116419498891846
-#define INV_TAU 0.1591549430918953357688837633725143620344596457404564487476673441
+typedef float real;
 
-double gaussian2d(double x0, double x1, double sigma) {
-	sigma = sigma > 0.0 ? sigma : 1.0;
-	double sigma0 = 1.0 / sigma;
-	double sigma1 = 1.0 / (2.0*sigma*sigma);
-	return sigma0*INV_TAU*exp(-sigma1*((x0*x0)+(x1*x1)));
-}
+const real     PI = 3.1415926535897932384626433832795028841971693993751058209749445923;
+const real INV_PI = 0.3183098861837906715377675267450287240689192914809128974953346881;
 
-// Triple32 Hash: https://nullprogram.com/blog/2018/07/31/
-// this hash in particular is remarkable because it's a statistically perfect 32-bit integer hash (of this kind)
-inline uint32_t triple32(uint32_t x) {
+const real     TAU = 6.2831853071795864769252867665590057683943387987502116419498891846;
+const real INV_TAU = 0.1591549430918953357688837633725143620344596457404564487476673441;
+
+// https://nullprogram.com/blog/2018/07/31/
+uint32_t triple32(uint32_t x) {
+	// exact bias: 0.020888578919738908
 	x ^= x >> (uint32_t)17u;
 	x *= (uint32_t)0xED5AD4BBu;
 	x ^= x >> (uint32_t)11u;
@@ -47,192 +41,276 @@ float urand(uint32_t* ns) {
 
 	return (2.32830629776081821092e-10f)*(float)_ns;
 }
-#define N 1000
 
-typedef double real;
+void drawLine(float* image, int w, int h, float r, float g, float b, float a, int x0, int y0, int x1, int y1) {
+	// Bresenham's Line Algorithm
 
-real W(real x, real y, real z, real h) {
-	/*
-	Gausssian Smoothing kernel (3D)
-	x     is a vector/matrix of x positions
-	y     is a vector/matrix of y positions
-	z     is a vector/matrix of z positions
-	h     is the smoothing length
-	w     is the evaluated smoothing function
-	*/
+	int dx = abs(x1 - x0);
+	int sx = x0 < x1 ? 1 : -1;
+	int dy = -abs(y1 - y0);
+	int sy = y0 < y1 ? 1 : -1;
+	int error = dx + dy;
 
-	real r = sqrt(x*x+y*y+z*z);
+	while(true) {
+		if((0 <= x0) && (x0 < w) && (0 <= y0) && (y0 < h)) {
+			int index = (w*y0)+x0;
+			image[4*index+0] += r;
+			image[4*index+1] += g;
+			image[4*index+2] += b;
+			image[4*index+3] += a;
+		}
 
-	real w = pow((1.0/(h*sqrt(PI))),3.0) * exp( -(r*r)/ (h*h));
+		if(x0 == x1 && y0 == y1) break;
 
-	return w;
+		int e2 = 2 * error;
+
+		if(e2 >= dy) {
+			if(x0 == x1) break;
+			error = error + dy;
+			x0 = x0 + sx;
+		}
+
+		if(e2 <= dx) {
+			if(y0 == y1) break;
+			error = error + dx;
+			y0 = y0 + sy;
+		}
+	}
 }
 
-void gradW(real x, real y, real z, real h, real* grad) {
-	/*
-	Gradient of the Gausssian Smoothing kernel (3D)
-	x     is a vector/matrix of x positions
-	y     is a vector/matrix of y positions
-	z     is a vector/matrix of z positions
-	h     is the smoothing length
-	wx, wy, wz     is the evaluated gradient
-	*/
+class Node {
+	public:
+		int parent;
+		int child0;
+		int child1;
+		int child2;
+		int child3;
 
-	real r = sqrt(x*x+y*y+z*z);
+		int id;
+		int np;
+		float m;
+		float x;
+		float y;
 
-	const real a = -0.0718348488500666246756327934510771021128743773739306898485328149; // -2/(5pi^(3/2))
+		Node(): parent(-1), child0(-1), child1(-1), child2(-1), child3(-1), id(-1), np(0), m(0.0f), x(0.0f), y(0.0f) {}
 
-	real poo = a*exp(-(r*r) / (h*h))*(1.0 / h);
-	grad[0] = poo * x;
-	grad[1] = poo * y;
-	grad[2] = poo * z;
-
-	//return wx, wy, wz;
-}
+		Node(int _parent): parent(_parent), child0(-1), child1(-1), child2(-1), child3(-1), id(-1), np(0), m(0.0f), x(0.0f), y(0.0f) {}
+};
 
 /*
-def getPairwiseSeparations( ri, rj ) {
-	"""
-	Get pairwise desprations between 2 sets of coordinates
-	ri    is an M x 3 matrix of positions
-	rj    is an N x 3 matrix of positions
-	dx, dy, dz   are M x N matrices of separations
-	"""
-	
-	M = ri.shape[0]
-	N = rj.shape[0]
-	
-	# positions ri = (x,y,z)
-	rix = ri[:,0].reshape((M,1))
-	riy = ri[:,1].reshape((M,1))
-	riz = ri[:,2].reshape((M,1))
-	
-	# other set of points positions rj = (x,y,z)
-	rjx = rj[:,0].reshape((N,1))
-	rjy = rj[:,1].reshape((N,1))
-	rjz = rj[:,2].reshape((N,1))
-	
-	# matrices that store all pairwise particle separations: r_i - r_j
-	dx = rix - rjx.T
-	dy = riy - rjy.T
-	dz = riz - rjz.T
-	
-	return dx, dy, dz
+void Remove() {
 }
 */
 
-real getDensity(real* x, real* r, real m, real h) {
-	/*
-	Get Density at sampling loctions from SPH particle distribution
-	r     is an M x 3 matrix of sampling locations
-	pos   is an N x 3 matrix of SPH particle positions
-	m     is the particle mass
-	h     is the smoothing length
-	rho   is M x 1 vector of densities
-	*/
-
-	/*
-	//M = r.shape[0];
-
-	dx, dy, dz = getPairwiseSeparations( r, pos );
-
-	rho = np.sum( m * W(dx, dy, dz, h), 1 ).reshape((M,1));
-
-	real rho = 0;
-
-	for(int i = 0; i < N; i++) {
-		rho += m * W(dx, dy, dz, h);
-	}
-
-	return rho;
-	*/
-
-	double rho = (double)0;
-
-	for(int i = 0; i < N; i++) {
-		rho += m * W(r[3*i+0]-x[0], r[3*i+1]-x[1], r[3*i+2]-x[2], h);
-	}
-
-	return rho;
+void drawLineUV(float* image, int w, int h, float r, float g, float b, float a, real x0, real y0, real x1, real y1) {
+	drawLine(image, w, h, r, g, b, a,
+	(int)((real)h * x0 + (real)0.5 * (real)w),
+	(int)((real)h * y0 + (real)0.5 * (real)h),
+	(int)((real)h * x1 + (real)0.5 * (real)w),
+	(int)((real)h * y1 + (real)0.5 * (real)h));
 }
 
-real getPressure(real rho, real k, real n) {
+void BarnesHut(std::vector<Node> tree, float* image, int w, int h, int* ids, real* pos, real* acc, real bx_min, real by_min, real bx_max, real by_max, int N) {
+	for(int i = 0; i < N; i++) ids[i] = -1;
+
+	tree.clear();
+
+	tree.push_back(-1);
+
 	/*
-	Equation of State
-	rho   vector of densities
-	k     equation of state constant
-	n     polytropic index
-	P     pressure
+	Quadrants:
+	+---+---+
+	| 2 | 3 |
+	+---+---+
+	| 0 | 1 |
+	+---+---+
 	*/
 
-	real P = k * pow(rho, 1.0+1.0/n);
-
-	return P;
-}
-
-void getAcc(real* r, real* v, real* rho, real* P, real m, real h, real k, real n, real lambda, real nu, real* a) {
-	/*
-	Calculate the acceleration on each SPH particle
-	pos   is an N x 3 matrix of positions
-	vel   is an N x 3 matrix of velocities
-	m     is the particle mass
-	h     is the smoothing length
-	k     equation of state constant
-	n     polytropic index
-	lmbda external force constant
-	nu    viscosity
-	a     is N x 3 matrix of accelerations
-	*/
-
-	//N = pos.shape[0];
-
-	// Calculate densities at the position of the particles
+	// Build the Barnes-Hut Tree
 	for(int i = 0; i < N; i++) {
-		real cr[3] = {r[3*i+0], r[3*i+1], r[3*i+2]};
+		int current_node = 0;
 
-		rho[i] = getDensity(cr, r, m, h);
+		real min_x = bx_min;
+		real min_y = by_min;
+		real max_x = bx_max;
+		real max_y = by_max;
+
+		int depth = 1;
+
+		while(depth <= 12) {
+			real hx = ((real)0.5*min_x)+((real)0.5*max_x);
+			real hy = ((real)0.5*min_y)+((real)0.5*max_y);
+
+			if(tree[current_node].child0 != -1
+			|| tree[current_node].child1 != -1
+			|| tree[current_node].child2 != -1
+			|| tree[current_node].child3 != -1) {
+				// node is split
+				int q = (pos[2*i+0] > hx ? 1 : 0)+(pos[2*i+1] > hy ? 2 : 0);
+
+				switch(q) {
+					case 0:
+					max_x = hx;
+					max_y = hy;
+					current_node = tree[current_node].child0;
+					break;
+					case 1:
+					min_x = hx;
+					max_y = hy;
+					current_node = tree[current_node].child1;
+					break;
+					case 2:
+					max_x = hx;
+					min_y = hy;
+					current_node = tree[current_node].child2;
+					break;
+					case 3:
+					min_x = hx;
+					min_y = hy;
+					current_node = tree[current_node].child3;
+					break;
+					default:
+					printf("Severe error!\n");
+					break;
+				}
+
+				depth++;
+
+				continue;
+			} 
+
+			//if(depth < 6) {
+			if(true) {
+				drawLineUV(image, w, h, 0., .5, 0., 1., min_x, min_y, max_x, min_y);
+				drawLineUV(image, w, h, 0., .5, 0., 1., min_x, min_y, min_x, max_y);
+				drawLineUV(image, w, h, 0., .5, 0., 1., min_x, max_y, max_x, max_y);
+				drawLineUV(image, w, h, 0., .5, 0., 1., max_x, min_y, max_x, max_y);
+				drawLineUV(image, w, h, 0., .5, 0., 1., min_x,    hy, max_x,    hy);
+				drawLineUV(image, w, h, 0., .5, 0., 1.,    hx, min_y,    hx, max_y);
+			}
+
+			// node is not split
+			if(tree[current_node].id != -1) {
+				// node has particle
+				tree.push_back(current_node);
+				tree[current_node].child0 = tree.size() - 1;
+
+				tree.push_back(current_node);
+				tree[current_node].child1 = tree.size() - 1;
+
+				tree.push_back(current_node);
+				tree[current_node].child2 = tree.size() - 1;
+
+				tree.push_back(current_node);
+				tree[current_node].child3 = tree.size() - 1;
+
+				int id = tree[current_node].id;
+
+				tree[current_node].id = -1;
+
+				int q = (pos[2*id+0] > hx ? 1 : 0)+(pos[2*id+1] > hy ? 2 : 0);
+
+				switch(q) {
+					case 0:
+					tree[tree[current_node].child0].id = id;
+					tree[tree[current_node].child0].np = 1;
+					break;
+					case 1:
+					tree[tree[current_node].child1].id = id;
+					tree[tree[current_node].child1].np = 1;
+					break;
+					case 2:
+					tree[tree[current_node].child2].id = id;
+					tree[tree[current_node].child2].np = 1;
+					break;
+					case 3:
+					tree[tree[current_node].child3].id = id;
+					tree[tree[current_node].child3].np = 1;
+					break;
+					default:
+					printf("Severe error!\n");
+					break;
+				}
+
+				continue;
+			}
+
+			// node doesn't have particle
+			tree[current_node].np = 1;
+			tree[current_node].id = i;
+			break;
+		}
+
+		if(depth == 8) {
+			//failures++;
+			//printf("A %d\n", failures);
+			//return EXIT_FAILURE;
+		}
+
+		//break;
 	}
 
-	// Get the pressures
-	for(int i = 0; i < N; i++) P[i] = getPressure(rho[i], k, n);
+	// Calculate Center of Mass
+	for(int i = 0; i < tree.size(); i++) {
+		tree[i].x = (tree[i].m != (real)0) ? (tree[i].x / tree[i].m) : tree[i].x;
+		tree[i].y = (tree[i].m != (real)0) ? (tree[i].y / tree[i].m) : tree[i].y;
+	}
 
+	// Compute Forces
 	for(int i = 0; i < N; i++) {
-		a[3*i+0] = (real)0;
-		a[3*i+0] = (real)0;
-		a[3*i+0] = (real)0;
+		std::stack<int> to_visit;
 
-		for(int j = 0; j < N; j++) {
-			if(i == j) continue;
+		to_visit.push(0);
 
-			real dx = r[3*j+0]-r[3*i+0];
-			real dy = r[3*j+1]-r[3*i+1];
-			real dz = r[3*j+2]-r[3*i+2];
-			real grad[3];
-			gradW(dx,dy,dz,h,grad);
-			a[3*i+0] += m*((P[i]/(rho[i]*rho[i]))+(P[j]/(rho[j]*rho[j])))*grad[0];
-			a[3*i+1] += m*((P[i]/(rho[i]*rho[i]))+(P[j]/(rho[j]*rho[j])))*grad[1];
-			a[3*i+2] += m*((P[i]/(rho[i]*rho[i]))+(P[j]/(rho[j]*rho[j])))*grad[2];
+		int depth = 0;
 
-			// Get pairwise distances and gradients
+		real x_min = bx_min;
+		real y_min = by_min;//width/dist;
+		real x_max = bx_max;
+		real y_max = by_max;
 
+		while(!to_visit.empty()) {
+			real hx = ((real)0.5*x_min)+((real)0.5*x_max);
+			real hy = ((real)0.5*x_min)+((real)0.5*x_max);
 
-			// Add Pressure contribution to accelerations
-			//ax = - np.sum( m * ( P/(rho**2) + P.T/rho.T**2  ) * dWx, 1).reshape((N,1));
-			//ay = - np.sum( m * ( P/(rho**2) + P.T/rho.T**2  ) * dWy, 1).reshape((N,1));
-			//az = - np.sum( m * ( P/(rho**2) + P.T/rho.T**2  ) * dWz, 1).reshape((N,1));
+			int cur_node = to_visit.top();
 
-			// pack together the acceleration components
-			//a = np.hstack((ax,ay,az));
+			to_visit.pop();
+
+			//int quad = (p.x > hx ? 1 : 0) + (p.y > hy ? 2 : 0);
+
+			/*
+			switch(quad) {
+				case 0:
+				bound_max = h;
+				break;
+
+				case 1:
+				bound_min.x = h.x;
+				bound_max.y = h.y;
+				break;
+
+				case 2:
+				bound_max.x = h.x;
+				bound_min.y = h.y;
+				break;
+
+				case 3:
+				bound_min = h;
+				break;
+
+				default:
+				break;
+			}
+			*/
 		}
 	}
 
-	// Add external potential force
-	for(int i = 0; i < (N * 3); i++) a[i] -= lambda * r[i];
-
-	// Add viscosity
-	for(int i = 0; i < (N * 3); i++) a[i] -= nu * v[i];
-
-	//return a;
+	// is this thing working?
+	drawLine(image, w, h, 1., 0., 0., 1., 15+0, 15-1, 15+4, 15-1); drawLine(image, w, h, 1., 0., 0., 1., 15+0, 15+1, 15+4, 15+1);
+	drawLine(image, w, h, 1., 1., 0., 1., 15-1, 15+0, 15-1, 15+4); drawLine(image, w, h, 1., 1., 0., 1., 15+1, 15+0, 15+1, 15+4);
+	drawLine(image, w, h, 0., 1., 0., 1., 15+0, 15-1, 15-4, 15-1); drawLine(image, w, h, 0., 1., 0., 1., 15+0, 15+1, 15-4, 15+1);
+	drawLine(image, w, h, 0., 0., 1., 1., 15-1, 15+0, 15-1, 15-4); drawLine(image, w, h, 0., 0., 1., 1., 15+1, 15+0, 15+1, 15-4);
 }
 
 int main(int argc, char** argv) {
@@ -242,73 +320,121 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	//const int N = 400; // number of particles
-	const real dt = 0.04; // timestep
-	const real M = 2.0; // star mass
-	const real R = 0.75; // star radius
-	const real h = 0.1; // smoothing length
-	const real k = 0.1; // equation of state constant
-	const real n = 1.0; // polytropic index
-	const real nu = 0.5; // damping
+	printf("Hello, world!\n");
 
-	size_t r_size = (N * 3) * sizeof(real);
-	size_t v_size = (N * 3) * sizeof(real);
-	size_t a_size = (N * 3) * sizeof(real);
-	size_t t_size = (N * 3) * sizeof(real);
-	size_t P_size = (N * 1) * sizeof(real);
-	size_t rho_size = N * sizeof(real);
+	fflush(stdout);
 
-	real* r = (real*)malloc(r_size); // position buffer
-	real* v = (real*)malloc(v_size); // velocity buffer
-	real* a = (real*)malloc(a_size); // acceleration buffer
-	real* P = (real*)malloc(P_size); // pressure
-	real* rho = (real*)malloc(rho_size); // interpolated density
-
-	for(int i = 0; i < n * 3; i++) a[i] = (real)0;
-	// Generate Initial Conditions
-	uint32_t ns = (uint32_t)1u;
-
-	real m = (real)((double)M/(double)N); // single particle mass
-
-	m = (real)0.5;
-
-	//real lambda = 2.0*k*(1.0+n)*pow(PI, -3.0/(2.0*n)) * pow((M*gamma(5.0/2.0+n)/(R*R*R)/gamma(1.0+n)),(1.0/n)) / (R*R); // ~ 2.01
-	real lambda = 2.0;
-
-	// randomly selected positions and velocities
-	for(int i = 0; i < N; i++) {
-		ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
-
-		float z0 = urand(&ns);
-		float z1 = urand(&ns);
-		float z2 = urand(&ns);
-		float z3 = urand(&ns);
-
-		r[3*i+0] = 0.1*sqrt(-2.0*log(z0))*cos(TAU*z2);
-		r[3*i+1] = 0.1*sqrt(-2.0*log(z0))*sin(TAU*z2);
-		r[3*i+2] = 0.1*sqrt(-2.0*log(z1))*cos(TAU*z3);
-	}
-
-	for(int i = 0; i < (N * 3); i++) v[i] = (real)0;
-	
-	// calculate initial gravitational accelerations
-	getAcc(r, v, rho, P, m, h, k, n, lambda, nu, a);
-	int image_w = 640, image_h = 480;
-
+	// timestamps
 	double t0, t1;
 
+	// initialize timestamps so it is cached or something idk
 	t0 = omp_get_wtime();
 	t1 = omp_get_wtime();
+	int w = 960; // Image Width
+	int h = 540; // Image Height
+	const long long int N = 384; // number of bodies in the simulation
 
-	size_t image_size = (image_w * image_h) * 3 * sizeof(float);
+	const real dt = 0.0314159265358979323846264338327950288419716939937510582097494459; // Simulation Timestep
 
-	float* image = (float*)malloc(image_size);
+	float* image; // Image Buffer, RGBA32F
+	real* sim; // Simulation Buffer
+	real* mas; // Mass Buffer
+	real* pos; // Position Buffer
+	real* vel; // Velocity Buffer
+	real* acc; // Acceleration Buffer
+	int* ids; // id buffer, contains ids of node paticles are in
 
 	stbi_flip_vertically_on_write(1);
+	size_t image_size = sizeof(float)*(4*w*h); // Image Buffer Size, RGBA32F
+	size_t mas_size = (N * 1) * sizeof(real); // mass buffer size
+	size_t pos_size = (N * 2) * sizeof(real); // position buffer size
+	size_t vel_size = (N * 2) * sizeof(real); // velocity buffer size
+	size_t acc_size = (N * 2) * sizeof(real); // acceleration buffer size
+	size_t sim_size = mas_size+pos_size+vel_size+acc_size; // simulation total buffer size
+	size_t ids_size = (N * 1) * sizeof(int);
 
-	const int num_steps = 600;
+	printf("%zu\n",sim_size);
 
-	//const real dt = 0.1;
+	std::vector<Node> tree;
+
+	// Allocate Memory
+	{
+		image = (float*)malloc(image_size); // Allocate image buffer
+
+		if(image == NULL) {
+			printf("Error: malloc() returned a null pointer!\n");
+
+			fflush(stdout);
+
+			return EXIT_FAILURE;
+		}
+
+		sim = (real*)malloc(sim_size); // Allocate simulation memory
+
+		if(sim == NULL) {
+			printf("Error: malloc() returned a null pointer!\n");
+
+			fflush(stdout);
+
+			free(image);
+
+			return EXIT_FAILURE;
+		}
+
+		ids = (int*)malloc(ids_size);
+
+		mas = sim; // mass buffer
+		pos = mas+(mas_size/sizeof(real)); // position buffer
+		vel = pos+(pos_size/sizeof(real)); // velocity buffer
+		acc = vel+(vel_size/sizeof(real)); // acceleration buffer
+
+		printf("mas: %p\n",mas);
+		printf("pos: %p\n",pos);
+		printf("vel: %p\n",vel);
+		printf("acc: %p\n",acc);
+	}
+
+	real tmin_x = (real)-1.;
+	real tmin_y = (real)-1.;
+	real tmax_x = (real)1.;
+	real tmax_y = (real)1.;
+
+	{
+
+	}
+
+	// Initialize Simulation
+	{
+		for(int i = 0; i < (N * 1); i++) mas[i] = (real)1;
+		for(int i = 0; i < (N * 2); i++) acc[i] = (real)0;
+		for(int i = 0; i < (N * 2); i++) vel[i] = (real)0;
+
+		// Generate Initial Conditions
+		uint32_t ns = (uint32_t)1u;
+
+		// randomly selected positions and velocities
+		for(int i = 0; i < N; i++) {
+			ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
+
+			float z0 = urand(&ns);
+			float z1 = urand(&ns);
+			float z2 = urand(&ns);
+			float z3 = urand(&ns);
+
+			// normal distribution
+			pos[2*i+0] = 0.1*sqrt(-2.0*log(z0))*cos(TAU*z2);
+			pos[2*i+1] = 0.1*sqrt(-2.0*log(z0))*sin(TAU*z2);
+			//pos[2*i+2] = 0.1*sqrt(-2.0*log(z1))*cos(TAU*z3);
+		}
+
+		for(int i = 0; i < N; i++) {
+			vel[2*i+0] = -.1*pos[2*i+1];
+			vel[2*i+1] =  .1*pos[2*i+0];
+		}
+
+		// calculate initial gravitational accelerations
+		BarnesHut(tree, image, w, h, ids, pos, acc, tmin_x, tmin_y, tmax_x, tmax_y, N);
+	}
 
 	#ifdef STARFLOOD_ENABLE_PROFILING
 	FILE* diagfile = fopen("./log.csv", "w");
@@ -317,6 +443,8 @@ int main(int argc, char** argv) {
 
 	fflush(diagfile);
 	#endif
+
+	const int num_steps = 150;
 
 	for(int step_num = 0; step_num < num_steps; step_num++) {
 		printf("\rRunning simulation, %d/%d (%.2f%) completed...", step_num, num_steps, 100.0*((double)step_num/(double)num_steps));
@@ -329,14 +457,17 @@ int main(int argc, char** argv) {
 
 		// render and write the image
 		{
+			stbi_flip_vertically_on_write(1);
+
 			// clear the image buffer
 			{
 				#ifdef STARFLOOD_ENABLE_PROFILING
 				t0 = omp_get_wtime();
 				#endif
 
+				// VERY FAST
 				//#pragma omp simd
-				for(int i = 0; i < (image_w * image_h) * 3; i++) image[i] = (float)0;
+				for(int i = 0; i < (4*w*h); i++) image[i] = (float)0;
 			
 				#ifdef STARFLOOD_ENABLE_PROFILING
 				t1 = omp_get_wtime();
@@ -353,19 +484,22 @@ int main(int argc, char** argv) {
 				for(int i = 0; i < N; i++) {
 					// vec2 uv = (fragCoord - 0.5 * resolution) / resolution.y
 					real t = 0.04*(real)step_num;
-					real uv[2] = {r[2 * i + 0]*cos(t)+r[2 * i + 2]*sin(t), r[2 * i + 1]};
+					//t = 0.0;
+					//real uv[2] = {r[2 * i + 0]*cos(t)+r[2 * i + 2]*sin(t), r[2 * i + 1]};
+					real uv[2] = {pos[2*i+0], pos[2*i+1]};
 
-					uv[0] *= (real)2.0; // 0.05
-					uv[1] *= (real)2.0;
+					uv[0] *= (real)1.0; // 0.05
+					uv[1] *= (real)1.0;
 
 					int coord[2] = {
-					(int)((real)image_h * uv[0] + (real)0.5 * (real)image_w),
-					(int)((real)image_h * uv[1] + (real)0.5 * (real)image_h)};
+					(int)((real)h * uv[0] + (real)0.5 * (real)w),
+					(int)((real)h * uv[1] + (real)0.5 * (real)h)};
 
-					if(0 <= coord[0] && coord[0] < image_w && 0 <= coord[1] && coord[1] < image_h) {
-						image[3 * (image_w * coord[1] + coord[0]) + 0] += 0.5f;
-						image[3 * (image_w * coord[1] + coord[0]) + 1] += 0.5f;
-						image[3 * (image_w * coord[1] + coord[0]) + 2] += 0.5f;
+					if((0 <= coord[0]) && (coord[0] < w) && (0 <= coord[1]) && (coord[1] < h)) {
+						image[4*(w*coord[1]+coord[0])+0] += 0.5f;
+						image[4*(w*coord[1]+coord[0])+1] += 0.5f;
+						image[4*(w*coord[1]+coord[0])+2] += 0.5f;
+						image[4*(w*coord[1]+coord[0])+3] += 1.0f;
 					}
 				}
 
@@ -373,6 +507,15 @@ int main(int argc, char** argv) {
 				t1 = omp_get_wtime();
 				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
 				#endif
+			}
+
+			BarnesHut(tree, image, w, h, ids, pos, acc, tmin_x, tmin_y, tmax_x, tmax_y, N); // if you want tree rendered
+
+			for(int i = 0; i < (w * h); i++) {
+				image[4*i+0] /= (image[4*i+3] != (float)0) ? image[4*i+3] : (float)1;
+				image[4*i+1] /= (image[4*i+3] != (float)0) ? image[4*i+3] : (float)1;
+				image[4*i+2] /= (image[4*i+3] != (float)0) ? image[4*i+3] : (float)1;
+				image[4*i+3]  = (float)1;
 			}
 
 			// write the image
@@ -384,7 +527,7 @@ int main(int argc, char** argv) {
 				t0 = omp_get_wtime();
 				#endif
 
-				if(stbi_write_hdr(file_name, image_w, image_h, 3, image) == 0) {
+				if(stbi_write_hdr(file_name, w, h, 4, image) == 0) {
 					printf("Failure on step %d\n", step_num);
 				}
 
@@ -403,7 +546,7 @@ int main(int argc, char** argv) {
 
 			// VERY FAST
 			//#pragma omp simd
-			for(int i = 0; i < (N * 3); i++) v[i] += (real)0.5 * dt * a[i];
+			for(int i = 0; i < (N * 2); i++) vel[i] += (real)0.5 * dt * acc[i];
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
@@ -419,7 +562,7 @@ int main(int argc, char** argv) {
 
 			// VERY FAST
 			//#pragma omp simd
-			for(int i = 0; i < (N * 3); i++) r[i] += dt * v[i];
+			for(int i = 0; i < (N * 2); i++) pos[i] += dt * vel[i];
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
@@ -427,21 +570,28 @@ int main(int argc, char** argv) {
 			#endif
 		}
 
+		if(step_num == 10) printf("%f\n", acc[30]);
+
 		// update acceleration
 		{
-			for(int i = 0; i < (N * 3); i++) a[i] = (real)0;
+			for(int i = 0; i < (N * 2); i++) acc[i] = (real)0;
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t0 = omp_get_wtime();
 			#endif
 
-			getAcc(r, v, rho, P, m, h, k, n, lambda, nu, a);
+			BarnesHut(tree, image, w, h, ids, pos, acc, tmin_x, tmin_y, tmax_x, tmax_y, N);
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
 			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
 			#endif
 		}
+
+		//for(int i = 0; i < N; i++) {
+		//	a[2*i+0] += -1.0*r[2*i+2];
+		//	a[2*i+2] +=  1.0*r[2*i+0];
+		//}
 
 		// kick
 		{
@@ -451,7 +601,7 @@ int main(int argc, char** argv) {
 
 			// VERY FAST
 			//#pragma omp simd
-			for(int i = 0; i < (N * 3); i++) v[i] += (real)0.5 * dt * a[i];
+			for(int i = 0; i < (N * 2); i++) vel[i] += (real)0.5 * dt * acc[i];
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
@@ -468,12 +618,8 @@ int main(int argc, char** argv) {
 	fclose(diagfile);
 	#endif
 
-	free(r);
-	free(v);
-	free(a);
-	free(P);
-	free(rho);
 	free(image);
+	free(sim);
 
 	return EXIT_SUCCESS;
 }
