@@ -12,8 +12,11 @@
 #define FRAME_INTERVAL 1
 #define FRAMES 300
 #define TIMESTEP (4.0*0.0314159265358979323846264338327950288419716939937510582097494459)
+#define TREE_FIT
+#define JITTER_TREE
+#define THETA 1.0
 
-#define STARFLOOD_RENDER_INTERACTS
+//#define STARFLOOD_RENDER_INTERACTS
 
 #define STARFLOOD_ENABLE_PROFILING
 
@@ -128,26 +131,47 @@ class Node {
 		x_min(_x_min), y_min(_y_min), x_max(_x_max), y_max(_y_max), m(0), x(0), y(0) {}
 };
 
-void BarnesHut(std::vector<Node> tree, float* image, int w, int h, int* ids, real* mas, real* pos, real* acc, int N) {
+void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, real* mas, real* pos, real* acc, int N, int step_num) {
 	for(int i = 0; i < N; i++) ids[i] = -1;
 
 	tree.clear();
 
-	//tree.push_back(Node(-1,(real)-1.0,(real)-1.0,(real)1.0,(real)1.0));
-
+	#ifndef TREE_FIT
+	tree.push_back(Node(-1,(real)-1.0,(real)-1.0,(real)1.0,(real)1.0));
+	#else
 	tree.push_back(Node(-1,pos[0],pos[1],pos[0],pos[1]));
+	#endif
 
-	for(int i = 1; i < N; i++) {
-		tree[0].x_min = fmin(tree[0].x_min,pos[2*i+0]);
-		tree[0].y_min = fmin(tree[0].y_min,pos[2*i+1]);
-		tree[0].x_max = fmax(tree[0].x_max,pos[2*i+0]);
-		tree[0].y_max = fmax(tree[0].y_max,pos[2*i+1]);
+	{
+		const real extrspace = 0.1;
+
+		#ifdef TREE_FIT
+		for(int i = 1; i < N; i++) {
+			tree[0].x_min = fmin(tree[0].x_min,pos[2*i+0]);
+			tree[0].y_min = fmin(tree[0].y_min,pos[2*i+1]);
+			tree[0].x_max = fmax(tree[0].x_max,pos[2*i+0]);
+			tree[0].y_max = fmax(tree[0].y_max,pos[2*i+1]);
+		}
+
+
+		tree[0].x_min -= extrspace;
+		tree[0].y_min -= extrspace;
+		tree[0].x_max += extrspace;
+		tree[0].y_max += extrspace;
+		#endif
+
+		#ifdef JITTER_TREE
+		uint32_t ns = (uint32_t)step_num+(uint32_t)37; // set the random number generator seed
+
+		float z0 = urand(&ns);
+		float z1 = urand(&ns);
+
+		tree[0].x_min += extrspace*(real)(z0-0.5f);
+		tree[0].y_min += extrspace*(real)(z1-0.5f);
+		tree[0].x_max += extrspace*(real)(z0-0.5f);
+		tree[0].y_max += extrspace*(real)(z1-0.5f);
+		#endif
 	}
-
-	tree[0].x_min -= 0.1;
-	tree[0].y_min -= 0.1;
-	tree[0].x_max += 0.1;
-	tree[0].y_max += 0.1;
 
 	/*
 	Quadrants:
@@ -169,6 +193,9 @@ void BarnesHut(std::vector<Node> tree, float* image, int w, int h, int* ids, rea
 			real y_min = tree[current_node].y_min;
 			real x_max = tree[current_node].x_max;
 			real y_max = tree[current_node].y_max;
+
+			// don't continue if particle is outside of bounds
+			if((x_max < pos[2*i+0]) || (pos[2*i+0] < x_min) || (y_max < pos[2*i+1]) || (pos[2*i+1] < y_min)) break;
 
 			real hx = ((real)0.5*tree[current_node].x_min)+((real)0.5*tree[current_node].x_max);
 			real hy = ((real)0.5*tree[current_node].y_min)+((real)0.5*tree[current_node].y_max);
@@ -290,6 +317,9 @@ void BarnesHut(std::vector<Node> tree, float* image, int w, int h, int* ids, rea
 
 	// Compute Forces
 	for(int i = 0; i < N; i++) {
+		// don't continue if particle is outside of bounds
+		if((tree[0].x_max < pos[2*i+0]) || (pos[2*i+0] < tree[0].x_min) || (tree[0].y_max < pos[2*i+1]) || (pos[2*i+1] < tree[0].y_min)) break;
+
 		acc[2*i+0] = (real)0;
 		acc[2*i+1] = (real)0;
 
@@ -310,6 +340,7 @@ void BarnesHut(std::vector<Node> tree, float* image, int w, int h, int* ids, rea
 
 			to_visit.pop();
 
+			// if this is empty or contains itself, we need not go any further
 			if((tree[cur_node].np < 1) || (tree[cur_node].id == i)) continue;
 
 			real x_min = tree[cur_node].x_min, y_min = tree[cur_node].y_min, x_max = tree[cur_node].x_max, y_max = tree[cur_node].y_max;
@@ -320,9 +351,12 @@ void BarnesHut(std::vector<Node> tree, float* image, int w, int h, int* ids, rea
 			real dy = tree[cur_node].y;
 			real dm = tree[cur_node].m;
 
+			// probably empty, idk just to be safe
 			if(dm < (real)0.001) continue;
 
 			if(x_min < u_i && u_i < x_max && y_min < v_i && v_i < y_max) {
+				// this particle is contained in the node we are evaluating so let's
+				// calculate what it would be like with it removed
 				dx *= dm;
 				dy *= dm;
 				dm -= mas[i];
@@ -337,9 +371,10 @@ void BarnesHut(std::vector<Node> tree, float* image, int w, int h, int* ids, rea
 
 			real dist = sqrtf((dx*dx)+(dy*dy));
 
+			// again, probably empty, just to be safe
 			if(dm < (real)0.001) continue;
 
-			const real theta = 1.0;
+			const real theta = THETA;
 
 			if((width/dist) > theta) {
 				if(tree[cur_node].child0 != -1) to_visit.push(tree[cur_node].child0);
@@ -390,12 +425,6 @@ void BarnesHut(std::vector<Node> tree, float* image, int w, int h, int* ids, rea
 			*/
 		}
 	}
-
-	// is this thing working?
-	drawLine(image, w, h, 1., 0., 0., 1., 15+0, 15-1, 15+4, 15-1); drawLine(image, w, h, 1., 0., 0., 1., 15+0, 15+1, 15+4, 15+1);
-	drawLine(image, w, h, 1., 1., 0., 1., 15-1, 15+0, 15-1, 15+4); drawLine(image, w, h, 1., 1., 0., 1., 15+1, 15+0, 15+1, 15+4);
-	drawLine(image, w, h, 0., 1., 0., 1., 15+0, 15-1, 15-4, 15-1); drawLine(image, w, h, 0., 1., 0., 1., 15+0, 15+1, 15-4, 15+1);
-	drawLine(image, w, h, 0., 0., 1., 1., 15-1, 15+0, 15-1, 15-4); drawLine(image, w, h, 0., 0., 1., 1., 15+1, 15+0, 15+1, 15-4);
 }
 
 int main(int argc, char** argv) {
@@ -495,18 +524,20 @@ int main(int argc, char** argv) {
 			float z3 = urand(&ns);
 
 			// normal distribution
-			pos[2*i+0] = 0.1*sqrt(-2.0*log(z0))*cos(TAU*z2);
-			pos[2*i+1] = 0.1*sqrt(-2.0*log(z0))*sin(TAU*z2);
+			//pos[2*i+0] = 0.1*sqrt(-2.0*log(z0))*cos(TAU*z2);
+			//pos[2*i+1] = 0.1*sqrt(-2.0*log(z0))*sin(TAU*z2);
 			//pos[2*i+2] = 0.1*sqrt(-2.0*log(z1))*cos(TAU*z3);
+			pos[2*i+0] = 0.2*sqrt(z1)*cos(TAU*z0);
+			pos[2*i+1] = 0.2*sqrt(z1)*sin(TAU*z0);
 		}
 
-		//for(int i = 0; i < N; i++) {
-		//	vel[2*i+0] = -.1*pos[2*i+1];
-		//	vel[2*i+1] =  .1*pos[2*i+0];
-		//}
+		for(int i = 0; i < N; i++) {
+			vel[2*i+0] = -.1*pos[2*i+1];
+			vel[2*i+1] =  .1*pos[2*i+0];
+		}
 
 		// calculate initial gravitational accelerations
-		BarnesHut(tree, image, w, h, ids, mas, pos, acc, N);
+		BarnesHut(tree, image, w, h, ids, mas, pos, acc, N, 0);
 	}
 
 	#ifdef STARFLOOD_ENABLE_PROFILING
@@ -612,8 +643,14 @@ int main(int argc, char** argv) {
 
 			if((step_num % FRAME_INTERVAL) == 0){
 				#ifdef STARFLOOD_RENDER_INTERACTS
-				BarnesHut(tree, image, w, h, ids, mas, pos, acc, N);
+				BarnesHut(tree, image, w, h, ids, mas, pos, acc, N, step_num);
 				#endif
+
+				// test, test, is this thing working?
+				drawLine(image, w, h, 1., 0., 0., 1., 15+0, 15-1, 15+4, 15-1); drawLine(image, w, h, 1., 0., 0., 1., 15+0, 15+1, 15+4, 15+1);
+				drawLine(image, w, h, 1., 1., 0., 1., 15-1, 15+0, 15-1, 15+4); drawLine(image, w, h, 1., 1., 0., 1., 15+1, 15+0, 15+1, 15+4);
+				drawLine(image, w, h, 0., 1., 0., 1., 15+0, 15-1, 15-4, 15-1); drawLine(image, w, h, 0., 1., 0., 1., 15+0, 15+1, 15-4, 15+1);
+				drawLine(image, w, h, 0., 0., 1., 1., 15-1, 15+0, 15-1, 15-4); drawLine(image, w, h, 0., 0., 1., 1., 15+1, 15+0, 15+1, 15-4);
 
 				for(int i = 0; i < (w * h); i++) {
 					image[4*i+0] /= (image[4*i+3] != (float)0) ? image[4*i+3] : (float)1;
@@ -686,7 +723,7 @@ int main(int argc, char** argv) {
 			t0 = omp_get_wtime();
 			#endif
 
-			BarnesHut(tree, image, w, h, ids, mas, pos, acc, N);
+			BarnesHut(tree, image, w, h, ids, mas, pos, acc, N, step_num);
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
@@ -714,6 +751,30 @@ int main(int argc, char** argv) {
 			fprintf(diagfile, "%.6f\n", 1000.0*(t1-t0));
 			#endif
 		}
+
+		/*
+		for(int i = 0; i < N; i++) {
+			if(abs(pos[2*i+0] > 1.) || abs(pos[2*i+0]) > 1.) {
+				// Generate Initial Conditions
+				uint32_t ns = (uint32_t)1u;
+
+				// randomly selected positions and velocities
+				for(int i = 0; i < N; i++) {
+					ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
+
+					float z0 = urand(&ns);
+					float z1 = urand(&ns);
+					float z2 = urand(&ns);
+					float z3 = urand(&ns);
+
+					// normal distribution
+					pos[2*i+0] = 0.1*sqrt(-2.0*log(z0))*cos(TAU*z2);
+					pos[2*i+1] = 0.1*sqrt(-2.0*log(z0))*sin(TAU*z2);
+					//pos[2*i+2] = 0.1*sqrt(-2.0*log(z1))*cos(TAU*z3);
+				}
+			}
+		}
+		*/
 	}
 
 	printf("\rRunning simulation, %d/%d (100.00%) completed... Done!\n\n", num_steps, num_steps);
