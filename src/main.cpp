@@ -315,10 +315,31 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 		tree[i].y = (tree[i].m != (real)0) ? (tree[i].y / tree[i].m) : tree[i].y;
 	}
 
+	/*
+	{
+		std::vector<Node> ntree;
+
+		std::stack<int> to_visit;
+
+		to_visit.push(0);
+
+		while(!to_visit.empty()) {
+				int cur_node = to_visit.top();
+
+				to_visit.pop();
+
+				ntree.push_back(tree[cur_node]);
+		}
+
+		tree = ntree;
+	}
+	*/
+
 	// Compute Forces
+	#pragma omp parallel for schedule(dynamic,256)
 	for(int i = 0; i < N; i++) {
 		// don't continue if particle is outside of bounds
-		if((tree[0].x_max < pos[2*i+0]) || (pos[2*i+0] < tree[0].x_min) || (tree[0].y_max < pos[2*i+1]) || (pos[2*i+1] < tree[0].y_min)) break;
+		if((tree[0].x_max < pos[2*i+0]) || (pos[2*i+0] < tree[0].x_min) || (tree[0].y_max < pos[2*i+1]) || (pos[2*i+1] < tree[0].y_min)) continue;
 
 		acc[2*i+0] = (real)0;
 		acc[2*i+1] = (real)0;
@@ -446,7 +467,7 @@ int main(int argc, char** argv) {
 	t1 = omp_get_wtime();
 	int w = 960; // Image Width
 	int h = 540; // Image Height
-	const long long int N = 16384; // number of bodies in the simulation
+	const long long int N = 4*65536; // number of bodies in the simulation
 
 	if(N < 1) {
 		return EXIT_FAILURE;
@@ -507,7 +528,7 @@ int main(int argc, char** argv) {
 
 	// Initialize Simulation
 	{
-		for(int i = 0; i < (N * 1); i++) mas[i] = (real)(((long double)1)/((long double)N));
+		for(int i = 0; i < (N * 1); i++) mas[i] = (real)(((long double)10)/((long double)N));
 		for(int i = 0; i < (N * 2); i++) acc[i] = (real)0;
 		for(int i = 0; i < (N * 2); i++) vel[i] = (real)0;
 
@@ -603,11 +624,15 @@ int main(int argc, char** argv) {
 						(int)((real)h * uv[1] + (real)0.5 * (real)h)};
 
 						if((0 <= coord[0]) && (coord[0] < w) && (0 <= coord[1]) && (coord[1] < h)) {
-							image[4*(w*coord[1]+coord[0])+0] += 0.5f;
-							image[4*(w*coord[1]+coord[0])+1] += 0.5f;
-							image[4*(w*coord[1]+coord[0])+2] += 0.5f;
-							image[4*(w*coord[1]+coord[0])+3] += 1.0f;
+							image[4*(w*coord[1]+coord[0])+0] += 0.05f;
+							image[4*(w*coord[1]+coord[0])+1] += 0.05f;
+							image[4*(w*coord[1]+coord[0])+2] += 0.05f;
+							image[4*(w*coord[1]+coord[0])+3] += 0.0f;
 						}
+					}
+
+					for(int i = 0; i < (w * h); i++) {
+						image[4*i+3] = (real)1;
 					}
 				}
 
