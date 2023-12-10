@@ -1,4 +1,4 @@
-# Starflood
+# ![Starflood](starflood-badge.png)
 
 Starflood is an open-source SPH and N-body code(s) written in C/C++.
 
@@ -17,7 +17,7 @@ Starflood is an open-source SPH and N-body code(s) written in C/C++.
 - Multipole Barnes-Hut or Fast-Multipole Method
 - Ability to save/load simulation data and render it afterwards
 - Ability to load pre-generated initial conditions
-- GPU/device offloading (development is currently made difficult due to [a lack of compiler packages with build support on Arch Linux](https://bugs.archlinux.org/task/63227), and NVIDIA's HPC SDK requires AVX so that's out of the question...)
+- GPU/device offloading ~~(development is currently made difficult due to [a lack of compiler packages with build support on Arch Linux](https://bugs.archlinux.org/task/63227), and NVIDIA's HPC SDK requires AVX so that's out of the question...)~~ I now have access to an Intel Core i7-3770K, which has AVX (something which NVIDIA's HPC SDK unfortunately **requires**)
 - Volumetrically rendering SPH particles for eye candy visualization
 - A more standardized build system such as [CMake](https://cmake.org/)
 

@@ -7,7 +7,7 @@ echo "" && \
 # todo
 echo "Compiling..." && \
 echo "" && \
-g++ -fopenmp -march=x86-64 -Og -pedantic -std=c++11 -Wall -Wextra -Wshadow -Wno-missing-field-initializers -o build/starflood.out src/main.cpp && \
+g++ -fopenmp -march=native -Ofast -pedantic -std=c++17 -Wall -Wextra -Wshadow -Wno-missing-field-initializers -o build/starflood.out src/main.cpp && \
 #/usr/bin/time -v g++ -fopenmp -march=x86-64 -O0 -pedantic -std=c++11 -Wall -Wextra -Wshadow -Wno-missing-field-initializers -o build/starflood.out src/main.cpp && \
 echo "" && \
 echo "Cleaning render..." && \

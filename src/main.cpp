@@ -10,11 +10,22 @@
 #include "stb_image_write.h"
 
 #define FRAME_INTERVAL 1
-#define FRAMES 300
-#define TIMESTEP (4.0*0.0314159265358979323846264338327950288419716939937510582097494459)
+#define FRAMES 600
+#define TIMESTEP (2.0*0.0314159265358979323846264338327950288419716939937510582097494459)
 #define TREE_FIT
 #define JITTER_TREE
 #define THETA 1.0
+
+// starflood version numbering (major.minor.patch)
+#ifndef STARFLOOD_VERSION_MAJOR
+#define STARFLOOD_VERSION_MAJOR 0
+#endif
+#ifndef STARFLOOD_VERSION_MINOR
+#define STARFLOOD_VERSION_MINOR 0
+#endif
+#ifndef STARFLOOD_VERSION_PATCH
+#define STARFLOOD_VERSION_PATCH 0
+#endif
 
 //#define STARFLOOD_RENDER_INTERACTS
 
@@ -315,7 +326,6 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 		tree[i].y = (tree[i].m != (real)0) ? (tree[i].y / tree[i].m) : tree[i].y;
 	}
 
-	/*
 	{
 		std::vector<Node> ntree;
 
@@ -333,7 +343,6 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 
 		tree = ntree;
 	}
-	*/
 
 	// Compute Forces
 	#pragma omp parallel for schedule(dynamic,256)
@@ -365,6 +374,15 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 			if((tree[cur_node].np < 1) || (tree[cur_node].id == i)) continue;
 
 			real x_min = tree[cur_node].x_min, y_min = tree[cur_node].y_min, x_max = tree[cur_node].x_max, y_max = tree[cur_node].y_max;
+
+			#ifdef STARFLOOD_RENDER_INTERACTS
+			if(i == 0) {
+				drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_min, x_max, y_min);
+				drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_min, x_min, y_max);
+				drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_max, x_max, y_max);
+				drawLineUV(image, w, h, 1., 1., 0., 1., x_max, y_min, x_max, y_max);
+			}
+			#endif
 
 			real width = ((real)0.5*(x_max - x_min))+((real)0.5*(y_max - y_min));
 
@@ -407,16 +425,16 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 
 			#ifdef STARFLOOD_RENDER_INTERACTS
 			if(i == 0) {
-				drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_min, x_max, y_min);
-				drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_min, x_min, y_max);
-				drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_max, x_max, y_max);
-				drawLineUV(image, w, h, 1., 1., 0., 1., x_max, y_min, x_max, y_max);
+				//drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_min, x_max, y_min);
+				//drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_min, x_min, y_max);
+				//drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_max, x_max, y_max);
+				//drawLineUV(image, w, h, 1., 1., 0., 1., x_max, y_min, x_max, y_max);
 				drawLineUV(image, w, h, 1., 0., 0., 1., u_i, v_i, tree[cur_node].x, tree[cur_node].y);
 			}
 			#endif
 
-			acc[2*i+0] += ((dx/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(real)0.001);
-			acc[2*i+1] += ((dy/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(real)0.001);
+			acc[2*i+0] += ((dx/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(real)0.0001);
+			acc[2*i+1] += ((dy/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(real)0.0001);
 
 			//int quad = (p.x > hx ? 1 : 0) + (p.y > hy ? 2 : 0);
 
@@ -450,26 +468,50 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 
 int main(int argc, char** argv) {
 	if(argc > 1) {
-		printf("%s: Invalid Parameter '%s'\n", argv[0], argv[1]);
+		if(strcmp(argv[1],"-h") || strcmp(argv[1],"--help")) {
+			printf(
+			"Usage: %s [OPTION]...\n"
+			"  -h, --help       display this help and exit\n"
+			//"      --version    output version information and exit\n"
+			);
 
-		return EXIT_FAILURE;
+			return EXIT_SUCCESS;
+		} else {
+			printf("%s: unrecognized option '%s'\nTry '%s -h' or '%s --help' for more information.\n", argv[0], argv[1]);
+
+			return EXIT_FAILURE;
+		}
 	}
 
-	printf("Hello, world!\n");
+	printf("Starflood %d.%d.%d\n", STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH); // print version information
+
+	#ifndef STARFLOOD_NO_SPLASH
+	printf(
+	"\n"
+	"╭───┬─╴╭─╮┌─╮┌──┐  ╭─╮╭─╮┌─╮\n"
+	"│   │  │ ││ ││  │  │ ││ ││ │\n"
+	"╰─╮ │  ├─┤├─╯├─╴│  │ ││ ││ │\n"
+	"│ │ │  │ ││ ││  │  │ ││ ││ │\n"
+	"╰─╯ ╵  ╵ ╵╵ ╵╵  └──╰─╯╰─╯└─╯\n"
+	"\n");
+	#endif
 
 	fflush(stdout);
 
 	// timestamps
 	double t0, t1;
 
-	// initialize timestamps so it is cached or something idk
+	// call omp_get_wtime() so it is cached or something idk
 	t0 = omp_get_wtime();
 	t1 = omp_get_wtime();
-	int w = 960; // Image Width
-	int h = 540; // Image Height
-	const long long int N = 4*65536; // number of bodies in the simulation
+
+	size_t w = 1920; // image width
+	size_t h = 1080; // image height
+	size_t N = 2*131072; // number of bodies in the simulation
 
 	if(N < 1) {
+		printf("Error: N was set to %zu, it must be greater than 0!\n", N);
+
 		return EXIT_FAILURE;
 	}
 
@@ -503,6 +545,8 @@ int main(int argc, char** argv) {
 
 			fflush(stdout);
 
+			perror("Error");
+
 			return EXIT_FAILURE;
 		}
 
@@ -512,6 +556,8 @@ int main(int argc, char** argv) {
 			printf("Error: malloc() returned a null pointer!\n");
 
 			fflush(stdout);
+
+			perror("Error");
 
 			free(image);
 
@@ -553,8 +599,8 @@ int main(int argc, char** argv) {
 		}
 
 		for(int i = 0; i < N; i++) {
-			vel[2*i+0] = -.1*pos[2*i+1];
-			vel[2*i+1] =  .1*pos[2*i+0];
+			vel[2*i+0] = -.3*pos[2*i+1];
+			vel[2*i+1] =  .3*pos[2*i+0];
 		}
 
 		// calculate initial gravitational accelerations
@@ -648,6 +694,7 @@ int main(int argc, char** argv) {
 				#endif
 
 				if((step_num % FRAME_INTERVAL) == 0) {
+					/*
 					for(int i = 0; i < tree.size(); i++) {
 						real x_min = tree[i].x_min, y_min = tree[i].y_min, x_max = tree[i].x_max, y_max = tree[i].y_max;
 
@@ -658,6 +705,7 @@ int main(int argc, char** argv) {
 						drawLineUV(image, w, h, 0., .01, 0., .1, x_min, y_max, x_max, y_max);
 						drawLineUV(image, w, h, 0., .01, 0., .1, x_max, y_min, x_max, y_max);
 					}
+					*/
 				}
 
 				#ifdef STARFLOOD_ENABLE_PROFILING
