@@ -1,4 +1,4 @@
-# ![Starflood](starflood-badge.png)
+# ![Starflood](images/starflood-badge.png)
 
 Starflood is an open-source SPH and N-body code(s) written in C/C++.
 
