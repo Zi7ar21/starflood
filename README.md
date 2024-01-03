@@ -31,72 +31,46 @@ Starflood is an open-source SPH and N-body code(s) written in C/C++.
 - Jeffrey Heer's article _The Barnes-Hut Approximation: Efficient computation of N-body forces_
   - <https://jheer.github.io/barnes-hut/>
 
-## Installation
+## Running Starflood
 
-At this point in time, Starflood doesn't have a method of installion. It's up to you to manually choose where you want the repository and build it.
+Starflood does not require any method of installation. It's up to the user to manually choose where they want the repository and build it.
 
-### Cloning the Repository
+### Getting the Source Code
 
-First, navigate to the folder you like to keep your repositories in. For example, I like to keep mine in `~/source`.
+First, navigate to a place you like to keep your repositories. For example, I like to keep mine in `~/source`.
 
 ```sh
 cd <folder you want the starflood repo in>
 ```
 
-Next, clone this repository.
+Next, clone the Starflood repository.
 
 ```sh
 git clone https://github.com/Zi7ar21/starflood.git
 ```
 
-Next, enter the repository
+Next, enter the repository.
 
 ```sh
 cd starflood
 ```
 
-### Building Starforge
+### Configuration
 
-Starforge uses CMake. Outlined below are some steps to build the project in a folder inside the repository. `<starforge repository>/build` is a part of the `.gitignore`, so no need to worry about accidentally commiting all your binaries.
+Starflood is still in its infancy, as such, all of modification happens through modifying source code. Don't fear however, as I try to keep parameters as `#define`s near the top of the source files.
 
-First, create a folder to build Starforge in.
+### Mounting a `tmpfs` (Optional)
 
-```sh
-mkdir build
-```
-
-Then enter the newly created build directory.
+Starflood renders timesteps and saves the frames to the disk, before they get rendered by `ffmpeg` as a video file. Since you may be rendering a lot of frames, it is desirable to render (`2g` means a `tmpfs` with a size of _2 GiB_):
 
 ```sh
-cd build
+sudo mount -t tmpfs -o size=2g tmpfs out
 ```
 
-Then, run `cmake` to configure the Starforge project.
+This will make running Starflood faster as it doesn't wait for images to be written to the disk. My condolences if your sysadmin does not let you mount `tmpfs`s. I plan on adding the ability to defer writing images or writing them in a separate thread, but for now this is not implemented.
 
-```sh
-cmake ..
-```
+### Building from Source
 
-This next part is platform-dependent, but by default on most major Linux distributions CMake will create a `Makefile` so you can build the project simply by running `make`.
+Starflood uses a custom shell script for compilation. While I would be flattered if you trust me, I encourage you to never run shell scripts without at least inspecting them first.
 
-```sh
-make
-```
-
-Congratulations! You (should) have just successfully compiled Starflood.
-
-### Running
-
-Starforge can be executed simply by running the compiled executable. Again, this may vary depending on the platform but on most major Linux distributions you can simply run `Starflood`.
-
-```sh
-./Starflood
-```
-
-If this does not work, your compiler may not have set the execute bit. This can be done by running `chmod +x ./Starflood`. If your sysadmin sucks, you may need to run this as a privilaged user (`sudo chmod +x ./Starflood`, `doas chmod +x ./Starflood`, or your system's equivalent). I think I have ran into this issue once, but it really shouldn't be an issue on most major Linux distributions.
-
-On Windows the compiled binary probably has `.exe` appended to it.
-
-```cmd
-Starflood.exe
-```
+In the root of the repository there is a shell script `test.sh`, which will automatically build Starflood, clean a previous render (if one exists), and render the resulting frames with `ffmpeg`. However, you can execute each of these steps individually if you so wish. `build.sh` builds `starflood` with `g++`, and `encode.sh` renders it as a `.mp4`.
