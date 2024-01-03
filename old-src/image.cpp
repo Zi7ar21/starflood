@@ -18,7 +18,7 @@ using namespace glm;
 */
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include <stb_image_write.h>
 
 float clamp(float a, float b, float c) {
 	return fminf(fmaxf(a, b), c);

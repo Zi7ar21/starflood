@@ -24,10 +24,8 @@ _deps
 
 # Renders
 out
-IMG_*.png
-IMG_*.hdr
-IMG_*.tga
 *.mp4
+*.tar
 *.webm
 
 # Uncatagorized

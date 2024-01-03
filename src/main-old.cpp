@@ -8,7 +8,7 @@
 #define STARFLOOD_ENABLE_PROFILING
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include <stb_image_write.h>
 
 typedef double real;
 

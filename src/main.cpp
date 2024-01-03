@@ -7,14 +7,14 @@
 #include <omp.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include <stb_image_write.h>
 
 #define FRAME_INTERVAL 1
 #define FRAMES 600
 #define TIMESTEP (2.0*0.0314159265358979323846264338327950288419716939937510582097494459)
 #define TREE_FIT
 #define JITTER_TREE
-#define THETA 1.0
+#define THETA 0.5
 
 // starflood version numbering (major.minor.patch)
 #ifndef STARFLOOD_VERSION_MAJOR
