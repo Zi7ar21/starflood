@@ -321,7 +321,7 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 	}
 
 	// Calculate Center of Mass
-	for(int i = 0; i < tree.size(); i++) {
+	for(size_t i = 0; i < tree.size(); i++) {
 		tree[i].x = (tree[i].m != (real)0) ? (tree[i].x / tree[i].m) : tree[i].x;
 		tree[i].y = (tree[i].m != (real)0) ? (tree[i].y / tree[i].m) : tree[i].y;
 	}
@@ -468,16 +468,16 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 
 int main(int argc, char** argv) {
 	if(argc > 1) {
-		if(strcmp(argv[1],"-h") || strcmp(argv[1],"--help")) {
+		if(!strcmp(argv[1],"-h") || !strcmp(argv[1],"--help")) {
 			printf(
 			"Usage: %s [OPTION]...\n"
 			"  -h, --help       display this help and exit\n"
 			//"      --version    output version information and exit\n"
-			);
+			, argv[0]);
 
 			return EXIT_SUCCESS;
 		} else {
-			printf("%s: unrecognized option '%s'\nTry '%s -h' or '%s --help' for more information.\n", argv[0], argv[1]);
+			printf("%s: unrecognized option '%s'\nTry '%s -h' or '%s --help' for more information.\n", argv[0], argv[1], argv[0], argv[0]);
 
 			return EXIT_FAILURE;
 		}
@@ -497,6 +497,10 @@ int main(int argc, char** argv) {
 	#endif
 
 	fflush(stdout);
+
+	int num_devices = omp_get_num_devices();
+
+	printf("OpenMP found %d devices.\n", num_devices);
 
 	// timestamps
 	double t0, t1;
@@ -574,15 +578,15 @@ int main(int argc, char** argv) {
 
 	// Initialize Simulation
 	{
-		for(int i = 0; i < (N * 1); i++) mas[i] = (real)(((long double)10)/((long double)N));
-		for(int i = 0; i < (N * 2); i++) acc[i] = (real)0;
-		for(int i = 0; i < (N * 2); i++) vel[i] = (real)0;
+		for(size_t i = 0; i < (N * 1); i++) mas[i] = (real)(((long double)10)/((long double)N));
+		for(size_t i = 0; i < (N * 2); i++) acc[i] = (real)0;
+		for(size_t i = 0; i < (N * 2); i++) vel[i] = (real)0;
 
 		// Generate Initial Conditions
 		uint32_t ns = (uint32_t)1u;
 
 		// randomly selected positions and velocities
-		for(int i = 0; i < N; i++) {
+		for(size_t i = 0; i < N; i++) {
 			ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
 
 			float z0 = urand(&ns);
@@ -598,7 +602,7 @@ int main(int argc, char** argv) {
 			pos[2*i+1] = 0.2*sqrt(z1)*sin(TAU*z0);
 		}
 
-		for(int i = 0; i < N; i++) {
+		for(size_t i = 0; i < N; i++) {
 			vel[2*i+0] = -.3*pos[2*i+1];
 			vel[2*i+1] =  .3*pos[2*i+0];
 		}
@@ -618,7 +622,7 @@ int main(int argc, char** argv) {
 	const int num_steps = FRAMES;
 
 	for(int step_num = 0; step_num < num_steps; step_num++) {
-		printf("\rRunning simulation, %d/%d (%.2f%) completed...", step_num, num_steps, 100.0*((double)step_num/(double)num_steps));
+		printf("\rRunning simulation, %d/%d (%.2f%%) completed...", step_num, num_steps, 100.0*((double)step_num/(double)num_steps));
 
 		fflush(stdout);
 
@@ -639,7 +643,7 @@ int main(int argc, char** argv) {
 				if((step_num % FRAME_INTERVAL) == 0) {
 					// VERY FAST
 					//#pragma omp simd
-					for(int i = 0; i < (4*w*h); i++) image[i] = (float)0;
+					for(size_t i = 0; i < (4*w*h); i++) image[i] = (float)0;
 				}
 
 				#ifdef STARFLOOD_ENABLE_PROFILING
@@ -655,7 +659,7 @@ int main(int argc, char** argv) {
 				#endif
 
 				if((step_num % FRAME_INTERVAL) == 0){
-					for(int i = 0; i < N; i++) {
+					for(size_t i = 0; i < N; i++) {
 						// vec2 uv = (fragCoord - 0.5 * resolution) / resolution.y
 						real t = 0.04*(real)step_num;
 						//t = 0.0;
@@ -669,7 +673,7 @@ int main(int argc, char** argv) {
 						(int)((real)h * uv[0] + (real)0.5 * (real)w),
 						(int)((real)h * uv[1] + (real)0.5 * (real)h)};
 
-						if((0 <= coord[0]) && (coord[0] < w) && (0 <= coord[1]) && (coord[1] < h)) {
+						if((0 <= coord[0]) && ((size_t)coord[0] < w) && (0 <= coord[1]) && ((size_t)coord[1] < h)) {
 							image[4*(w*coord[1]+coord[0])+0] += 0.05f;
 							image[4*(w*coord[1]+coord[0])+1] += 0.05f;
 							image[4*(w*coord[1]+coord[0])+2] += 0.05f;
@@ -677,7 +681,7 @@ int main(int argc, char** argv) {
 						}
 					}
 
-					for(int i = 0; i < (w * h); i++) {
+					for(size_t i = 0; i < (w * h); i++) {
 						image[4*i+3] = (real)1;
 					}
 				}
@@ -695,7 +699,7 @@ int main(int argc, char** argv) {
 
 				if((step_num % FRAME_INTERVAL) == 0) {
 					/*
-					for(int i = 0; i < tree.size(); i++) {
+					for(size_t i = 0; i < tree.size(); i++) {
 						real x_min = tree[i].x_min, y_min = tree[i].y_min, x_max = tree[i].x_max, y_max = tree[i].y_max;
 
 						if((x_max-x_min) < (real)0.1) continue;
@@ -725,7 +729,7 @@ int main(int argc, char** argv) {
 				drawLine(image, w, h, 0., 1., 0., 1., 15+0, 15-1, 15-4, 15-1); drawLine(image, w, h, 0., 1., 0., 1., 15+0, 15+1, 15-4, 15+1);
 				drawLine(image, w, h, 0., 0., 1., 1., 15-1, 15+0, 15-1, 15-4); drawLine(image, w, h, 0., 0., 1., 1., 15+1, 15+0, 15+1, 15-4);
 
-				for(int i = 0; i < (w * h); i++) {
+				for(size_t i = 0; i < (w * h); i++) {
 					image[4*i+0] /= (image[4*i+3] != (float)0) ? image[4*i+3] : (float)1;
 					image[4*i+1] /= (image[4*i+3] != (float)0) ? image[4*i+3] : (float)1;
 					image[4*i+2] /= (image[4*i+3] != (float)0) ? image[4*i+3] : (float)1;
@@ -764,7 +768,7 @@ int main(int argc, char** argv) {
 
 			// VERY FAST
 			//#pragma omp simd
-			for(int i = 0; i < (N * 2); i++) vel[i] += (real)0.5 * dt * acc[i];
+			for(size_t i = 0; i < (N * 2); i++) vel[i] += (real)0.5 * dt * acc[i];
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
@@ -780,7 +784,7 @@ int main(int argc, char** argv) {
 
 			// VERY FAST
 			//#pragma omp simd
-			for(int i = 0; i < (N * 2); i++) pos[i] += dt * vel[i];
+			for(size_t i = 0; i < (N * 2); i++) pos[i] += dt * vel[i];
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
@@ -790,7 +794,7 @@ int main(int argc, char** argv) {
 
 		// update acceleration
 		{
-			for(int i = 0; i < (N * 2); i++) acc[i] = (real)0;
+			for(size_t i = 0; i < (N * 2); i++) acc[i] = (real)0;
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t0 = omp_get_wtime();
@@ -817,7 +821,7 @@ int main(int argc, char** argv) {
 
 			// VERY FAST
 			//#pragma omp simd
-			for(int i = 0; i < (N * 2); i++) vel[i] += (real)0.5 * dt * acc[i];
+			for(size_t i = 0; i < (N * 2); i++) vel[i] += (real)0.5 * dt * acc[i];
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
@@ -850,7 +854,7 @@ int main(int argc, char** argv) {
 		*/
 	}
 
-	printf("\rRunning simulation, %d/%d (100.00%) completed... Done!\n\n", num_steps, num_steps);
+	printf("\rRunning simulation, %d/%d (100.00%%) completed... Done!\n\n", num_steps, num_steps);
 
 	fflush(stdout);
 
