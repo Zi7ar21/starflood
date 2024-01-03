@@ -31,3 +31,6 @@ out
 # Uncatagorized
 sph.py
 encode.sh
+
+# Submodules
+stb/
