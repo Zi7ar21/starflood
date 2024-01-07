@@ -34,3 +34,7 @@ encode.sh
 
 # Submodules
 stb/
+
+# Profiling
+nsight/
+#log.csv
