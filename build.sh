@@ -1,8 +1,16 @@
 #!/bin/bash
 
-# -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unused-variable
-#-mp=gpu
+STB_DIR="stb" # STB directory
 
-g++ -flto -fopenmp -march=native -g -Og -pedantic -std=c++17 -Wall -Wextra -Wshadow -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unused-variable -Isrc/ -Istb/ -o build/starflood.out src/rng.cpp src/barnes-hut.cpp src/main.cpp
-#nvc++ -fopenmp -march=native -g -O2 -pedantic -std=c++17 -Wall -Wextra -Wshadow  -Wno-unused-parameter -Wno-unused-variable -Isrc/ -Istb/ -o build/starflood.out src/rng.cpp -fopenmp src/barnes-hut.cpp -fopenmp src/main.cpp
-#/usr/bin/time -v g++ -fopenmp -march=x86-64 -O0 -pedantic -std=c++11 -Wall -Wextra -Wshadow -Wno-missing-field-initializers -Istb/ -o build/starflood.out src/main.cpp
+SOURCE_DIR="src" # Starflood source directory
+
+BUILD_DIR="build" # Build output directory
+
+CXX="g++" # Use GCC as the compiler
+#CXX="nvc++" # Use NVIDIA's compiler
+
+CXX_FLAGS="-flto -fopenmp -march=native -g -Og -pedantic -std=c++17 -Wall -Wextra -Wshadow -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unused-variable" # parameters for GCC
+#CXX_FLAGS="-fopenmp -march=native -mp=gpu -g -O2 -pedantic -std=c++17 -Wall -Wextra -Wshadow  -Wno-unused-parameter -Wno-unused-variable -Isrc/ -Istb/ -o build/starflood.out src/rng.cpp -fopenmp src/barnes-hut.cpp -fopenmp src/main.cpp" # parameters for NVIDIA's HPC SDK
+
+${CXX} ${CXX_FLAGS} -I${SOURCE_DIR}/ -I${STB_DIR}/ -o ${BUILD_DIR}/starflood.out ${SOURCE_DIR}/rng.cpp ${SOURCE_DIR}/barnes-hut.cpp ${SOURCE_DIR}/main.cpp
+#/usr/bin/time -v ${CXX} ${CXX_FLAGS} -I${SOURCE_DIR}/ -I${STB_DIR}/ -o ${BUILD_DIR}/starflood.out ${SOURCE_DIR}/rng.cpp ${SOURCE_DIR}/barnes-hut.cpp ${SOURCE_DIR}/main.cpp

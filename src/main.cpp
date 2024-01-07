@@ -12,6 +12,7 @@
 #include <rng.hpp>
 #include <barnes-hut.hpp>
 
+// Draw a line given pixel coordinates
 void drawLine(float* image, int w, int h, float r, float g, float b, float a, int x0, int y0, int x1, int y1) {
 	// Bresenham's Line Algorithm
 
@@ -48,6 +49,7 @@ void drawLine(float* image, int w, int h, float r, float g, float b, float a, in
 	}
 }
 
+// Draw a line given screen-space UV coordinates
 void drawLineUV(float* image, int w, int h, float r, float g, float b, float a, real x0, real y0, real x1, real y1) {
 	drawLine(image, w, h, r, g, b, a,
 	(int)((real)h * x0 + (real)0.5 * (real)w),
@@ -55,10 +57,6 @@ void drawLineUV(float* image, int w, int h, float r, float g, float b, float a, 
 	(int)((real)h * x1 + (real)0.5 * (real)w),
 	(int)((real)h * y1 + (real)0.5 * (real)h));
 }
-
-
-
-
 
 int main(int argc, char** argv) {
 	if(argc > 1) {
@@ -92,38 +90,41 @@ int main(int argc, char** argv) {
 
 	fflush(stdout);
 
-	int num_devices = omp_get_num_devices();
-
-	printf("OpenMP found %d devices.\n", num_devices);
-
-	/*
-	#pragma omp target teams distribute parallel
+	// OpenMP Offloading Stuff
 	{
-		printf("Hello, world!");
+		int num_devices = omp_get_num_devices();
 
-		//#pragma omp single
-		//{
-			//printf("Hello, world!");
+		printf("OpenMP found %d devices.\n", num_devices);
 
-			//double a = omp_get_wtime();
+		/*
+		#pragma omp target teams distribute parallel
+		{
+			printf("Hello, world!");
 
-			//while(omp_get_wtime() <= (a + 5.0)) {
-			//	continue;
+			//#pragma omp single
+			//{
+				//printf("Hello, world!");
+
+				//double a = omp_get_wtime();
+
+				//while(omp_get_wtime() <= (a + 5.0)) {
+				//	continue;
+				//}
 			//}
-		//}
+		}
+		*/
 	}
-	*/
 
-	// timestamps
+	// timer timestamps
 	double t0, t1;
 
 	// call omp_get_wtime() so it is cached or something idk
 	t0 = omp_get_wtime();
 	t1 = omp_get_wtime();
 
-	size_t w = 640; // image width
-	size_t h = 360; // image height
-	size_t N = 16384; // number of bodies in the simulation
+	size_t w = RENDER_W; // image width
+	size_t h = RENDER_H; // image height
+	size_t N = NUM_BODIES; // number of bodies in the simulation
 
 	if(N < 1) {
 		printf("Error: N was set to %zu, it must be greater than 0!\n", N);
