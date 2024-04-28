@@ -4,22 +4,23 @@ Starflood is an open-source SPH and N-body code(s) written in C/C++.
 
 ## Features
 
-- [Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
-- _O(N*log(N))_-complexity tree gravity solver using the [Barnes-Hut algorithm](https://en.wikipedia.org/wiki/Barnes%E2%80%93Hut_simulation) O(NlogN)
+- 3D [Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
+- 3D _O(N*log(N))_-complexity tree gravity solver using the [Barnes-Hut algorithm](https://en.wikipedia.org/wiki/Barnes%E2%80%93Hut_simulation)
 - Decently optimized low-level C/C++ code with high-level parallelism via [OpenMP](www.openmp.org)
-- Semi-simultaneous simulation and rendering
-- Performance profiling using `omp_get_wtime` for `double`-precision timing (a little less precision than a nanosecond after 6 months uptime)
+- Simultaneous simulation and rendering
+- Performance profiling using `omp_get_wtime` for `double`-precision timing (a little less granularity than a nanosecond after 6 months uptime)
 
 ### Planned
 
-- Combine all sources into one clean, configurable, 2D/3D SPH/N-body code
+- Combine all sources into one clean, configurable, SPH/N-body code
 - Optimize SPH neighbor search to be better than _O(N²)_
-- Multipole Barnes-Hut or Fast-Multipole Method
+- Multipole Barnes-Hut or [Fast-Multipole Method](https://en.wikipedia.org/wiki/Fast_multipole_method)
 - Ability to save/load simulation data and render it afterwards
 - Ability to load pre-generated initial conditions
-- GPU/device offloading ~~(development is currently made difficult due to [a lack of compiler packages with build support on Arch Linux](https://bugs.archlinux.org/task/63227), and NVIDIA's HPC SDK requires AVX so that's out of the question...)~~ I now have access to an Intel Core i7-3770K, which has AVX (something which NVIDIA's HPC SDK unfortunately **requires**)
+- Heterogenous Compute  Offloading ~~(development is currently made difficult due to [a lack of compiler packages with build support on Arch Linux](https://bugs.archlinux.org/task/63227), and NVIDIA's HPC SDK requires AVX so that's out of the question...)~~ I now have access to an Intel Core i7-3770K, which has [AVX](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) (something which [NVIDIA's HPC SDK](https://developer.nvidia.com/hpc-sdk) unfortunately [**requires**](https://forums.developer.nvidia.com/t/nvidia-hpc-sdk-version-22-1-mpi-question/202949))
 - Volumetrically rendering SPH particles for eye candy visualization
 - A more standardized build system such as [CMake](https://cmake.org/)
+- [Distributed computing](https://en.wikipedia.org/wiki/Distributed_computing) (Using [Open MPI](https://www.open-mpi.org/) or something)
 
 ## Credits
 

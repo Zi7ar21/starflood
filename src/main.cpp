@@ -145,9 +145,9 @@ int main(int argc, char** argv) {
 	stbi_flip_vertically_on_write(1);
 	size_t image_size = sizeof(float)*(4*w*h); // Image Buffer Size, RGBA32F
 	size_t mas_size = (N * 1) * sizeof(real); // mass buffer size
-	size_t pos_size = (N * 2) * sizeof(real); // position buffer size
-	size_t vel_size = (N * 2) * sizeof(real); // velocity buffer size
-	size_t acc_size = (N * 2) * sizeof(real); // acceleration buffer size
+	size_t pos_size = (N * 3) * sizeof(real); // position buffer size
+	size_t vel_size = (N * 3) * sizeof(real); // velocity buffer size
+	size_t acc_size = (N * 3) * sizeof(real); // acceleration buffer size
 	size_t sim_size = mas_size+pos_size+vel_size+acc_size; // simulation total buffer size
 	size_t ids_size = (N * 1) * sizeof(int);
 
@@ -191,9 +191,9 @@ int main(int argc, char** argv) {
 
 	// Initialize Simulation
 	{
-		for(size_t i = 0; i < (N * 1); i++) mas[i] = (real)(((long double)10)/((long double)N));
-		for(size_t i = 0; i < (N * 2); i++) acc[i] = (real)0;
-		for(size_t i = 0; i < (N * 2); i++) vel[i] = (real)0;
+		for(size_t i = 0; i < (N * 1); i++) mas[i] = (real)(((long double)1000)/((long double)N));
+		for(size_t i = 0; i < (N * 3); i++) acc[i] = (real)0;
+		for(size_t i = 0; i < (N * 3); i++) vel[i] = (real)0;
 
 		// randomly selected positions and velocities
 		for(size_t i = 0; i < N; i++) {
@@ -204,17 +204,32 @@ int main(int argc, char** argv) {
 			float z2 = urand(&ns);
 			float z3 = urand(&ns);
 
+			pos[3*i+0] = (real)2.*(real).1*(real)((double)z0-(double)0.5);
+			pos[3*i+1] = (real)2.*(real).1*(real)((double)z1-(double)0.5);
+			pos[3*i+2] = (real)2.*(real).1*(real)((double)z2-(double)0.5);
+
 			// normal distribution
-			//pos[2*i+0] = 0.1*sqrt(-2.0*log(z0))*cos(TAU*z2);
-			//pos[2*i+1] = 0.1*sqrt(-2.0*log(z0))*sin(TAU*z2);
-			//pos[2*i+2] = 0.1*sqrt(-2.0*log(z1))*cos(TAU*z3);
-			pos[2*i+0] = 0.2*sqrt(z1)*cos(TAU*z0);
-			pos[2*i+1] = 0.2*sqrt(z1)*sin(TAU*z0);
+			pos[3*i+0] = sqrt(-2.0*log(z0))*cos(TAU*z2);
+			pos[3*i+1] = sqrt(-2.0*log(z0))*sin(TAU*z2);
+			pos[3*i+2] = sqrt(-2.0*log(z1))*cos(TAU*z3);
+			//real radasdf = powf((pos[3*i+0]*pos[3*i+0])+(pos[3*i+2]*pos[3*i+2]),0.25f);
+			//pos[3*i+0] /= radasdf;
+			//pos[3*i+2] /= radasdf;
+			//pos[3*i+0] *= 0.200f;
+			//pos[3*i+1] *= 0.005f;
+			//pos[3*i+2] *= 0.200f;
+			//pos[2*i+0] = 0.2*sqrt(z1)*cos(TAU*z0);
+			//pos[2*i+1] = 0.2*sqrt(z1)*sin(TAU*z0);
+
 		}
 
 		for(size_t i = 0; i < N; i++) {
-			vel[2*i+0] = -.3*pos[2*i+1];
-			vel[2*i+1] =  .3*pos[2*i+0];
+			//vel[3*i+0] = -.2*pos[3*i+2];
+			//vel[3*i+1] =  0.*pos[3*i+1];
+			//vel[3*i+2] =  .2*pos[3*i+0];
+			vel[3*i+0] = 0;
+			vel[3*i+1] = 0;
+			vel[3*i+2] = 0;
 		}
 
 		// calculate initial gravitational accelerations
@@ -230,6 +245,26 @@ int main(int argc, char** argv) {
 	#endif
 
 	const int num_steps = FRAMES;
+
+	float particle_lut[7*7];
+
+	for(int i = 0; i <= 6; i++) {
+		for(int j = 0; j <= 6; j++) {
+			float ix = ((real)i-(real)3.)*(real)0.5;
+			float iy = ((real)j-(real)3.)*(real)0.5;
+			particle_lut[i*7+j] = expf(-((ix*ix)+(iy*iy)));
+		}
+	}
+
+	{
+		double sum = 0.;
+
+		for(int i = 0; i < 7*7; i++) sum += particle_lut[i];
+
+		sum = sum != 0. ? 1./sum : 1.;
+
+		for(int i = 0; i < 7*7; i++) particle_lut[i] *= (float)sum;
+	}
 
 	for(int step_num = 0; step_num < num_steps; step_num++) {
 		printf("\rRunning simulation, %d/%d (%.2f%%) completed...", step_num, num_steps, 100.0*((double)step_num/(double)num_steps));
@@ -269,12 +304,37 @@ int main(int argc, char** argv) {
 				#endif
 
 				if((step_num % FRAME_INTERVAL) == 0){
+					double rms_rad = 0.;
+
+					for(size_t i = 0; i < N; i++) {
+						double rad = (pos[3*i+0]*pos[3*i+0])+(pos[3*i+1]*pos[3*i+1])+(pos[3*i+2]*pos[3*i+2]);
+						rms_rad += rad;
+					}
+
+					rms_rad = 4.0*sqrt(rms_rad/(double)N);
+
 					for(size_t i = 0; i < N; i++) {
 						// vec2 uv = (fragCoord - 0.5 * resolution) / resolution.y
-						real t = 0.04*(real)step_num;
+						real t = 0.0166666666666666666666667*2.*(real)step_num;
 						//t = 0.0;
-						//real uv[2] = {r[2 * i + 0]*cos(t)+r[2 * i + 2]*sin(t), r[2 * i + 1]};
-						real uv[2] = {pos[2*i+0], pos[2*i+1]};
+						//real uv[2] = {pos[3 * i + 0]*cos(t)+pos[3 * i + 2]*sin(t), pos[3 * i + 1]};
+						real cam_pos[3] = {0.0f, 0.0f, -(real)rms_rad};
+						real obj_dif[3] = {
+						(pos[3*i+0]*cos(t)-pos[3*i+2]*sin(t))-cam_pos[0],
+						pos[3*i+1]-cam_pos[1],
+						(pos[3*i+0]*sin(t)+pos[3*i+2]*cos(t))-cam_pos[2]};
+						/*
+						real obj_dif[3] = {
+						pos[3*i+0]-cam_pos[0],
+						pos[3*i+1]-cam_pos[1],
+						pos[3*i+2]-cam_pos[2]};
+						*/
+						real obj_rad = (obj_dif[0]*obj_dif[0])+(obj_dif[1]*obj_dif[1])+(obj_dif[2]*obj_dif[2]);
+						if(obj_dif[2] < (real)0.0) continue;
+						real uv[2] = {
+						(obj_dif[0]*(real)1.)/((obj_dif[2])*((real)1.)),
+						(obj_dif[1]*(real)1.)/((obj_dif[2])*((real)1.))};
+						//real uv[2] = {pos[3*i+0], pos[3*i+1]};
 
 						uv[0] *= (real)1.0; // 0.05
 						uv[1] *= (real)1.0;
@@ -283,11 +343,29 @@ int main(int argc, char** argv) {
 						(int)((real)h * uv[0] + (real)0.5 * (real)w),
 						(int)((real)h * uv[1] + (real)0.5 * (real)h)};
 
+						/*
 						if((0 <= coord[0]) && ((size_t)coord[0] < w) && (0 <= coord[1]) && ((size_t)coord[1] < h)) {
 							image[4*(w*coord[1]+coord[0])+0] += 0.05f;
 							image[4*(w*coord[1]+coord[0])+1] += 0.05f;
 							image[4*(w*coord[1]+coord[0])+2] += 0.05f;
 							image[4*(w*coord[1]+coord[0])+3] += 0.0f;
+						}*/
+						for(int jy = -3; jy <= 3; jy++) {
+							for(int jx = -3; jx <= 3; jx++) {
+								int ix = jx+3;
+								int iy = jy+3;
+								int icoord[2] = {
+								coord[0]+jx,
+								coord[1]+jy};
+								float br = particle_lut[iy*7+ix];
+
+								if((0 <= icoord[0]) && ((size_t)icoord[0] < w) && (0 <= icoord[1]) && ((size_t)icoord[1] < h)) {
+									image[4*(w*icoord[1]+icoord[0])+0] += 0.1*br;
+									image[4*(w*icoord[1]+icoord[0])+1] += 0.1*br;
+									image[4*(w*icoord[1]+icoord[0])+2] += 0.1*br;
+									image[4*(w*icoord[1]+icoord[0])+3] += 0.0f;
+								}
+							}
 						}
 					}
 
@@ -360,7 +438,7 @@ int main(int argc, char** argv) {
 				if((step_num % FRAME_INTERVAL) == 0){
 					#ifndef STARFLOOD_DISABLE_IMAGE_WRITE
 					if(stbi_write_hdr(file_name, w, h, 4, image) == 0) {
-						printf("Error: stbi_write_hdr(%s, %zu, %zu, %d, %p) was not successful!\n", file_name, w, h, 4, image);
+						printf("Error: stbi_write_hdr(%s, %zu, %zu, %d, %p) was not successful!\n", file_name, w, h, 4, (void*)image);
 					}
 					#endif
 				}
@@ -380,7 +458,7 @@ int main(int argc, char** argv) {
 
 			// VERY FAST
 			//#pragma omp simd
-			for(size_t i = 0; i < (N * 2); i++) vel[i] += (real)0.5 * dt * acc[i];
+			for(size_t i = 0; i < (N * 3); i++) vel[i] += (real)0.5 * dt * acc[i];
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
@@ -396,7 +474,7 @@ int main(int argc, char** argv) {
 
 			// VERY FAST
 			//#pragma omp simd
-			for(size_t i = 0; i < (N * 2); i++) pos[i] += dt * vel[i];
+			for(size_t i = 0; i < (N * 3); i++) pos[i] += dt * vel[i];
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
@@ -406,7 +484,7 @@ int main(int argc, char** argv) {
 
 		// update acceleration
 		{
-			for(size_t i = 0; i < (N * 2); i++) acc[i] = (real)0;
+			for(size_t i = 0; i < (N * 3); i++) acc[i] = (real)0;
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t0 = omp_get_wtime();
@@ -434,7 +512,7 @@ int main(int argc, char** argv) {
 			// VERY FAST
 			//#pragma omp simd
 			//#pragma omp target teams distribute parallel for map(tofrom:vel[0:2*N]) map(tofrom:acc[0:2*N])
-			for(size_t i = 0; i < (N * 2); i++) vel[i] += (real)0.5 * dt * acc[i];
+			for(size_t i = 0; i < (N * 3); i++) vel[i] += (real)0.5 * dt * acc[i];
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();

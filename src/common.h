@@ -23,12 +23,12 @@ typedef float real;
 //   2048×2048:  48 MiB/frame
 //   4096×4096: 192 MiB/frame
 //   8192×8192: 768 MiB/frame
-#define RENDER_W 640
-#define RENDER_H 360
+#define RENDER_W 1920
+#define RENDER_H 1080
 
 // Default number of bodies in the simulation
 //
-#define NUM_BODIES 16384
+#define NUM_BODIES 65536
 
 // Default Barnes-Hut parameter "theta", higher: fewer interactions, less accurate, lower: more interactions, more accurate
 #define THETA 0.5
@@ -37,7 +37,7 @@ typedef float real;
 #define FRAME_INTERVAL 1
 
 // Default number of timesteps
-#define FRAMES 60
+#define FRAMES 600
 
 // Timestep parameter, sometimes called delta t
 //#define TIMESTEP 0.01
@@ -56,7 +56,8 @@ typedef float real;
 #define STARFLOOD_ENABLE_PROFILING
 
 // Disable writing images (for quick debugging)
-#define STARFLOOD_DISABLE_IMAGE_WRITE
+//#define STARFLOOD_DISABLE_IMAGE_WRITE
+
 // Starflood version numbering (major.minor.patch)
 #ifndef STARFLOOD_VERSION_MAJOR
 #define STARFLOOD_VERSION_MAJOR 0
