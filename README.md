@@ -25,9 +25,10 @@ Starflood is an open-source SPH and N-body code(s) written in C/C++.
 ## Credits
 
 - Philip Mocz's Python SPH Guide
-  -  <https://github.com/pmocz/sph-python>
+  - <https://github.com/pmocz/sph-python>
   - Used as a reference for the SPH algorithm, although the numpy syntax was a little hard to decipher...
-- stb https://github.com/nothings/stb
+- stb
+  - <https://github.com/nothings/stb>
   - `stb_image.h` and `stb_image_write.h` headers for image read/write
 - Jeffrey Heer's article _The Barnes-Hut Approximation: Efficient computation of N-body forces_
   - <https://jheer.github.io/barnes-hut/>
