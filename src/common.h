@@ -31,6 +31,7 @@ typedef float real;
 #define NUM_BODIES 65536
 
 // Default Barnes-Hut parameter "theta", higher: fewer interactions, less accurate, lower: more interactions, more accurate
+//#define THETA 0.5
 #define THETA 0.5
 
 // Starflood will render 1 out of every FRAME_INTERVAL frames by default
@@ -41,7 +42,7 @@ typedef float real;
 
 // Timestep parameter, sometimes called delta t
 //#define TIMESTEP 0.01
-#define TIMESTEP (2.0*0.0314159265358979323846264338327950288419716939937510582097494459)
+#define TIMESTEP (1.0*0.0314159265358979323846264338327950288419716939937510582097494459)
 
 // Fits the Barnes-Hut tree to the bodies
 #define TREE_FIT

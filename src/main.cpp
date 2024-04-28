@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
 
 	// Initialize Simulation
 	{
-		for(size_t i = 0; i < (N * 1); i++) mas[i] = (real)(((long double)1000)/((long double)N));
+		for(size_t i = 0; i < (N * 1); i++) mas[i] = (real)(((long double)100)/((long double)N));
 		for(size_t i = 0; i < (N * 3); i++) acc[i] = (real)0;
 		for(size_t i = 0; i < (N * 3); i++) vel[i] = (real)0;
 
@@ -204,14 +204,14 @@ int main(int argc, char** argv) {
 			float z2 = urand(&ns);
 			float z3 = urand(&ns);
 
-			pos[3*i+0] = (real)2.*(real).1*(real)((double)z0-(double)0.5);
-			pos[3*i+1] = (real)2.*(real).1*(real)((double)z1-(double)0.5);
-			pos[3*i+2] = (real)2.*(real).1*(real)((double)z2-(double)0.5);
+			//pos[3*i+0] = (real)2.*(real).1*(real)((double)z0-(double)0.5);
+			//pos[3*i+1] = (real)2.*(real).1*(real)((double)z1-(double)0.5);
+			//pos[3*i+2] = (real)2.*(real).1*(real)((double)z2-(double)0.5);
 
 			// normal distribution
-			pos[3*i+0] = sqrt(-2.0*log(z0))*cos(TAU*z2);
-			pos[3*i+1] = sqrt(-2.0*log(z0))*sin(TAU*z2);
-			pos[3*i+2] = sqrt(-2.0*log(z1))*cos(TAU*z3);
+			pos[3*i+0] = 1.000*sqrt(-2.0*log(z0))*cos(TAU*z2);
+			pos[3*i+1] = 0.100*sqrt(-2.0*log(z0))*sin(TAU*z2);
+			pos[3*i+2] = 1.000*sqrt(-2.0*log(z1))*cos(TAU*z3);
 			//real radasdf = powf((pos[3*i+0]*pos[3*i+0])+(pos[3*i+2]*pos[3*i+2]),0.25f);
 			//pos[3*i+0] /= radasdf;
 			//pos[3*i+2] /= radasdf;
@@ -224,12 +224,12 @@ int main(int argc, char** argv) {
 		}
 
 		for(size_t i = 0; i < N; i++) {
-			//vel[3*i+0] = -.2*pos[3*i+2];
-			//vel[3*i+1] =  0.*pos[3*i+1];
-			//vel[3*i+2] =  .2*pos[3*i+0];
-			vel[3*i+0] = 0;
-			vel[3*i+1] = 0;
-			vel[3*i+2] = 0;
+			vel[3*i+0] = -(real)0.2*pos[3*i+2];
+			vel[3*i+1] =  (real)0.2*pos[3*i+1];
+			vel[3*i+2] =  (real)0.2*pos[3*i+0];
+			//vel[3*i+0] = 0;
+			//vel[3*i+1] = 0;
+			//vel[3*i+2] = 0;
 		}
 
 		// calculate initial gravitational accelerations
@@ -250,8 +250,8 @@ int main(int argc, char** argv) {
 
 	for(int i = 0; i <= 6; i++) {
 		for(int j = 0; j <= 6; j++) {
-			float ix = ((real)i-(real)3.)*(real)0.5;
-			float iy = ((real)j-(real)3.)*(real)0.5;
+			float ix = ((real)i-(real)3.)*(real)1.0;
+			float iy = ((real)j-(real)3.)*(real)1.0;
 			particle_lut[i*7+j] = expf(-((ix*ix)+(iy*iy)));
 		}
 	}
@@ -315,14 +315,14 @@ int main(int argc, char** argv) {
 
 					for(size_t i = 0; i < N; i++) {
 						// vec2 uv = (fragCoord - 0.5 * resolution) / resolution.y
-						real t = 0.0166666666666666666666667*2.*(real)step_num;
+						real t = 0.0166666666666666666666667*1.*(real)step_num;
 						//t = 0.0;
 						//real uv[2] = {pos[3 * i + 0]*cos(t)+pos[3 * i + 2]*sin(t), pos[3 * i + 1]};
-						real cam_pos[3] = {0.0f, 0.0f, -(real)rms_rad};
+						real cam_pos[3] = {0.0f, 0.15f*(real)rms_rad, -0.9f*(real)rms_rad};
 						real obj_dif[3] = {
-						(pos[3*i+0]*cos(t)-pos[3*i+2]*sin(t))-cam_pos[0],
+						(pos[3*i+0]*cos(-t)-pos[3*i+2]*sin(-t))-cam_pos[0],
 						pos[3*i+1]-cam_pos[1],
-						(pos[3*i+0]*sin(t)+pos[3*i+2]*cos(t))-cam_pos[2]};
+						(pos[3*i+0]*sin(-t)+pos[3*i+2]*cos(-t))-cam_pos[2]};
 						/*
 						real obj_dif[3] = {
 						pos[3*i+0]-cam_pos[0],
@@ -466,6 +466,27 @@ int main(int argc, char** argv) {
 			#endif
 		}
 
+		// center
+		{
+			long double avg_pos[3] = {0.0l, 0.0l, 0.0l};
+
+			for(size_t i = 0; i < N; i++) {
+				avg_pos[0] += (long double)pos[3*i+0];
+				avg_pos[1] += (long double)pos[3*i+1];
+				avg_pos[2] += (long double)pos[3*i+2];
+			}
+
+			avg_pos[0] /= (long double)N;
+			avg_pos[1] /= (long double)N;
+			avg_pos[2] /= (long double)N;
+
+			for(size_t i = 0; i < N; i++) {
+				pos[3*i+0] -= avg_pos[0];
+				pos[3*i+1] -= avg_pos[1];
+				pos[3*i+2] -= avg_pos[2];
+			}
+		}
+
 		// drift
 		{
 			#ifdef STARFLOOD_ENABLE_PROFILING
@@ -518,6 +539,27 @@ int main(int argc, char** argv) {
 			t1 = omp_get_wtime();
 			fprintf(diagfile, "%.6f\n", 1000.0*(t1-t0));
 			#endif
+		}
+
+		// center
+		{
+			long double avg_pos[3] = {0.0l, 0.0l, 0.0l};
+
+			for(size_t i = 0; i < N; i++) {
+				avg_pos[0] += (long double)pos[3*i+0];
+				avg_pos[1] += (long double)pos[3*i+1];
+				avg_pos[2] += (long double)pos[3*i+2];
+			}
+
+			avg_pos[0] /= (long double)N;
+			avg_pos[1] /= (long double)N;
+			avg_pos[2] /= (long double)N;
+
+			for(size_t i = 0; i < N; i++) {
+				pos[3*i+0] -= avg_pos[0];
+				pos[3*i+1] -= avg_pos[1];
+				pos[3*i+2] -= avg_pos[2];
+			}
 		}
 
 		/*

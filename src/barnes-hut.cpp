@@ -94,7 +94,7 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 			|| tree[current_node].child6 != -1
 			|| tree[current_node].child7 != -1) {
 				// node is split
-				int q = (pos[3*i+0] > hx ? 1 : 0)+(pos[3*i+1] > hy ? 2 : 0)+(pos[3*i+2] > hy ? 4 : 0);
+				int q = (pos[3*i+0] > hx ? 1 : 0)+(pos[3*i+1] > hy ? 2 : 0)+(pos[3*i+2] > hz ? 4 : 0);
 
 				switch(q) {
 					case 0:
@@ -171,7 +171,7 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 
 				tree[current_node].id = -1;
 
-				int q = (pos[3*id+0] > hx ? 1 : 0)+(pos[3*id+1] > hy ? 2 : 0)+(pos[3*id+2] > hy ? 4 : 0);
+				int q = (pos[3*id+0] > hx ? 1 : 0)+(pos[3*id+1] > hy ? 2 : 0)+(pos[3*id+2] > hz ? 4 : 0);
 
 				switch(q) {
 					case 0:
