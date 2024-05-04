@@ -140,6 +140,7 @@ int main(int argc, char** argv) {
 	real* pos; // Position Buffer
 	real* vel; // Velocity Buffer
 	real* acc; // Acceleration Buffer
+	real* pen; // Potential Energy Buffer
 	int* ids; // id buffer, contains ids of node paticles are in
 
 	stbi_flip_vertically_on_write(1);
@@ -148,7 +149,8 @@ int main(int argc, char** argv) {
 	size_t pos_size = (N * 3) * sizeof(real); // position buffer size
 	size_t vel_size = (N * 3) * sizeof(real); // velocity buffer size
 	size_t acc_size = (N * 3) * sizeof(real); // acceleration buffer size
-	size_t sim_size = mas_size+pos_size+vel_size+acc_size; // simulation total buffer size
+	size_t pen_size = (N * 1) * sizeof(real); // potential energy buffer size
+	size_t sim_size = mas_size+pos_size+vel_size+acc_size+pen_size; // simulation total buffer size
 	size_t ids_size = (N * 1) * sizeof(int);
 
 	std::vector<Node> tree;
@@ -187,31 +189,47 @@ int main(int argc, char** argv) {
 		pos = mas+(mas_size/sizeof(real)); // position buffer
 		vel = pos+(pos_size/sizeof(real)); // velocity buffer
 		acc = vel+(vel_size/sizeof(real)); // acceleration buffer
+		pen = acc+(acc_size/sizeof(real)); // potential energy buffer
 	}
 
 	// Initialize Simulation
 	{
-		for(size_t i = 0; i < (N * 1); i++) mas[i] = (real)(((long double)100)/((long double)N));
-		for(size_t i = 0; i < (N * 3); i++) acc[i] = (real)0;
+		for(size_t i = 0; i < (N * 1); i++) mas[i] = (real)((100.0*(4.0/3.0)*PI)/(double)N);
+		for(size_t i = 0; i < (N * 3); i++) pos[i] = (real)0;
 		for(size_t i = 0; i < (N * 3); i++) vel[i] = (real)0;
+		for(size_t i = 0; i < (N * 3); i++) acc[i] = (real)0;
+		for(size_t i = 0; i < (N * 1); i++) pen[i] = (real)0;
 
 		// randomly selected positions and velocities
-		for(size_t i = 0; i < N; i++) {
-			uint32_t ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
+		//for(size_t i = 0; i < N; i++) {
+		//	uint32_t ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
 
-			float z0 = urand(&ns);
-			float z1 = urand(&ns);
-			float z2 = urand(&ns);
-			float z3 = urand(&ns);
+		//	float z0 = urand(&ns);
+		//	float z1 = urand(&ns);
+		//	float z2 = urand(&ns);
+		//	float z3 = urand(&ns);
 
-			//pos[3*i+0] = (real)2.*(real).1*(real)((double)z0-(double)0.5);
-			//pos[3*i+1] = (real)2.*(real).1*(real)((double)z1-(double)0.5);
-			//pos[3*i+2] = (real)2.*(real).1*(real)((double)z2-(double)0.5);
+			//pos[3*i+0] = (real)((double)z0-0.5);
+			//pos[3*i+1] = (real)((double)z1-0.5);
+			//pos[3*i+2] = (real)((double)z2-0.5);
+
+			/*
+			double ang_th = (double)TAU * (double)z0;
+			double ang_ph = acos(2.0 * (double)z1 - 1.0);
+			double ang_rh = cbrt((double)z2);
+			double sin_th = sin(ang_th);
+			double cos_th = cos(ang_th);
+			double sin_ph = sin(ang_ph);
+			double cos_ph = cos(ang_ph);
+			pos[3*i+0] = (real)(ang_rh*sin_ph*cos_th);
+			pos[3*i+1] = (real)(ang_rh*sin_ph*sin_th);
+			pos[3*i+2] = (real)(ang_rh*cos_ph);
+			*/
 
 			// normal distribution
-			pos[3*i+0] = 1.000*sqrt(-2.0*log(z0))*cos(TAU*z2);
-			pos[3*i+1] = 0.100*sqrt(-2.0*log(z0))*sin(TAU*z2);
-			pos[3*i+2] = 1.000*sqrt(-2.0*log(z1))*cos(TAU*z3);
+			//pos[3*i+0] = 1.000*sqrt(-2.0*log(z0))*cos(TAU*z2);
+			//pos[3*i+1] = 0.100*sqrt(-2.0*log(z0))*sin(TAU*z2);
+			//pos[3*i+2] = 1.000*sqrt(-2.0*log(z1))*cos(TAU*z3);
 			//real radasdf = powf((pos[3*i+0]*pos[3*i+0])+(pos[3*i+2]*pos[3*i+2]),0.25f);
 			//pos[3*i+0] /= radasdf;
 			//pos[3*i+2] /= radasdf;
@@ -221,19 +239,101 @@ int main(int argc, char** argv) {
 			//pos[2*i+0] = 0.2*sqrt(z1)*cos(TAU*z0);
 			//pos[2*i+1] = 0.2*sqrt(z1)*sin(TAU*z0);
 
+		//}
+
+		for(size_t i = 0; i < N/2; i++) {
+			uint32_t ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
+
+			float z0 = urand(&ns);
+			float z1 = urand(&ns);
+			float z2 = urand(&ns);
+			float z3 = urand(&ns);
+
+			double ang_th = (double)TAU * (double)z0;
+			double ang_ph = acos(2.0 * (double)z1 - 1.0);
+			double ang_rh = cbrt((double)z2);
+			double sin_th = sin(ang_th);
+			double cos_th = cos(ang_th);
+			double sin_ph = sin(ang_ph);
+			double cos_ph = cos(ang_ph);
+			pos[3*i+0] = (real)(ang_rh*sin_ph*cos_th)-(real)4.0;
+			pos[3*i+1] = (real)(ang_rh*sin_ph*sin_th);
+			pos[3*i+2] = (real)(ang_rh*cos_ph);
 		}
 
+		for(size_t i = N/2; i < N; i++) {
+			uint32_t ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
+
+			float z0 = urand(&ns);
+			float z1 = urand(&ns);
+			float z2 = urand(&ns);
+			float z3 = urand(&ns);
+
+			double ang_th = (double)TAU * (double)z0;
+			double ang_ph = acos(2.0 * (double)z1 - 1.0);
+			double ang_rh = cbrt((double)z2);
+			double sin_th = sin(ang_th);
+			double cos_th = cos(ang_th);
+			double sin_ph = sin(ang_ph);
+			double cos_ph = cos(ang_ph);
+			pos[3*i+0] = (real)(ang_rh*sin_ph*cos_th)+(real)4.0;
+			pos[3*i+1] = (real)(ang_rh*sin_ph*sin_th);
+			pos[3*i+2] = (real)(ang_rh*cos_ph);
+		}
+
+
+		/*
 		for(size_t i = 0; i < N; i++) {
-			vel[3*i+0] = -(real)0.2*pos[3*i+2];
-			vel[3*i+1] =  (real)0.2*pos[3*i+1];
-			vel[3*i+2] =  (real)0.2*pos[3*i+0];
-			//vel[3*i+0] = 0;
-			//vel[3*i+1] = 0;
-			//vel[3*i+2] = 0;
+			vel[3*i+0] = (real)(-0.2*(double)pos[3*i+2]);
+			vel[3*i+1] = (real)( 0.2*(double)pos[3*i+1]);
+			vel[3*i+2] = (real)( 0.2*(double)pos[3*i+0]);
+			//vel[3*i+0] = (real)0;
+			//vel[3*i+1] = (real)0;
+			//vel[3*i+2] = (real)0;
+		}
+		*/
+		for(size_t i = 0; i < N/2; i++) {
+			//vel[3*i+0] = (real)(-0.2*(double)pos[3*i+2]);
+			//vel[3*i+1] = (real)( 0.2*(double)pos[3*i+1]);
+			//vel[3*i+2] = (real)( 0.2*(double)pos[3*i+0]);
+			vel[3*i+0] = (real)0.0;
+			vel[3*i+1] = (real)0.0;
+			//vel[3*i+2] = (real)0;
+			vel[3*i+2] = (real)0;
+		}
+		for(size_t i = N/2; i < N; i++) {
+			//vel[3*i+0] = (real)(-0.2*(double)pos[3*i+2]);
+			//vel[3*i+1] = (real)( 0.2*(double)pos[3*i+1]);
+			//vel[3*i+2] = (real)( 0.2*(double)pos[3*i+0]);
+			vel[3*i+0] = (real)-0.0;
+			vel[3*i+1] = (real)0.0;
+			//vel[3*i+2] = (real)0;
+			vel[3*i+2] = (real)0;
 		}
 
 		// calculate initial gravitational accelerations
-		BarnesHut(tree, image, w, h, ids, mas, pos, acc, N, 0);
+		BarnesHut(tree, image, w, h, ids, mas, pos, acc, pen, N, 0);
+	}
+
+	// center
+	{
+		long double avg_pos[3] = {0.0l, 0.0l, 0.0l};
+
+		for(size_t i = 0; i < N; i++) {
+			avg_pos[0] += (long double)pos[3*i+0];
+			avg_pos[1] += (long double)pos[3*i+1];
+			avg_pos[2] += (long double)pos[3*i+2];
+		}
+
+		avg_pos[0] /= (long double)N;
+		avg_pos[1] /= (long double)N;
+		avg_pos[2] /= (long double)N;
+
+		for(size_t i = 0; i < N; i++) {
+			pos[3*i+0] -= avg_pos[0];
+			pos[3*i+1] -= avg_pos[1];
+			pos[3*i+2] -= avg_pos[2];
+		}
 	}
 
 	#ifdef STARFLOOD_ENABLE_PROFILING
@@ -244,14 +344,22 @@ int main(int argc, char** argv) {
 	fflush(diagfile);
 	#endif
 
+	#ifdef STARFLOOD_ENABLE_METRICS
+	FILE* metricfile = fopen("./metrics.csv", "w");
+
+	fprintf(metricfile, "\"n\",\"kinetic energy\",\"potential energy\"\n");
+
+	fflush(metricfile);
+	#endif
+
 	const int num_steps = FRAMES;
 
 	float particle_lut[7*7];
 
 	for(int i = 0; i <= 6; i++) {
 		for(int j = 0; j <= 6; j++) {
-			float ix = ((real)i-(real)3.)*(real)1.0;
-			float iy = ((real)j-(real)3.)*(real)1.0;
+			float ix = ((real)i-(real)3.)*(real)0.5;
+			float iy = ((real)j-(real)3.)*(real)0.5;
 			particle_lut[i*7+j] = expf(-((ix*ix)+(iy*iy)));
 		}
 	}
@@ -274,6 +382,49 @@ int main(int argc, char** argv) {
 		#ifdef STARFLOOD_ENABLE_PROFILING
 		fprintf(diagfile, "%d,", step_num);
 		#endif
+
+		#ifdef STARFLOOD_ENABLE_METRICS
+		{
+			double ke = 0;
+			double pe = 0;
+
+			// K = (1/2)*m*v^2
+			for(size_t i = 0; i < N; i++) ke += 0.5*(double)mas[i]*(double)((vel[3*i+0]*vel[3*i+0])+(vel[3*i+1]*vel[3*i+1])+(vel[3*i+2]*vel[3*i+2]));
+
+			for(size_t i = 0; i < N; i++) pe += pen[i];
+
+			fprintf(metricfile, "%d,%f,%f\n", step_num, ke, pe);
+		}
+		#endif
+
+		for(size_t i = 0; i < N; i++) {
+			if((pos[3*i+0]*pos[3*i+0])+(pos[3*i+1]*pos[3*i+1])+(pos[3*i+2]*pos[3*i+2]) > 64.0) {
+				uint32_t ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
+
+				urand(&ns);
+
+				ns += step_num;
+
+				ns += step_num; float z0 = urand(&ns);
+				
+				ns += step_num; float z1 = urand(&ns);
+				
+				ns += step_num; float z2 = urand(&ns);
+				
+				ns += step_num; float z3 = urand(&ns);
+
+				double ang_th = (double)TAU * (double)z0;
+				double ang_ph = acos(2.0 * (double)z1 - 1.0);
+				double ang_rh = cbrt((double)z2);
+				double sin_th = sin(ang_th);
+				double cos_th = cos(ang_th);
+				double sin_ph = sin(ang_ph);
+				double cos_ph = cos(ang_ph);
+				pos[3*i+0] = (real)(8.0*(ang_rh*sin_ph*cos_th));
+				pos[3*i+1] = (real)(8.0*(ang_rh*sin_ph*sin_th));
+				pos[3*i+2] = (real)(8.0*(ang_rh*cos_ph));
+			}
+		}
 
 		// render and write the image
 		{
@@ -312,13 +463,15 @@ int main(int argc, char** argv) {
 					}
 
 					rms_rad = 4.0*sqrt(rms_rad/(double)N);
+					rms_rad = 16.0;
 
 					for(size_t i = 0; i < N; i++) {
 						// vec2 uv = (fragCoord - 0.5 * resolution) / resolution.y
-						real t = 0.0166666666666666666666667*1.*(real)step_num;
+						real t = 0.0166666666666666666666667*.2*(real)step_num;
 						//t = 0.0;
 						//real uv[2] = {pos[3 * i + 0]*cos(t)+pos[3 * i + 2]*sin(t), pos[3 * i + 1]};
-						real cam_pos[3] = {0.0f, 0.15f*(real)rms_rad, -0.9f*(real)rms_rad};
+						//real cam_pos[3] = {0.0f, 0.15f*(real)rms_rad, -0.9f*(real)rms_rad};
+						real cam_pos[3] = {(real)0, (real)0, (real)(-1.0*(double)rms_rad)};
 						real obj_dif[3] = {
 						(pos[3*i+0]*cos(-t)-pos[3*i+2]*sin(-t))-cam_pos[0],
 						pos[3*i+1]-cam_pos[1],
@@ -349,7 +502,8 @@ int main(int argc, char** argv) {
 							image[4*(w*coord[1]+coord[0])+1] += 0.05f;
 							image[4*(w*coord[1]+coord[0])+2] += 0.05f;
 							image[4*(w*coord[1]+coord[0])+3] += 0.0f;
-						}*/
+						}
+						*/
 						for(int jy = -3; jy <= 3; jy++) {
 							for(int jx = -3; jx <= 3; jx++) {
 								int ix = jx+3;
@@ -360,9 +514,9 @@ int main(int argc, char** argv) {
 								float br = particle_lut[iy*7+ix];
 
 								if((0 <= icoord[0]) && ((size_t)icoord[0] < w) && (0 <= icoord[1]) && ((size_t)icoord[1] < h)) {
-									image[4*(w*icoord[1]+icoord[0])+0] += 0.1*br;
-									image[4*(w*icoord[1]+icoord[0])+1] += 0.1*br;
-									image[4*(w*icoord[1]+icoord[0])+2] += 0.1*br;
+									image[4*(w*icoord[1]+icoord[0])+0] += 0.5*br;
+									image[4*(w*icoord[1]+icoord[0])+1] += 0.5*br;
+									image[4*(w*icoord[1]+icoord[0])+2] += 0.5*br;
 									image[4*(w*icoord[1]+icoord[0])+3] += 0.0f;
 								}
 							}
@@ -466,6 +620,7 @@ int main(int argc, char** argv) {
 			#endif
 		}
 
+		#ifdef KEEP_CENTERED
 		// center
 		{
 			long double avg_pos[3] = {0.0l, 0.0l, 0.0l};
@@ -486,6 +641,11 @@ int main(int argc, char** argv) {
 				pos[3*i+2] -= avg_pos[2];
 			}
 		}
+		#endif
+
+		#ifdef HUBBLE_CONST
+		for(size_t i = 0; i < (N * 3); i++) pos[i] *= (real)(1.0+0.5*(double)dt*HUBBLE_CONST);
+		#endif
 
 		// drift
 		{
@@ -511,7 +671,7 @@ int main(int argc, char** argv) {
 			t0 = omp_get_wtime();
 			#endif
 
-			BarnesHut(tree, image, w, h, ids, mas, pos, acc, N, step_num);
+			BarnesHut(tree, image, w, h, ids, mas, pos, acc, pen, N, step_num);
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
@@ -541,19 +701,20 @@ int main(int argc, char** argv) {
 			#endif
 		}
 
+		#ifdef KEEP_CENTERED
 		// center
 		{
-			long double avg_pos[3] = {0.0l, 0.0l, 0.0l};
+			double avg_pos[3] = {0, 0, 0};
 
 			for(size_t i = 0; i < N; i++) {
-				avg_pos[0] += (long double)pos[3*i+0];
-				avg_pos[1] += (long double)pos[3*i+1];
-				avg_pos[2] += (long double)pos[3*i+2];
+				avg_pos[0] += (double)pos[3*i+0];
+				avg_pos[1] += (double)pos[3*i+1];
+				avg_pos[2] += (double)pos[3*i+2];
 			}
 
-			avg_pos[0] /= (long double)N;
-			avg_pos[1] /= (long double)N;
-			avg_pos[2] /= (long double)N;
+			avg_pos[0] /= (double)N;
+			avg_pos[1] /= (double)N;
+			avg_pos[2] /= (double)N;
 
 			for(size_t i = 0; i < N; i++) {
 				pos[3*i+0] -= avg_pos[0];
@@ -561,6 +722,11 @@ int main(int argc, char** argv) {
 				pos[3*i+2] -= avg_pos[2];
 			}
 		}
+		#endif
+
+		#ifdef HUBBLE_CONST
+		for(size_t i = 0; i < (N * 3); i++) pos[i] *= (real)(1.0+0.5*(double)dt*HUBBLE_CONST);
+		#endif
 
 		/*
 		for(int i = 0; i < N; i++) {
@@ -593,6 +759,10 @@ int main(int argc, char** argv) {
 
 	#ifdef STARFLOOD_ENABLE_PROFILING
 	fclose(diagfile);
+	#endif
+
+	#ifdef STARFLOOD_ENABLE_METRICS
+	fclose(metricfile);
 	#endif
 
 	free(image);

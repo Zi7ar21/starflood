@@ -4,7 +4,7 @@
 #include <rng.hpp>
 //#include <omp.h>
 
-void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, real* mas, real* pos, real* acc, int N, int step_num) {
+void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, real* mas, real* pos, real* acc, real* pen, int N, int step_num) {
 	for(int i = 0; i < N; i++) ids[i] = -1;
 
 	tree.clear();
@@ -264,8 +264,10 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 		tree = ntree;
 	}
 
+	for(int i = 0; i < N; i++) pen[i] = 0;
+
 	// Compute Forces
-	#pragma omp parallel for schedule(dynamic,256)
+	#pragma omp parallel for schedule(dynamic,1024)
 	for(int i = 0; i < N; i++) {
 		// don't continue if particle is outside of bounds
 		if((tree[0].x_max < pos[3*i+0]) || (pos[3*i+0] < tree[0].x_min)
@@ -368,9 +370,11 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 			}
 			#endif
 
+			// F = G*m_i*m_j/r^2
 			acc[3*i+0] += ((dx/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(dz*dz)+(real)0.0001);
 			acc[3*i+1] += ((dy/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(dz*dz)+(real)0.0001);
 			acc[3*i+2] += ((dz/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(dz*dz)+(real)0.0001);
+			pen[  i  ] += (mas[i]*dm)/sqrt((dx*dx)+(dy*dy)+(dz*dz)+0.0001); // U = G*m_i*m_j/r_ij
 
 			//int quad = (p.x > hx ? 1 : 0) + (p.y > hy ? 2 : 0);
 

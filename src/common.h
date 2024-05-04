@@ -3,8 +3,8 @@
 #include <cstdint>
 
 // Real number type (currently does not toggle precision of special math functions, e.g. sqrtf!)
-typedef float real;
-//typedef double real;
+//typedef float real;
+typedef double real;
 
 // Default render width and height (pixels)
 //
@@ -23,12 +23,12 @@ typedef float real;
 //   2048×2048:  48 MiB/frame
 //   4096×4096: 192 MiB/frame
 //   8192×8192: 768 MiB/frame
-#define RENDER_W 1920
-#define RENDER_H 1080
+#define RENDER_W 960
+#define RENDER_H 540
 
 // Default number of bodies in the simulation
 //
-#define NUM_BODIES 65536
+#define NUM_BODIES 1024
 
 // Default Barnes-Hut parameter "theta", higher: fewer interactions, less accurate, lower: more interactions, more accurate
 //#define THETA 0.5
@@ -42,7 +42,7 @@ typedef float real;
 
 // Timestep parameter, sometimes called delta t
 //#define TIMESTEP 0.01
-#define TIMESTEP (1.0*0.0314159265358979323846264338327950288419716939937510582097494459)
+#define TIMESTEP (0.1*0.0314159265358979323846264338327950288419716939937510582097494459)
 
 // Fits the Barnes-Hut tree to the bodies
 #define TREE_FIT
@@ -55,6 +55,13 @@ typedef float real;
 
 // Enable self-profiling by default
 #define STARFLOOD_ENABLE_PROFILING
+
+#define STARFLOOD_ENABLE_METRICS
+
+// Calculate potential energy using the O(N^2) particle-particle method (not barnes-hut)
+#define METRICS_EXACT_ENERGY
+
+//#define KEEP_CENTERED
 
 // Disable writing images (for quick debugging)
 //#define STARFLOOD_DISABLE_IMAGE_WRITE
@@ -76,3 +83,5 @@ const real INV_PI = 0.3183098861837906715377675267450287240689192914809128974953
 
 const real     TAU = 6.2831853071795864769252867665590057683943387987502116419498891846;
 const real INV_TAU = 0.1591549430918953357688837633725143620344596457404564487476673441;
+
+//#define HUBBLE_CONST 2.750

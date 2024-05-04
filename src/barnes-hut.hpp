@@ -48,4 +48,4 @@ class Node {
 		x_min(_x_min), y_min(_y_min), z_min(_z_min), x_max(_x_max), y_max(_y_max), z_max(_z_max), m(0), x(0), y(0), z(0) {}
 };
 
-void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, real* mas, real* pos, real* acc, int N, int step_num);
+void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, real* mas, real* pos, real* acc, real* pen, int N, int step_num);
