@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
 
 		t1 = omp_get_wtime();
 
-		//fprintf(logfile, "%.6f,", 1000.0*(t1-t0));
+		//fprintf(logfile, "%.9f,", 1000.0*(t1-t0));
 	}
 
 	fftw_free(mass_i);
@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
 
 		t1 = omp_get_wtime();
 
-		//fprintf(logfile, "%.6f,", 1000.0*(t1-t0));
+		//fprintf(logfile, "%.9f,", 1000.0*(t1-t0));
 	}
 	*/
 

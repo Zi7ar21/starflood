@@ -384,7 +384,7 @@ int main(int argc, char** argv) {
 			
 				#ifdef STARFLOOD_ENABLE_PROFILING
 				t1 = omp_get_wtime();
-				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+				fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 				#endif
 			}
 
@@ -416,7 +416,7 @@ int main(int argc, char** argv) {
 
 				#ifdef STARFLOOD_ENABLE_PROFILING
 				t1 = omp_get_wtime();
-				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+				fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 				#endif
 			}
 
@@ -435,7 +435,7 @@ int main(int argc, char** argv) {
 
 				#ifdef STARFLOOD_ENABLE_PROFILING
 				t1 = omp_get_wtime();
-				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+				fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 				#endif
 			}
 		}
@@ -452,7 +452,7 @@ int main(int argc, char** argv) {
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+			fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 			#endif
 		}
 
@@ -468,7 +468,7 @@ int main(int argc, char** argv) {
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+			fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 			#endif
 		}
 
@@ -484,7 +484,7 @@ int main(int argc, char** argv) {
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+			fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 			#endif
 		}
 		//for(int i = 0; i < N; i++) {
@@ -504,7 +504,7 @@ int main(int argc, char** argv) {
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f\n", 1000.0*(t1-t0));
+			fprintf(diagfile, "%.9f\n", 1000.0*(t1-t0));
 			#endif
 		}
 	}

@@ -11,54 +11,11 @@
 #include <common.h>
 #include <rng.hpp>
 #include <barnes-hut.hpp>
-
-// Draw a line given pixel coordinates
-void drawLine(float* image, int w, int h, float r, float g, float b, float a, int x0, int y0, int x1, int y1) {
-	// Bresenham's Line Algorithm
-
-	int dx = abs(x1 - x0);
-	int sx = x0 < x1 ? 1 : -1;
-	int dy = -abs(y1 - y0);
-	int sy = y0 < y1 ? 1 : -1;
-	int error = dx + dy;
-
-	while(true) {
-		if((0 <= x0) && (x0 < w) && (0 <= y0) && (y0 < h)) {
-			int index = (w*y0)+x0;
-			image[4*index+0] += r;
-			image[4*index+1] += g;
-			image[4*index+2] += b;
-			image[4*index+3] += a;
-		}
-
-		if(x0 == x1 && y0 == y1) break;
-
-		int e2 = 2 * error;
-
-		if(e2 >= dy) {
-			if(x0 == x1) break;
-			error = error + dy;
-			x0 = x0 + sx;
-		}
-
-		if(e2 <= dx) {
-			if(y0 == y1) break;
-			error = error + dx;
-			y0 = y0 + sy;
-		}
-	}
-}
-
-// Draw a line given screen-space UV coordinates
-void drawLineUV(float* image, int w, int h, float r, float g, float b, float a, real x0, real y0, real x1, real y1) {
-	drawLine(image, w, h, r, g, b, a,
-	(int)((real)h * x0 + (real)0.5 * (real)w),
-	(int)((real)h * y0 + (real)0.5 * (real)h),
-	(int)((real)h * x1 + (real)0.5 * (real)w),
-	(int)((real)h * y1 + (real)0.5 * (real)h));
-}
+#include <graphics.hpp>
 
 int main(int argc, char** argv) {
+	double start_time = omp_get_wtime();
+
 	if(argc > 1) {
 		if(!strcmp(argv[1],"-h") || !strcmp(argv[1],"--help")) {
 			printf(
@@ -75,7 +32,8 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	printf("Starflood %d.%d.%d\n", STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH); // print version information
+
+	printf("[%.09f] Starflood %d.%d.%d\n", 0.0, STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH); // print version information
 
 	#ifndef STARFLOOD_NO_SPLASH
 	printf(
@@ -92,9 +50,19 @@ int main(int argc, char** argv) {
 
 	// OpenMP Offloading Stuff
 	{
+		printf("[%.09f] Setting up Starflood.\n", omp_get_wtime()-start_time);
+
+		printf("[%.09f] OpenMP found %d processor(s).\n", omp_get_wtime()-start_time, omp_get_num_procs());
+
 		int num_devices = omp_get_num_devices();
 
-		printf("OpenMP found %d devices.\n", num_devices);
+		printf("[%.09f] OpenMP found %d device(s) (for offloading).\n", omp_get_wtime()-start_time, num_devices);
+
+		printf("[%.09f] NOTE: Starflood does not support OpenMP offloading quite yet. If you would like to see offloading in the future, check the Starflood repo for ways you can contribute!\n", omp_get_wtime()-start_time);
+
+		printf("[%.09f] Starflood will perform calculations AND rendering using %d OpenMP thread(s).\n", omp_get_wtime()-start_time, omp_get_max_threads());
+
+		fflush(stdout);
 
 		/*
 		#pragma omp target teams distribute parallel
@@ -115,7 +83,7 @@ int main(int argc, char** argv) {
 		*/
 	}
 
-	// timer timestamps
+	// profiling timestamps
 	double t0, t1;
 
 	// call omp_get_wtime() so it is cached or something idk
@@ -127,7 +95,7 @@ int main(int argc, char** argv) {
 	size_t N = NUM_BODIES; // number of bodies in the simulation
 
 	if(N < 1) {
-		printf("Error: N was set to %zu, it must be greater than 0!\n", N);
+		printf("[%.09f] Error: N was set to %zu, it must be greater than 0! Starflood will abort now.\n", omp_get_wtime()-start_time, N);
 
 		return EXIT_FAILURE;
 	}
@@ -157,40 +125,91 @@ int main(int argc, char** argv) {
 
 	// Allocate Memory
 	{
+		printf("[%.09f] Memory allocation starting.\n", omp_get_wtime()-start_time);
+
+		printf("[%.09f] Trying to allocate %zu bytes (%.03f MiB) for rendering.\n", omp_get_wtime()-start_time, image_size, 0.00000095367431640625*(double)image_size);
+
+		fflush(stdout);
+
+		t0 = omp_get_wtime();
+
 		image = (float*)malloc(image_size); // Allocate image buffer
 
+		t1 = omp_get_wtime();
+
 		if(image == NULL) {
-			printf("Error: malloc() returned a null pointer!\n");
+			perror("Error");
+
+			printf("[%.09f] Error: malloc() returned a NULL pointer!\n", omp_get_wtime()-start_time);
+
+			printf("[%.09f] %zu bytes (%.03f MiB) were allocated (took %.9f seconds).\n", omp_get_wtime()-start_time, (size_t)0, 0.00000095367431640625*(double)0, t1 - t0);
 
 			fflush(stdout);
 
-			perror("Error");
-
 			return EXIT_FAILURE;
 		}
+
+		printf("[%.09f] %zu bytes (%.03f MiB) were allocated (took %.9f seconds).\n", omp_get_wtime()-start_time, image_size, 0.00000095367431640625*(double)image_size, t1 - t0);
+
+		printf("[%.09f] Trying to allocate %zu bytes (%.03f MiB) for the simulation.\n", omp_get_wtime()-start_time, sim_size, 0.00000095367431640625*(double)sim_size);
+
+		fflush(stdout);
+
+		t0 = omp_get_wtime();
 
 		sim = (real*)malloc(sim_size); // Allocate simulation memory
 
+		t1 = omp_get_wtime();
+
 		if(sim == NULL) {
-			printf("Error: malloc() returned a null pointer!\n");
-
-			fflush(stdout);
-
 			perror("Error");
 
-			free(image);
+			printf("[%.09f] Error: malloc() returned a NULL pointer!\n", omp_get_wtime()-start_time);
+
+			printf("[%.09f] %zu bytes (%.03f MiB) were allocated (took %.9f seconds).\n", omp_get_wtime()-start_time, (size_t)0, 0.00000095367431640625*(double)0, t1 - t0);
+
+			fflush(stdout);
 
 			return EXIT_FAILURE;
 		}
 
+		printf("[%.09f] %zu bytes (%.03f MiB) were allocated (took %.9f seconds).\n", omp_get_wtime()-start_time, sim_size, 0.00000095367431640625*(double)sim_size, t1 - t0);
+
+		printf("[%.09f] Trying to allocate an initial %zu bytes (%.03f MiB) for the Barnes-Hut tree.\n", omp_get_wtime()-start_time, ids_size, 0.00000095367431640625*(double)ids_size);
+
+		fflush(stdout);
+
+		t0 = omp_get_wtime();
+
 		ids = (int*)malloc(ids_size);
 
+		t1 = omp_get_wtime();
+
+		if(ids == NULL) {
+			perror("Error");
+
+			printf("[%.09f] Error: malloc() returned a NULL pointer!\n", omp_get_wtime()-start_time);
+
+			printf("[%.09f] %zu bytes (%.03f MiB) were allocated (took %.9f seconds).\n", omp_get_wtime()-start_time, (size_t)0, 0.00000095367431640625*(double)0, t1 - t0);
+
+			fflush(stdout);
+
+			return EXIT_FAILURE;
+		}
+
+		printf("[%.09f] %zu bytes (%.03f MiB) were allocated (took %.9f seconds).\n", omp_get_wtime()-start_time, ids_size, 0.00000095367431640625*(double)ids_size, t1 - t0);
+
+		fflush(stdout);
+
+		// partition allocated memory for the simulation
 		mas = sim; // mass buffer
 		pos = mas+(mas_size/sizeof(real)); // position buffer
 		vel = pos+(pos_size/sizeof(real)); // velocity buffer
 		acc = vel+(vel_size/sizeof(real)); // acceleration buffer
 		pen = acc+(acc_size/sizeof(real)); // potential energy buffer
 	}
+
+	printf("[%.09f] Setting up initial conditions.\n", omp_get_wtime()-start_time);
 
 	// Initialize Simulation
 	{
@@ -201,35 +220,34 @@ int main(int argc, char** argv) {
 		for(size_t i = 0; i < (N * 1); i++) pen[i] = (real)0;
 
 		// randomly selected positions and velocities
-		//for(size_t i = 0; i < N; i++) {
-		//	uint32_t ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
+		for(size_t i = 0; i < N; i++) {
+			uint32_t ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
 
-		//	float z0 = urand(&ns);
-		//	float z1 = urand(&ns);
-		//	float z2 = urand(&ns);
-		//	float z3 = urand(&ns);
+			float z0 = urand(&ns);
+			float z1 = urand(&ns);
+			float z2 = urand(&ns);
+			float z3 = urand(&ns);
 
 			//pos[3*i+0] = (real)((double)z0-0.5);
 			//pos[3*i+1] = (real)((double)z1-0.5);
 			//pos[3*i+2] = (real)((double)z2-0.5);
 
-			/*
-			double ang_th = (double)TAU * (double)z0;
-			double ang_ph = acos(2.0 * (double)z1 - 1.0);
-			double ang_rh = cbrt((double)z2);
-			double sin_th = sin(ang_th);
-			double cos_th = cos(ang_th);
-			double sin_ph = sin(ang_ph);
-			double cos_ph = cos(ang_ph);
-			pos[3*i+0] = (real)(ang_rh*sin_ph*cos_th);
-			pos[3*i+1] = (real)(ang_rh*sin_ph*sin_th);
-			pos[3*i+2] = (real)(ang_rh*cos_ph);
-			*/
+			//double ang_th = (double)TAU * (double)z0;
+			//double ang_ph = acos(2.0 * (double)z1 - 1.0);
+			//double ang_rh = cbrt((double)z2);
+			//double sin_th = sin(ang_th);
+			//double cos_th = cos(ang_th);
+			//double sin_ph = sin(ang_ph);
+			//double cos_ph = cos(ang_ph);
+			//pos[3*i+0] = (real)(ang_rh*sin_ph*cos_th);
+			//pos[3*i+1] = (real)(ang_rh*sin_ph*sin_th);
+			//pos[3*i+2] = (real)(ang_rh*cos_ph);
 
 			// normal distribution
-			//pos[3*i+0] = 1.000*sqrt(-2.0*log(z0))*cos(TAU*z2);
-			//pos[3*i+1] = 0.100*sqrt(-2.0*log(z0))*sin(TAU*z2);
-			//pos[3*i+2] = 1.000*sqrt(-2.0*log(z1))*cos(TAU*z3);
+			pos[3*i+0] = 1.000*sqrt(-2.0*log(z0))*cos(TAU*z2);
+			pos[3*i+1] = 0.100*sqrt(-2.0*log(z0))*sin(TAU*z2);
+			pos[3*i+2] = 1.000*sqrt(-2.0*log(z1))*cos(TAU*z3);
+
 			//real radasdf = powf((pos[3*i+0]*pos[3*i+0])+(pos[3*i+2]*pos[3*i+2]),0.25f);
 			//pos[3*i+0] /= radasdf;
 			//pos[3*i+2] /= radasdf;
@@ -238,9 +256,9 @@ int main(int argc, char** argv) {
 			//pos[3*i+2] *= 0.200f;
 			//pos[2*i+0] = 0.2*sqrt(z1)*cos(TAU*z0);
 			//pos[2*i+1] = 0.2*sqrt(z1)*sin(TAU*z0);
+		}
 
-		//}
-
+		/*
 		for(size_t i = 0; i < N/2; i++) {
 			uint32_t ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
 
@@ -279,19 +297,18 @@ int main(int argc, char** argv) {
 			pos[3*i+0] = (real)(ang_rh*sin_ph*cos_th)+(real)4.0;
 			pos[3*i+1] = (real)(ang_rh*sin_ph*sin_th);
 			pos[3*i+2] = (real)(ang_rh*cos_ph);
-		}
+		}*/
 
-
-		/*
 		for(size_t i = 0; i < N; i++) {
-			vel[3*i+0] = (real)(-0.2*(double)pos[3*i+2]);
-			vel[3*i+1] = (real)( 0.2*(double)pos[3*i+1]);
-			vel[3*i+2] = (real)( 0.2*(double)pos[3*i+0]);
+			vel[3*i+0] = (real)(-PI*pos[3*i+2]);
+			vel[3*i+1] = (real)( 0.0*pos[3*i+1]);
+			vel[3*i+2] = (real)( PI*pos[3*i+0]);
 			//vel[3*i+0] = (real)0;
 			//vel[3*i+1] = (real)0;
 			//vel[3*i+2] = (real)0;
 		}
-		*/
+
+		/*
 		for(size_t i = 0; i < N/2; i++) {
 			//vel[3*i+0] = (real)(-0.2*(double)pos[3*i+2]);
 			//vel[3*i+1] = (real)( 0.2*(double)pos[3*i+1]);
@@ -310,11 +327,13 @@ int main(int argc, char** argv) {
 			//vel[3*i+2] = (real)0;
 			vel[3*i+2] = (real)0;
 		}
+		*/
 
 		// calculate initial gravitational accelerations
 		BarnesHut(tree, image, w, h, ids, mas, pos, acc, pen, N, 0);
 	}
 
+	#ifdef KEEP_CENTERED
 	// center
 	{
 		long double avg_pos[3] = {0.0l, 0.0l, 0.0l};
@@ -335,6 +354,9 @@ int main(int argc, char** argv) {
 			pos[3*i+2] -= avg_pos[2];
 		}
 	}
+	#endif
+
+	printf("[%.09f] Getting ready to start the run.\n", omp_get_wtime()-start_time);
 
 	#ifdef STARFLOOD_ENABLE_PROFILING
 	FILE* diagfile = fopen("./log.csv", "w");
@@ -347,7 +369,7 @@ int main(int argc, char** argv) {
 	#ifdef STARFLOOD_ENABLE_METRICS
 	FILE* metricfile = fopen("./metrics.csv", "w");
 
-	fprintf(metricfile, "\"n\",\"kinetic energy\",\"potential energy\"\n");
+	fprintf(metricfile, "\"n\",\"z\",\"kinetic energy\",\"potential energy\"\n");
 
 	fflush(metricfile);
 	#endif
@@ -374,8 +396,10 @@ int main(int argc, char** argv) {
 		for(int i = 0; i < 7*7; i++) particle_lut[i] *= (float)sum;
 	}
 
+	printf("[%.09f] Starting run!\n", omp_get_wtime()-start_time);
+
 	for(int step_num = 0; step_num < num_steps; step_num++) {
-		printf("\rRunning simulation, %d/%d (%.2f%%) completed...", step_num, num_steps, 100.0*((double)step_num/(double)num_steps));
+		printf("\r[%.09f] The run is currently on step %d/%d (z = %.09f), %.3f%% complete...", omp_get_wtime()-start_time, step_num, num_steps, TIMESTEP*(double)step_num, 100.0*((double)step_num/(double)num_steps));
 
 		fflush(stdout);
 
@@ -391,12 +415,30 @@ int main(int argc, char** argv) {
 			// K = (1/2)*m*v^2
 			for(size_t i = 0; i < N; i++) ke += 0.5*(double)mas[i]*(double)((vel[3*i+0]*vel[3*i+0])+(vel[3*i+1]*vel[3*i+1])+(vel[3*i+2]*vel[3*i+2]));
 
+			#ifndef METRICS_EXACT_ENERGY
 			for(size_t i = 0; i < N; i++) pe += pen[i];
+			#else
+			for(size_t i = 0; i < N; i++) {
+				for(size_t j = 0; j < N; j++) {
+					if(i == j) continue;
 
-			fprintf(metricfile, "%d,%f,%f\n", step_num, ke, pe);
+					double disp[3] = {
+						(double)pos[3*j+0] - (double)pos[3*i+0],
+						(double)pos[3*j+1] - (double)pos[3*i+1],
+						(double)pos[3*j+2] - (double)pos[3*i+2],
+					};
+
+					pe += G*mas[i]*mas[j]/sqrt(disp[0]*disp[0])+(disp[1]*disp[1])+(disp[2]*disp[2]); // U = G*m_i*m_j/r_ij
+				}
+			}
+			#endif
+
+			fprintf(metricfile, "%d,%.9f,%.9f,%.9f\n", step_num, TIMESTEP*(double)N, ke, pe);
 		}
 		#endif
 
+		/*
+		// reset out-of-bound particles
 		for(size_t i = 0; i < N; i++) {
 			if((pos[3*i+0]*pos[3*i+0])+(pos[3*i+1]*pos[3*i+1])+(pos[3*i+2]*pos[3*i+2]) > 64.0) {
 				uint32_t ns = (uint32_t)i+(uint32_t)42u; // set the random number generator seed
@@ -425,6 +467,7 @@ int main(int argc, char** argv) {
 				pos[3*i+2] = (real)(8.0*(ang_rh*cos_ph));
 			}
 		}
+		*/
 
 		// render and write the image
 		{
@@ -444,7 +487,7 @@ int main(int argc, char** argv) {
 
 				#ifdef STARFLOOD_ENABLE_PROFILING
 				t1 = omp_get_wtime();
-				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+				fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 				#endif
 			}
 
@@ -530,7 +573,7 @@ int main(int argc, char** argv) {
 
 				#ifdef STARFLOOD_ENABLE_PROFILING
 				t1 = omp_get_wtime();
-				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+				fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 				#endif
 			}
 
@@ -556,12 +599,12 @@ int main(int argc, char** argv) {
 
 				#ifdef STARFLOOD_ENABLE_PROFILING
 				t1 = omp_get_wtime();
-				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+				fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 				#endif
 			}
 
 			if((step_num % FRAME_INTERVAL) == 0){
-				#ifdef STARFLOOD_RENDER_INTERACTS
+				#ifdef STARFLOOD_RENDER_INTERACTIONS
 				BarnesHut(tree, image, w, h, ids, mas, pos, acc, N, step_num);
 				#endif
 
@@ -592,14 +635,21 @@ int main(int argc, char** argv) {
 				if((step_num % FRAME_INTERVAL) == 0){
 					#ifndef STARFLOOD_DISABLE_IMAGE_WRITE
 					if(stbi_write_hdr(file_name, w, h, 4, image) == 0) {
-						printf("Error: stbi_write_hdr(%s, %zu, %zu, %d, %p) was not successful!\n", file_name, w, h, 4, (void*)image);
+						printf("\r[%.09f] Error: stbi_write_hdr(%s, %zu, %zu, %d, %p) returned %d (not successful)! The image may not have been written.\n", omp_get_wtime()-start_time, file_name, w, h, 4, (void*)image, 0);
+
+						printf(
+						"[%.09f] Warning: STARFLOOD_DISABLE_IMAGE_WRITE is defined,"
+						"so I'm going to assume you don't want to continue wasting precious CPU time without rendering,"
+						"so I'll abort the run now (at step #%d).\n", omp_get_wtime()-start_time, step_num);
+
+						break;
 					}
 					#endif
 				}
 
 				#ifdef STARFLOOD_ENABLE_PROFILING
 				t1 = omp_get_wtime();
-				fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+				fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 				#endif
 			}
 		}
@@ -616,7 +666,7 @@ int main(int argc, char** argv) {
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+			fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 			#endif
 		}
 
@@ -659,7 +709,7 @@ int main(int argc, char** argv) {
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+			fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 			#endif
 		}
 
@@ -675,7 +725,7 @@ int main(int argc, char** argv) {
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f,", 1000.0*(t1-t0));
+			fprintf(diagfile, "%.9f,", 1000.0*(t1-t0));
 			#endif
 		}
 
@@ -697,7 +747,7 @@ int main(int argc, char** argv) {
 
 			#ifdef STARFLOOD_ENABLE_PROFILING
 			t1 = omp_get_wtime();
-			fprintf(diagfile, "%.6f\n", 1000.0*(t1-t0));
+			fprintf(diagfile, "%.9f\n", 1000.0*(t1-t0));
 			#endif
 		}
 
@@ -753,7 +803,11 @@ int main(int argc, char** argv) {
 		*/
 	}
 
-	printf("\rRunning simulation, %d/%d (100.00%%) completed... Done!\n\n", num_steps, num_steps);
+	printf("\r\x1b[2K"); // return to beginning and clear line (ANSI escape sequence used for clearing line)
+
+	printf("[%.09f] Run complete!\n", omp_get_wtime()-start_time);
+
+	printf("[%.09f] Cleaning up.\n", omp_get_wtime()-start_time);
 
 	fflush(stdout);
 
@@ -765,8 +819,33 @@ int main(int argc, char** argv) {
 	fclose(metricfile);
 	#endif
 
-	free(image);
+	printf("[%.09f] Attempting to free %zu bytes (%.03f MiB) used during the run.\n", omp_get_wtime()-start_time, sim_size, 0.00000095367431640625*(double)sim_size);
+
+	fflush(stdout);
+
+	t0 = omp_get_wtime();
+
 	free(sim);
+
+	t1 = omp_get_wtime();
+
+	printf("[%.09f] %zu bytes (%.03f MiB) were freed (took %.9f seconds).\n", omp_get_wtime()-start_time, sim_size, 0.00000095367431640625*(double)sim_size, t1 - t0);
+
+	printf("[%.09f] Attempting to free %zu bytes (%.03f MiB) used during rendering.\n", omp_get_wtime()-start_time, image_size, 0.00000095367431640625*(double)image_size);
+
+	fflush(stdout);
+
+	t0 = omp_get_wtime();
+
+	free(image);
+
+	t1 = omp_get_wtime();
+
+	printf("[%.09f] %zu bytes (%.03f MiB) were freed (took %.9f seconds).\n", omp_get_wtime()-start_time, image_size, 0.00000095367431640625*(double)image_size, t1 - t0);
+
+	printf("[%.09f] Execution complete. Thank you for using Starflood!\n", omp_get_wtime()-start_time);
+
+	fflush(stdout);
 
 	return EXIT_SUCCESS;
 }

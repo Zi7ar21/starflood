@@ -1,8 +1,13 @@
 #include <barnes-hut.hpp>
+
 #include <cmath>
 #include <cstdio>
 #include <rng.hpp>
 //#include <omp.h>
+
+#ifdef STARFLOOD_RENDER_INTERACTIONS
+#include <graphics.hpp>
+#endif
 
 void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, real* mas, real* pos, real* acc, real* pen, int N, int step_num) {
 	for(int i = 0; i < N; i++) ids[i] = -1;
@@ -301,7 +306,7 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 
 			real x_min = tree[cur_node].x_min, y_min = tree[cur_node].y_min, z_min = tree[cur_node].z_min, x_max = tree[cur_node].x_max, y_max = tree[cur_node].y_max, z_max = tree[cur_node].z_max;
 
-			#ifdef STARFLOOD_RENDER_INTERACTS
+			#ifdef STARFLOOD_RENDER_INTERACTIONS
 			if(i == 0) {
 				drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_min, x_max, y_min);
 				drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_min, x_min, y_max);
@@ -360,7 +365,7 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 				continue;
 			}
 
-			#ifdef STARFLOOD_RENDER_INTERACTS
+			#ifdef STARFLOOD_RENDER_INTERACTIONS
 			if(i == 0) {
 				//drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_min, x_max, y_min);
 				//drawLineUV(image, w, h, 1., 1., 0., 1., x_min, y_min, x_min, y_max);

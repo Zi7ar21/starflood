@@ -3,8 +3,8 @@
 #include <cstdint>
 
 // Real number type (currently does not toggle precision of special math functions, e.g. sqrtf!)
-//typedef float real;
-typedef double real;
+typedef float real;
+//typedef double real;
 
 // Default render width and height (pixels)
 //
@@ -35,14 +35,15 @@ typedef double real;
 #define THETA 0.5
 
 // Starflood will render 1 out of every FRAME_INTERVAL frames by default
-#define FRAME_INTERVAL 1
+#define FRAME_INTERVAL 2
 
 // Default number of timesteps
 #define FRAMES 600
 
 // Timestep parameter, sometimes called delta t
 //#define TIMESTEP 0.01
-#define TIMESTEP (0.1*0.0314159265358979323846264338327950288419716939937510582097494459)
+//#define TIMESTEP (0.1*0.0314159265358979323846264338327950288419716939937510582097494459)
+#define TIMESTEP (0.5/60.0)
 
 // Fits the Barnes-Hut tree to the bodies
 #define TREE_FIT
@@ -51,7 +52,7 @@ typedef double real;
 #define JITTER_TREE
 
 // Render Barnes-Hut interactions by default
-//#define STARFLOOD_RENDER_INTERACTS
+//#define STARFLOOD_RENDER_INTERACTIONS
 
 // Enable self-profiling by default
 #define STARFLOOD_ENABLE_PROFILING
@@ -84,4 +85,8 @@ const real INV_PI = 0.3183098861837906715377675267450287240689192914809128974953
 const real     TAU = 6.2831853071795864769252867665590057683943387987502116419498891846;
 const real INV_TAU = 0.1591549430918953357688837633725143620344596457404564487476673441;
 
+// (pseudo-)Hubble Constant (Leave commented to disable expansion) 
 //#define HUBBLE_CONST 2.750
+
+// Gravitational Constant
+#define G 1.000
