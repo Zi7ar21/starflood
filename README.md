@@ -7,8 +7,8 @@ Starflood is an open-source SPH and N-body code(s) written in C/C++.
 
 ## Features
 
-- ~~2D~~ (*New!*) **3D** _O(N*log(N))_-complexity tree gravity solver using the **[Barnes-Hut algorithm](https://en.wikipedia.org/wiki/Barnes%E2%80%93Hut_simulation)**!
-- ~~2D~~ (*New!*) **3D** hydrodynamics with **[Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)**!
+- ~~2D~~ (_New!_) **3D** _O(N*log(N))_-complexity tree gravity solver using the **[Barnes-Hut algorithm](https://en.wikipedia.org/wiki/Barnes%E2%80%93Hut_simulation)**!
+- ~~2D~~ (_New!_) **3D** hydrodynamics with **[Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)**!
 - _Reasonably performant_ low-level C/C++ code with high-level parallelism via **[OpenMP](www.openmp.org)**!
 - Simultaneous **Simulation** AND **Rendering**!
 - **Profiling** using `omp_get_wtime` for `double`-precision timing (a little less granularity than a nanosecond after 6 months uptime)!

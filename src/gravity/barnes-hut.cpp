@@ -1,4 +1,4 @@
-#include <barnes-hut.hpp>
+#include <gravity/barnes-hut.hpp>
 
 #include <cmath>
 #include <cstdio>
@@ -13,6 +13,30 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 	for(int i = 0; i < N; i++) ids[i] = -1;
 
 	tree.clear();
+
+	for(int i = 0; i < (N * 3); i++) acc[i] = (real)0;
+
+	#pragma omp target parallel for schedule(dynamic,256)
+	for(int i = 0; i < N; i++) {
+		for(int j = 0; j < N; j++) {
+			if(i == j) continue;
+
+			real dif[3] = {
+				(real)pos[3*j+0] - (real)pos[3*i+0],
+				(real)pos[3*j+1] - (real)pos[3*i+1],
+				(real)pos[3*j+2] - (real)pos[3*i+2]
+			};
+
+			real r2 = (dif[0]*dif[0])+(dif[1]*dif[1])+(dif[2]*dif[2]);
+
+			// F = G*m_i*m_j*r_ij/(|r_ij|*r_ij^2)
+			acc[3*i+0] += (real)(G*mas[i]*mas[j]*(dif[0]/sqrt(r2))/(r2+SOFTENING_PARAMETER));
+			acc[3*i+1] += (real)(G*mas[i]*mas[j]*(dif[1]/sqrt(r2))/(r2+SOFTENING_PARAMETER));
+			acc[3*i+2] += (real)(G*mas[i]*mas[j]*(dif[2]/sqrt(r2))/(r2+SOFTENING_PARAMETER));
+		}
+	}
+
+	return;
 
 	#ifndef TREE_FIT
 	tree.push_back(Node(-1,(real)-1.0,(real)-1.0,(real)1.0,(real)1.0));
@@ -43,11 +67,21 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 		#endif
 
 		#ifdef JITTER_TREE
-		uint32_t ns = (uint32_t)step_num+(uint32_t)37; // set the random number generator seed
+		// random number generator state
+		rng_state_t rng_state;
 
-		float z0 = urand(&ns);
-		float z1 = urand(&ns);
-		float z2 = urand(&ns);
+		// intialize random number generator
+		rng_state.z0 = (uint32_t)step_num;
+		rng_state.z1 = (uint32_t)6u;
+		rng_state.z2 = (uint32_t)9u;
+		rng_state.z3 = (uint32_t)4u;
+
+		update_rng(&rng_state);
+
+		float z0 = inv_rng32_max*rng_state.z0;
+		float z1 = inv_rng32_max*rng_state.z1;
+		float z2 = inv_rng32_max*rng_state.z2;
+		float z3 = inv_rng32_max*rng_state.z3;
 
 		tree[0].x_min += extrspace*(real)(z0-0.5f);
 		tree[0].y_min += extrspace*(real)(z1-0.5f);
@@ -272,7 +306,7 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 	for(int i = 0; i < N; i++) pen[i] = 0;
 
 	// Compute Forces
-	#pragma omp parallel for schedule(dynamic,1024)
+	#pragma omp parallel for schedule(dynamic,256)
 	for(int i = 0; i < N; i++) {
 		// don't continue if particle is outside of bounds
 		if((tree[0].x_max < pos[3*i+0]) || (pos[3*i+0] < tree[0].x_min)
@@ -376,10 +410,10 @@ void BarnesHut(std::vector<Node> &tree, float* image, int w, int h, int* ids, re
 			#endif
 
 			// F = G*m_i*m_j/r^2
-			acc[3*i+0] += ((dx/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(dz*dz)+(real)0.0001);
-			acc[3*i+1] += ((dy/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(dz*dz)+(real)0.0001);
-			acc[3*i+2] += ((dz/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(dz*dz)+(real)0.0001);
-			pen[  i  ] += (mas[i]*dm)/sqrt((dx*dx)+(dy*dy)+(dz*dz)+0.0001); // U = G*m_i*m_j/r_ij
+			acc[3*i+0] += (G*(dx/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(dz*dz)+(real)SOFTENING_PARAMETER);
+			acc[3*i+1] += (G*(dy/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(dz*dz)+(real)SOFTENING_PARAMETER);
+			acc[3*i+2] += (G*(dz/dist)*mas[i]*dm)/((dx*dx)+(dy*dy)+(dz*dz)+(real)SOFTENING_PARAMETER);
+			pen[  i  ] += (G*mas[i]*dm)/sqrt((dx*dx)+(dy*dy)+(dz*dz)+SOFTENING_PARAMETER); // U = G*m_i*m_j/r_ij
 
 			//int quad = (p.x > hx ? 1 : 0) + (p.y > hy ? 2 : 0);
 

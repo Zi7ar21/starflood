@@ -3,8 +3,8 @@
 #include <cstdint>
 
 // Real number type (currently does not toggle precision of special math functions, e.g. sqrtf!)
-typedef float real;
-//typedef double real;
+//typedef float real;
+typedef double real;
 
 // Default render width and height (pixels)
 //
@@ -23,12 +23,12 @@ typedef float real;
 //   2048×2048:  48 MiB/frame
 //   4096×4096: 192 MiB/frame
 //   8192×8192: 768 MiB/frame
-#define RENDER_W 960
-#define RENDER_H 540
+#define RENDER_W 640
+#define RENDER_H 360
 
 // Default number of bodies in the simulation
 //
-#define NUM_BODIES 1024
+#define NUM_BODIES 4096
 
 // Default Barnes-Hut parameter "theta", higher: fewer interactions, less accurate, lower: more interactions, more accurate
 //#define THETA 0.5
@@ -57,12 +57,12 @@ typedef float real;
 // Enable self-profiling by default
 #define STARFLOOD_ENABLE_PROFILING
 
-#define STARFLOOD_ENABLE_METRICS
+#define STARFLOOD_ENABLE_STATISTICS
 
 // Calculate potential energy using the O(N^2) particle-particle method (not barnes-hut)
-#define METRICS_EXACT_ENERGY
+#define STATISTICS_EXACT_ENERGY
 
-//#define KEEP_CENTERED
+#define KEEP_CENTERED
 
 // Disable writing images (for quick debugging)
 //#define STARFLOOD_DISABLE_IMAGE_WRITE
@@ -89,4 +89,6 @@ const real INV_TAU = 0.159154943091895335768883763372514362034459645740456448747
 //#define HUBBLE_CONST 2.750
 
 // Gravitational Constant
-#define G 1.000
+#define G 0.01
+
+#define SOFTENING_PARAMETER 0.0001

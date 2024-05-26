@@ -24,6 +24,9 @@ _deps
 
 # Renders
 out
+out-archive
+vid
+millenium_jr
 *.mp4
 *.tar
 *.webm
