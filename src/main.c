@@ -1,10 +1,3 @@
-#ifdef _OPENMP
-#pragma message("OpenMP is ENABLED")
-#include <omp.h>
-#else
-#pragma message("OpenMP is DISABLED")
-#endif
-
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -12,142 +5,56 @@
 #include <stdint.h>
 #include <string.h>
 
-void pcg4d(uint32_t* restrict s) {
-	uint32_t v[4] = {s[0], s[1], s[2], s[3]};
+#ifdef _OPENMP
+#pragma message("OpenMP is ENABLED")
+#include <omp.h>
+#else
+#pragma message("OpenMP is NOT ENABLED")
+#endif
 
-	v[0] = v[0] * (uint32_t)0x0019660Du + (uint32_t)0x3C6EF35Fu;
-	v[1] = v[1] * (uint32_t)0x0019660Du + (uint32_t)0x3C6EF35Fu;
-	v[2] = v[2] * (uint32_t)0x0019660Du + (uint32_t)0x3C6EF35Fu;
-	v[3] = v[3] * (uint32_t)0x0019660Du + (uint32_t)0x3C6EF35Fu;
+#include "types.h"
+#include "simulation.h"
 
-	v[0] += v[1]*v[3];
-	v[1] += v[2]*v[0];
-	v[2] += v[0]*v[1];
-	v[3] += v[1]*v[2];
+const double TAU = 6.2831853071795864769252867665590057683943387987502116419498891846156328125724179972560696506842341360;
 
-	v[0] = v[0] ^ (v[0] >> (uint32_t)16u);
-	v[1] = v[1] ^ (v[1] >> (uint32_t)16u);
-	v[2] = v[2] ^ (v[2] >> (uint32_t)16u);
-	v[3] = v[3] ^ (v[3] >> (uint32_t)16u);
-
-	v[0] += v[1]*v[3];
-	v[1] += v[2]*v[0];
-	v[2] += v[0]*v[1];
-	v[3] += v[1]*v[2];
-
-	s[0] = v[0];
-	s[1] = v[1];
-	s[2] = v[2];
-	s[3] = v[3];
-}
-
-typedef float real;
-
-int main(int argc, char *argv[]) {
-	printf("=== starflood ===\n");
+int main(void) {
+	printf("=== Starflood ===\n");
 
 	fflush(stdout);
 
-	#ifdef _OPENMP
-	printf("_OPENMP: %d\n", _OPENMP);
-	#endif
-
-	unsigned int num_timesteps = 900u;
-
-	if(argc > 1) {
-		fprintf(stderr, "%s error: unrecognized option \"%s\"\n", argv[0], argv[1]);
-
-		return EXIT_FAILURE;
-	}
+	printf("Configuration:\n");
 
 	#ifdef _OPENMP
-	int max_threads = omp_get_max_threads();
-
-	printf("max_threads: %d\n", max_threads);
+	printf("  OpenMP is ON (_OPENMP = %d)\n", _OPENMP);
+	#else
+	printf("  OpenMP is OFF\n");
 	#endif
+
+	unsigned int num_timesteps = 300u;
 
 	//printf("");
 
 	int rendering_enabled = true;
 
-	// Number of bodies to simulate
-	size_t N = (size_t)10000u;
+	unsigned int N = 20000u;
 
-	size_t u_size = N * (size_t)1u;
-	size_t m_size = N * (size_t)1u;
-	size_t r_size = N * (size_t)3u;
-	size_t v_size = N * (size_t)3u;
-	size_t a_size = N * (size_t)3u;
+	simulation_t sim;
 
-	size_t u_offset = (size_t)0u;
-	size_t m_offset = u_offset + u_size;
-	size_t r_offset = m_offset + m_size;
-	size_t v_offset = r_offset + r_size;
-	size_t a_offset = v_offset + v_size;
-	size_t buf_size = a_offset + a_size;
-
-	size_t shared_memory_size = sizeof(real)*buf_size;
-
-	const size_t align_size = (size_t)4096u; // Set to page size or something similar
-
-	void* shared_memory = aligned_alloc(align_size, shared_memory_size);
-
-	if(NULL == shared_memory) {
-		perror("error allocating shared_memory");
+	if(simulation_init(&sim, N) != EXIT_SUCCESS) {
+		fprintf(stderr, "Error creating simulation!");
 
 		return EXIT_FAILURE;
 	}
 
-	printf("shared_memory: %p\n", shared_memory);
-
-	memset(shared_memory, 0, shared_memory_size);
-
-	real* buffer = (real*)shared_memory;
-
-	real* u = &(buffer[u_offset]);
-	real* m = &(buffer[m_offset]);
-	real* r = &(buffer[r_offset]);
-	real* v = &(buffer[v_offset]);
-	real* a = &(buffer[a_offset]);
-
-	for(size_t i = (size_t)0u; i < N; i++) {
-		u[i] = (real)0.0;
-	}
-
-	for(size_t i = (size_t)0u; i < N; i++) {
-		m[i] = (double)1.0/(double)N;
-	}
-
-	for(size_t i = (size_t)0u; i < N; i++) {
-		uint32_t s[4] = {(uint32_t)i, (uint32_t)420u, (uint32_t)69u, (uint32_t)1337u};
-
-		pcg4d(s);
-
-		r[3*i+0] = 2.0*((double)s[0]/(double)0xFFFFFFFFu)-1.0;
-		r[3*i+1] = 2.0*((double)s[1]/(double)0xFFFFFFFFu)-1.0;
-		r[3*i+2] = 2.0*((double)s[2]/(double)0xFFFFFFFFu)-1.0;
-	}
-
-	for(size_t i = (size_t)0u; i < (size_t)3u*N; i++) {
-		v[i] = (real)0.0;
-	}
-
-	for(size_t i = (size_t)0u; i < (size_t)3u*N; i++) {
-		a[i] = (real)0.0;
-	}
-
-	const real timestep = (real)0.314159;
-	const real G = (real)1.0;
-
 	size_t image_w = (size_t)480u;
 	size_t image_h = (size_t)480u;
 
-	float* image = (float*)aligned_alloc(align_size, sizeof(float)*(size_t)3*image_w*image_h);
+	float* image = (float*)aligned_alloc((size_t)4096u, sizeof(float)*(size_t)3*image_w*image_h);
 
 	if(NULL == image) {
 		perror("error allocating image");
 
-		free(shared_memory);
+		simulation_free(&sim);
 
 		return EXIT_FAILURE;
 	}
@@ -168,9 +75,16 @@ int main(int argc, char *argv[]) {
 				}
 			}
 
+			real* pos = sim.pos;
+
 			for(unsigned int i = 0u; i < N; i++) {
-				int x = ( (float)image_h*((float)0.25*r[3*i+0]) )+((float)0.5*(float)image_w)-(float)0.5;
-				int y = ( (float)image_h*((float)0.25*r[3*i+1]) )+((float)0.5*(float)image_h)-(float)0.5;
+				//double t = 0.125*0.125*sin(0.25*TAU*(1.0/15.0)*(double)n);
+
+				//real u = pos[3u*i+0u]*cos(TAU*t)-pos[3u*i+2u]*sin(TAU*t);
+
+				//int x = ( (float)image_h*((float)0.25*u           ) )+((float)0.5*(float)image_w)-(float)0.5;
+				int x = ( (float)image_h*((float)0.25*pos[3u*i+0u]) )+((float)0.5*(float)image_w)-(float)0.5;
+				int y = ( (float)image_h*((float)0.25*pos[3u*i+1u]) )+((float)0.5*(float)image_h)-(float)0.5;
 
 				if((int)0 <= x && x < (int)image_w && (int)0 <= y && y < (int)image_h) {
 					image[3*(image_w*y+x)+0] += (float)0.333;
@@ -210,63 +124,12 @@ int main(int argc, char *argv[]) {
 			fclose(file);
 		}
 
-		#ifdef _OPENMP
-		#pragma omp parallel for schedule(dynamic,100)
-		#endif
-		for(unsigned int i = 0u; i < N; i++) {
-			real U_sum = (real)0;
-
-			real F[3] = {(real)0, (real)0, (real)0};
-
-			for(unsigned int j = 0u; j < N; j++) {
-				if(i == j) {
-					continue;
-				}
-
-				real dr[3] = {r[3*i+0]-r[3*j+0], r[3*i+1]-r[3*j+1], r[3*i+2]-r[3*j+2]};
-
-				real r2 = (dr[0]*dr[0])+(dr[1]*dr[1])+(dr[2]*dr[2]);
-
-				real r1 = (real)sqrtf(r2);
-
-				real rinv = (real)1.0 / r1;
-
-				real 
-
-				U = -G*m[i]*m[j]*rinv;
-
-				U_sum += U;
-
-				F[0] += U*dr[0]/(r2+(real)0.001);
-				F[1] += U*dr[1]/(r2+(real)0.001);
-				F[2] += U*dr[2]/(r2+(real)0.001);
-			}
-
-			u[i] = U_sum;
-			a[3*i+0] = F[0];
-			a[3*i+1] = F[1];
-			a[3*i+2] = F[2];
-		}
-
-		double sum = 0.0;
-
-		for(unsigned int i = 0u; i < N; i++) {
-			sum += u[i];
-		}
-
-		printf("%.015f\n", sum);
-
-		for(unsigned int i = 0u; i < (size_t)3*N; i++) {
-			v[i] += timestep*a[i];
-		}
-
-		for(unsigned int i = 0u; i < (size_t)3*N; i++) {
-			r[i] += timestep*v[i];
-		}
+		simulation_step(&sim);
 	}
 
 	free(image);
-	free(shared_memory);
+
+	simulation_free(&sim);
 
 	return EXIT_SUCCESS;
 }
