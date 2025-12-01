@@ -75,17 +75,41 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 	}
 
 	for(size_t i = (size_t)0u; i < N; i++) {
-		mas[i] = (double)1.0/(double)N;
+		mas[i] = (double)10.0/(double)N;
 	}
 
 	for(size_t i = (size_t)0u; i < N; i++) {
 		uint32_t s[4] = {(uint32_t)i, (uint32_t)420u, (uint32_t)69u, (uint32_t)1337u};
 
 		pcg4d(s);
+		pcg4d(s); // second round for better statistical quality
 
+		const double inverse32 = (double)1.0/(double)0xFFFFFFFFu;
+
+		double r[4] = {
+			inverse32 * (double)s[0],
+			inverse32 * (double)s[1],
+			inverse32 * (double)s[2],
+			inverse32 * (double)s[3]
+		};
+
+		// Box-Muller Transform
+		// https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
+		double p[3] = {
+			sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[2]),
+			sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[2]),
+			sqrt( -2.0 * log(r[1]) ) * cos(TAU * r[3])
+		};
+
+		/*
 		pos[3u*i+0u] = 2.0*((double)s[0]/(double)0xFFFFFFFFu)-1.0;
 		pos[3u*i+1u] = 2.0*((double)s[1]/(double)0xFFFFFFFFu)-1.0;
 		pos[3u*i+2u] = 2.0*((double)s[2]/(double)0xFFFFFFFFu)-1.0;
+		*/
+
+		pos[3u*i+0u] = p[0];
+		pos[3u*i+1u] = p[1];
+		pos[3u*i+2u] = p[2];
 	}
 
 	for(size_t i = (size_t)0u; i < (size_t)3u*N; i++) {
@@ -125,7 +149,7 @@ int simulation_step(simulation_t* simulation) {
 	real* acc = sim.acc;
 
 	#ifdef _OPENMP
-	#pragma omp parallel for schedule(dynamic,100)
+	#pragma omp parallel for schedule(dynamic,128)
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
 		real U_sum = (real)0;
@@ -182,7 +206,7 @@ int simulation_step(simulation_t* simulation) {
 			ksum += kin[i];
 		}
 
-		printf("T = %.015f\nU = %.015f\nV = %.015f\n", usum+ksum, usum, ksum);
+		printf("T = % .015f\nU = % .015f\nV = % .015f\n", usum+ksum, usum, ksum);
 	}
 
 	for(unsigned int i = 0u; i < (size_t)3u*N; i++) {

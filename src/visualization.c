@@ -89,8 +89,8 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		//real u = pos[3u*i+0u]*cos(TAU*t)-pos[3u*i+2u]*sin(TAU*t);
 
 		//int x = ( (float)image_h*((float)0.25*u           ) )+((float)0.5*(float)image_w)-(float)0.5;
-		int x = ( (float)h*((float)0.25*pos[3u*i+0u]) )+((float)0.5*(float)w)-(float)0.5;
-		int y = ( (float)h*((float)0.25*pos[3u*i+1u]) )+((float)0.5*(float)h)-(float)0.5;
+		int x = ( (float)h*((float)0.25*(float)pos[3u*i+0u]) )+((float)0.5*(float)w)-(float)0.5;
+		int y = ( (float)h*((float)0.25*(float)pos[3u*i+1u]) )+((float)0.5*(float)h)-(float)0.5;
 
 		if((int)0 <= x && x < (int)w && (int)0 <= y && y < (int)h) {
 			for(unsigned int j = 0u; j < 3u; j++) {
@@ -104,6 +104,9 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		}
 	}
 
+	#ifdef _OPENMP
+	#pragma omp parallel for schedule(dynamic,1024)
+	#endif
 	for(unsigned int i = 0u; i < 3u*w*h; i++) {
 		int val = 0;
 
@@ -112,7 +115,7 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		#endif
 		val = atomic_buffer[i];
 
-		render_buffer[i] = (float)0.25*(float)val;
+		render_buffer[i] = (float)0.125*(float)val;
 	}
 
 	char filename[FILENAME_MAX];

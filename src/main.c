@@ -16,8 +16,6 @@
 #include "types.h"
 #include "visualization.h"
 
-const double TAU = 6.2831853071795864769252867665590057683943387987502116419498891846156328125724179972560696506842341360;
-
 int main(void) {
 	printf("=== Starflood ===\n");
 
@@ -33,13 +31,13 @@ int main(void) {
 
 	printf("\n");
 
-	unsigned int num_timesteps = 10u;
+	unsigned int num_timesteps = 300u;
 
 	//printf("");
 
 	int rendering_enabled = true;
 
-	unsigned int N = 20000u;
+	unsigned int N = 16384u;
 
 	simulation_t sim;
 
@@ -62,12 +60,16 @@ int main(void) {
 	}
 
 	for(unsigned int n = 0u; n < num_timesteps; n++) {
+		printf("Step #% 3u\n", n);
+
 		if(rendering_enabled) {
 			if(visualization_draw(&vis, &sim) != EXIT_SUCCESS) {
 			}
 		}
 
 		simulation_step(&sim);
+
+		printf("\n");
 	}
 
 	if(rendering_enabled) {
