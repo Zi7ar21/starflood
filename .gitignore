@@ -5,7 +5,6 @@ archive
 # Build
 *.o
 *.out
-build
 
 # CMake
 CMakeLists.txt.user
@@ -43,5 +42,6 @@ encode.sh
 #stb/
 
 # Profiling
+perf.data
 nsight/
 #log.csv

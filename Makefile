@@ -1,10 +1,26 @@
-CC="gcc"
+# Starflood
 
-CFLAGS="-fopenmp -g -march=native -Og -pedantic -std=c99 -Wall -Wextra -Wshadow"
+CC = gcc
 
-all: build/starflood
-	$(CC) src/main.c -o
+CFLAGS = -fopenmp -ggdb -march=x86-64 -mtune=generic -Og -pedantic -std=c11 -Wall -Wextra -Wshadow
+
+LDFLAGS = -lm
+
+.PHONY: all
+all: starflood
+
+starflood: src/main.o src/simulation.o src/visualization.o
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ src/main.c src/simulation.c src/visualization.c
+
+src/main.o:
+	$(CC) -c $(CFLAGS) -o $@ src/main.c
+
+src/simulation.o:
+	$(CC) -c $(CFLAGS) -o $@ src/simulation.c
+
+src/visualization.o:
+	$(CC) -c $(CFLAGS) -o $@ src/visualization.c
 
 .PHONY: clean
 clean:
-	rm -r $(BUILD_DIR)
+	rm -fv src/main.o src/simulation.o src/visualization.o starflood

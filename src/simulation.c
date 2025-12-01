@@ -1,14 +1,21 @@
 #include "simulation.h"
 
-#include "pcg4d.h"
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#include "config.h"
+#include "pcg4d.h"
+
 int simulation_init(simulation_t* simulation, unsigned int N) {
 	simulation_t sim = *simulation;
+
+	printf("Simulation Memory Addresses:\n");
 
 	size_t pot_size = (size_t)1u * N;
 	size_t kin_size = (size_t)1u * N;
@@ -28,19 +35,17 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 
 	size_t mem_size = sizeof(real)*buf_size;
 
-	const size_t align_size = (size_t)4096u; // Set to page size or something similar
-
-	void* mem = aligned_alloc(align_size, mem_size);
+	void* mem = aligned_alloc(STARFLOOD_ALIGNMENT, mem_size);
 
 	if(NULL == mem) {
-		fprintf(stderr, "error in aligned_alloc(%zu, %zu) while allocating memory for the simulation", align_size, mem_size);
+		fprintf(stderr, "error in aligned_alloc(%zu, %zu) while allocating memory for the simulation", STARFLOOD_ALIGNMENT, mem_size);
 
 		perror("");
 
 		return EXIT_FAILURE;
 	}
 
-	printf("Shared Memory Address: %p\n", mem);
+	printf("  mem: %p\n", mem);
 
 	memset(mem, 0, mem_size);
 
@@ -53,12 +58,13 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 	real* vel = &(buf[vel_offset]);
 	real* acc = &(buf[acc_offset]);
 
-	printf("%p\n", (void*)pot);
-	printf("%p\n", (void*)kin);
-	printf("%p\n", (void*)mas);
-	printf("%p\n", (void*)pos);
-	printf("%p\n", (void*)vel);
-	printf("%p\n", (void*)acc);
+	printf("  pot: %p\n", (void*)pot);
+	printf("  kin: %p\n", (void*)kin);
+	printf("  mas: %p\n", (void*)mas);
+	printf("  pos: %p\n", (void*)pos);
+	printf("  vel: %p\n", (void*)vel);
+	printf("  acc: %p\n", (void*)acc);
+	printf("\n");
 
 	for(size_t i = (size_t)0u; i < N; i++) {
 		pot[i] = (real)0.0;
@@ -109,7 +115,6 @@ int simulation_step(simulation_t* simulation) {
 	simulation_t sim = *simulation;
 
 	const real timestep = (real)0.3141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117068;
-	const real G = (real)5.0;
 
 	unsigned int N = sim.N;
 	real* pot = sim.pot;
@@ -132,6 +137,8 @@ int simulation_step(simulation_t* simulation) {
 				continue;
 			}
 
+			real m2 = mas[i]*mas[j];
+
 			real dr[3] = {
 				pos[3u*i+0u]-pos[3u*j+0u],
 				pos[3u*i+1u]-pos[3u*j+1u],
@@ -144,7 +151,7 @@ int simulation_step(simulation_t* simulation) {
 
 			real rinv = (real)1.0 / r1;
 
-			real U = -G*mas[i]*mas[j]*rinv;
+			real U = -(real)G * m2 * rinv;
 
 			U_sum += U;
 

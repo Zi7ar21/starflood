@@ -78,10 +78,10 @@ Starflood renders timesteps and saves the frames to the disk, before they get re
 ./temp.sh
 ```
 
-or by just running `mount` directly (`2g` means **2 GiB** of storage):
+or by just running `mount` directly (`2G` means **2 GiB** of storage):
 
 ```sh
-sudo mount -t tmpfs -o size=2g tmpfs out
+sudo mount -o size=1G -t tmpfs tmpfs out
 ```
 
 This will make running Starflood faster as it doesn't have to wait for images to be written to a disk. My condolences if your sysadmin does not let you mount `tmpfs`s. I plan on adding the ability to defer writing images, or writing them in a separate thread, but this hasn't been implemented yet.
