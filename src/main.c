@@ -1,8 +1,8 @@
 #include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 
 #ifdef _OPENMP
@@ -37,20 +37,24 @@ int main(void) {
 
 	int rendering_enabled = true;
 
-	unsigned int N = 16384u;
-
 	simulation_t sim;
 
-	if(simulation_init(&sim, N) != EXIT_SUCCESS) {
+	sim.mem = NULL;
+
+	if(simulation_init(&sim, 16384u) != EXIT_SUCCESS) {
 		fprintf(stderr, "Error starting simulation!\n");
 
 		return EXIT_FAILURE;
 	}
 
+	char filename[64];
+
+	//simulation_load(&sim, filename);
+
 	visualization_t vis;
 
 	if(rendering_enabled) {
-		if(visualization_init(&vis, 480u, 480u) != EXIT_SUCCESS) {
+		if(visualization_init(&vis, 960u, 960u) != EXIT_SUCCESS) {
 			fprintf(stderr, "Error starting visualization!\n");
 
 			simulation_free(&sim);
@@ -59,11 +63,26 @@ int main(void) {
 		}
 	}
 
-	for(unsigned int n = 0u; n < num_timesteps; n++) {
-		printf("Step #% 3u\n", n);
+	for(unsigned int step_num = 0u; step_num < num_timesteps; step_num++) {
+		printf("Step #%3u\n", step_num);
+
+		/*
+		snprintf(filename, (size_t)64u, "./out/step_%04u.data", step_num);
+
+		if(EXIT_SUCCESS != simulation_dump(&sim, filename)) {
+			fprintf(stderr, "Error: simulation_dump() failed!\n");
+		}
+		*/
 
 		if(rendering_enabled) {
-			if(visualization_draw(&vis, &sim) != EXIT_SUCCESS) {
+			if(EXIT_SUCCESS != visualization_draw(&vis, &sim)) {
+				fprintf(stderr, "Error: visualization_draw() failed!\n");
+			}
+
+			snprintf(filename, (size_t)64u, "./out/step_%04u.pfm", step_num);
+
+			if(EXIT_SUCCESS != visualization_save(&vis, filename)) {
+				fprintf(stderr, "Error: visualization_save() failed!\n");
 			}
 		}
 
