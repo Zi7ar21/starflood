@@ -15,7 +15,7 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 
 	printf("visualization memory addresses:\n");
 
-	size_t atomic_buffer_size = sizeof(i32)*(size_t)3u*(size_t)w*(size_t)h;
+	size_t atomic_buffer_size = sizeof(i32)*(size_t)4u*(size_t)w*(size_t)h;
 
 	i32* atomic_buffer = (i32*)aligned_alloc(STARFLOOD_ALIGNMENT, atomic_buffer_size);
 
@@ -29,7 +29,7 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 
 	printf("  atomic_buffer: %p\n", (void*)atomic_buffer);
 
-	size_t render_buffer_size = sizeof(f32)*(size_t)3u*(size_t)w*(size_t)h;
+	size_t render_buffer_size = sizeof(f32)*(size_t)4u*(size_t)w*(size_t)h;
 
 	f32* render_buffer = (f32*)aligned_alloc(STARFLOOD_ALIGNMENT, render_buffer_size);
 
@@ -76,7 +76,7 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 	real* pos = sim.pos;
 
-	for(unsigned int i = 0u; i < 3u * w * h; i++) {
+	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		#ifdef _OPENMP
 		#pragma omp atomic write
 		#endif
@@ -84,17 +84,35 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 	}
 
 	#ifdef _OPENMP
-	//#pragma omp parallel for schedule(dynamic, 1024)
+	#pragma omp parallel for schedule(dynamic, 1024)
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
 		// https://cs418.cs.illinois.edu/website/text/math2.html
-		real v[3] = {
+		real v[4] = {
 			pos[3u*i+0u],
 			pos[3u*i+1u],
-			pos[3u*i+2u]
+			pos[3u*i+2u],
+			(real)1.0
 		};
 
-		for(unsigned int j = 0u; j < 16u; j++) {
+		// Pitch
+		{
+			real theta = (real)TAU * 0.125;
+
+			real v_rot[3] = {
+				v[0],
+				v[1]*cosf(theta)-v[2]*sinf(theta),
+				v[1]*sinf(theta)+v[2]*cosf(theta),
+			};
+
+			v[0] = v_rot[0];
+			v[1] = v_rot[1];
+			v[2] = v_rot[2];
+		}
+
+		i32 rgba[4] = {(f32)1.000, (f32)1.000, (f32)1.000, (f32)1.000};
+
+		for(unsigned int j = 0u; j < 64u; j++) {
 			u32 s[4] = {(u32)j, (u32)i, (u32)step_number, (u32)420691337u};
 
 			pcg4d(s);
@@ -107,22 +125,24 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 				INV_PCG32_MAX * (double)s[3]
 			};
 
+			// Gaussian pixel filter
+			// https://en.wikipedia.org/wiki/Box–Muller_transform
 			double sample_offset[2] = {
-				0.500 * sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[1]),
-				0.500 * sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[1])
+				0.66666666666666666666666666666667 * sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[1]),
+				0.66666666666666666666666666666667 * sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[1])
 			};
 
 			int x = ( h * (0.250 * (double)v[0]) )+(0.5 * (double)w) - 0.5 + sample_offset[0];
 			int y = ( h * (0.250 * (double)v[1]) )+(0.5 * (double)h) - 0.5 + sample_offset[1];
 
 			if((int)0 <= x && x < (int)w && (int)0 <= y && y < (int)h) {
-				for(unsigned int k = 0u; k < 3u; k++) {
-					size_t idx = (size_t)(3u*(w*(unsigned int)y+(unsigned int)x)+k);
+				size_t pixel_index = (size_t)4u*((size_t)w*(size_t)y+(size_t)x);
 
+				for(size_t k = (size_t)0u; k < (size_t)4u; k++) {
 					#ifdef _OPENMP
 					#pragma omp atomic update
 					#endif
-					atomic_buffer[idx] += (i32)1;
+					atomic_buffer[pixel_index + k] += rgba[k];
 				}
 			}
 		}
@@ -131,7 +151,7 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 	#ifdef _OPENMP
 	#pragma omp parallel for schedule(dynamic, 1024)
 	#endif
-	for(unsigned int i = 0u; i < 3u * w * h; i++) {
+	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		i32 val = (i32)0;
 
 		#ifdef _OPENMP
@@ -139,7 +159,7 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		#endif
 		val = atomic_buffer[i];
 
-		render_buffer[i] = (f32)tanh(0.500 * 0.125 * (double)val);
+		render_buffer[i] = (f32)tanh(0.125 * 0.125 * (double)val);
 	}
 
 	*visualization = vis;
@@ -165,17 +185,19 @@ int visualization_save(visualization_t* visualization, const char* restrict file
 		return EXIT_FAILURE;
 	}
 
+	// PFM graphic image file format
+	// https://netpbm.sourceforge.net/doc/pfm.html
 	fprintf(file, "PF\n%zu %zu\n-1.0\n", (size_t)image_w, (size_t)image_h);
 
 	for(unsigned int y = 0u; y < image_h; y++) {
 		for(unsigned int x = 0u; x < image_w; x++) {
-			float pixel[3] = {
-				render_buffer[3u*(image_w*y+x)+0u],
-				render_buffer[3u*(image_w*y+x)+1u],
-				render_buffer[3u*(image_w*y+x)+2u]
+			f32 rgb[3] = {
+				render_buffer[4u*(image_w*y+x)+0u],
+				render_buffer[4u*(image_w*y+x)+1u],
+				render_buffer[4u*(image_w*y+x)+2u]
 			};
 
-			fwrite(pixel, sizeof(float), (size_t)3u, file);
+			fwrite(rgb, sizeof(f32), (size_t)3u, file);
 		}
 	}
 

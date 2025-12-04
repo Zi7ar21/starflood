@@ -109,14 +109,13 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 		pos[3u*i+2u] = 2.0*((double)s[2]/(double)0xFFFFFFFFu)-1.0;
 		*/
 
-		pos[3u*i+0u] = p[0];
-		pos[3u*i+1u] = p[1];
-		pos[3u*i+2u] = p[2];
-	}
+		pos[3u*i+0u] = (real)(1.000 * p[0]);
+		pos[3u*i+1u] = (real)(0.125 * p[1]);
+		pos[3u*i+2u] = (real)(1.000 * p[2]);
 
-	for(size_t i = (size_t)0u; i < (size_t)3u*N; i++) {
-		//vel[i] = (real)0.0;
-		vel[i] = (real)0.001 * pos[i];
+		vel[3u*i+0u] = (real)( 0.100 * p[2]);
+		vel[3u*i+1u] = (real)( 0.000 * p[1]);
+		vel[3u*i+2u] = (real)(-0.100 * p[0]);
 	}
 
 	for(size_t i = (size_t)0u; i < (size_t)3u*N; i++) {
@@ -142,9 +141,10 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 int simulation_step(simulation_t* simulation) {
 	simulation_t sim = *simulation;
 
-	const real timestep = (real)0.3141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117068;
+	const real timestep = (real)0.03333333333333333333333333333333;
 
 	unsigned int N = sim.N;
+	unsigned int step_number = sim.step_number;
 	real* pot = sim.pot;
 	real* kin = sim.kin;
 	real* mas = sim.mas;
@@ -153,14 +153,14 @@ int simulation_step(simulation_t* simulation) {
 	real* acc = sim.acc;
 
 	#ifdef _OPENMP
-	#pragma omp parallel for schedule(dynamic,128)
+	#pragma omp parallel for schedule(dynamic, 128)
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
-		real U_sum = (real)0;
+		real U_i = (real)0; // Potential energy
 
-		real F[3] = {(real)0.0, (real)0.0, (real)0.0};
+		real F_i[3] = {(real)0.0, (real)0.0, (real)0.0}; // Summed forces
 
-		real m_i = mas[i];
+		real m_i = mas[i]; // Body mass
 
 		real r_i[3] = {
 			pos[3u*i+0u],
@@ -168,7 +168,8 @@ int simulation_step(simulation_t* simulation) {
 			pos[3u*i+2u]
 		};
 
-		for(unsigned int j = 0u; j < N; j++) {
+		//for(unsigned int j = 0u; j < N; j++) {
+		for(unsigned int j = (N/2u)*(step_number % 2u); j < (N/2u)*(step_number % 2u) + (N/2u); j++) {
 			if(i == j) {
 				continue;
 			}
@@ -189,51 +190,62 @@ int simulation_step(simulation_t* simulation) {
 
 			real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
 
-			real inv_r2 = (real)1.0 / (      r2 +(real)0.0001);
-			real inv_r1 = (real)1.0 / (sqrtf(r2)+(real)0.0001);
+			real inv_r2 = (real)1.0 / (      r2 +(real)0.000001);
+			real inv_r1 = (real)1.0 / (sqrtf(r2)+(real)0.000001);
 
-			real U = -(real)G * m_i * m_j * inv_r1;
+			real U_ij = -(real)G * m_i * m_j * inv_r2;
 
-			U_sum += U;
+			U_i += U_ij;
 
-			F[0] += -U * r_ij[0] * inv_r2;
-			F[1] += -U * r_ij[1] * inv_r2;
-			F[2] += -U * r_ij[2] * inv_r2;
+			F_i[0] += (real)2.0 * -U_ij * r_ij[0] * inv_r1;
+			F_i[1] += (real)2.0 * -U_ij * r_ij[1] * inv_r1;
+			F_i[2] += (real)2.0 * -U_ij * r_ij[2] * inv_r1;
 		}
 
-		pot[i] = U_sum;
-		acc[3u*i+0u] = F[0];
-		acc[3u*i+1u] = F[1];
-		acc[3u*i+2u] = F[2];
+		pot[i] = U_i;
+
+		acc[3u*i+0u] = F_i[0];
+		acc[3u*i+1u] = F_i[1];
+		acc[3u*i+2u] = F_i[2];
 	}
 
 	for(unsigned int i = 0u; i < N; i++) {
-		kin[i] = (real)0.5 * mas[i] * vel[i] * vel[i];
+		double v_i[3] = {
+			(double)vel[3u*i+0u],
+			(double)vel[3u*i+1u],
+			(double)vel[3u*i+2u]
+		};
+
+		kin[i] = (real)0.5 * mas[i] * ((v_i[0]*v_i[0])+(v_i[1]*v_i[1])+(v_i[2]*v_i[2])); // K = (1/2) * m * v^2
 	}
 
+	// Compute total energy
 	{
-		double usum = 0.0;
-		double ksum = 0.0;
+		double E_pot = 0.0;
+		double E_kin = 0.0;
 
 		for(unsigned int i = 0u; i < N; i++) {
-			usum += pot[i];
+			E_pot += pot[i];
 		}
 
 		for(unsigned int i = 0u; i < N; i++) {
-			ksum += kin[i];
+			E_kin += kin[i];
 		}
 
-		printf("E (E_tot) = % .015f\nU (E_pot) = % .015f\nK (E_kin) = % .015f\n", usum+ksum, usum, ksum);
+		printf("E (E_tot) = % .015f\nU (E_pot) = % .015f\nK (E_kin) = % .015f\n", E_pot + E_kin, E_pot, E_kin);
 	}
 
+	// 1/2 kick
 	for(unsigned int i = 0u; i < 3u * N; i++) {
 		pos[i] += (real)0.5 * timestep * vel[i];
 	}
 
+	// Drift
 	for(unsigned int i = 0u; i < 3u * N; i++) {
 		vel[i] += timestep * acc[i];
 	}
 
+	// 1/2 kick
 	for(unsigned int i = 0u; i < 3u * N; i++) {
 		pos[i] += (real)0.5 * timestep * vel[i];
 	}

@@ -31,7 +31,7 @@ int main(void) {
 
 	printf("\n");
 
-	unsigned int num_timesteps = 300u;
+	unsigned int num_timesteps = 600u;
 
 	//printf("");
 
@@ -54,7 +54,7 @@ int main(void) {
 	visualization_t vis;
 
 	if(rendering_enabled) {
-		if(visualization_init(&vis, 960u, 960u) != EXIT_SUCCESS) {
+		if(visualization_init(&vis, 960u, 540u) != EXIT_SUCCESS) {
 			fprintf(stderr, "Error starting visualization!\n");
 
 			simulation_free(&sim);
