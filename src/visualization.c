@@ -148,9 +148,6 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		}
 	}
 
-	#ifdef _OPENMP
-	#pragma omp parallel for schedule(dynamic, 1024)
-	#endif
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		i32 val = (i32)0;
 
@@ -159,7 +156,7 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		#endif
 		val = atomic_buffer[i];
 
-		render_buffer[i] = (f32)tanh(0.125 * 0.125 * (double)val);
+		render_buffer[i] = (f32)tanh(0.500 * 0.125 * 0.125 * (double)val);
 	}
 
 	*visualization = vis;

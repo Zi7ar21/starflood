@@ -31,7 +31,7 @@ int main(void) {
 
 	printf("\n");
 
-	unsigned int num_timesteps = 600u;
+	unsigned int num_timesteps = 450u;
 
 	//printf("");
 
@@ -41,7 +41,7 @@ int main(void) {
 
 	sim.mem = NULL;
 
-	if(simulation_init(&sim, 16384u) != EXIT_SUCCESS) {
+	if(simulation_init(&sim, 65536u) != EXIT_SUCCESS) {
 		fprintf(stderr, "Error starting simulation!\n");
 
 		return EXIT_FAILURE;

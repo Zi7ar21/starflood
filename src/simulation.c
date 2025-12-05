@@ -113,9 +113,9 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 		pos[3u*i+1u] = (real)(0.125 * p[1]);
 		pos[3u*i+2u] = (real)(1.000 * p[2]);
 
-		vel[3u*i+0u] = (real)( 0.100 * p[2]);
-		vel[3u*i+1u] = (real)( 0.000 * p[1]);
-		vel[3u*i+2u] = (real)(-0.100 * p[0]);
+		vel[3u*i+0u] = (real)( INV_TAU * 0.100 * p[2]);
+		vel[3u*i+1u] = (real)( INV_TAU * 0.000 * p[1]);
+		vel[3u*i+2u] = (real)(-INV_TAU * 0.100 * p[0]);
 	}
 
 	for(size_t i = (size_t)0u; i < (size_t)3u*N; i++) {
@@ -141,7 +141,8 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 int simulation_step(simulation_t* simulation) {
 	simulation_t sim = *simulation;
 
-	const real timestep = (real)0.03333333333333333333333333333333;
+	//const real timestep = (real)0.03333333333333333333333333333333;
+	const real timestep = (real)0.06666666666666666666666666666667;
 
 	unsigned int N = sim.N;
 	unsigned int step_number = sim.step_number;
@@ -153,7 +154,7 @@ int simulation_step(simulation_t* simulation) {
 	real* acc = sim.acc;
 
 	#ifdef _OPENMP
-	#pragma omp parallel for schedule(dynamic, 128)
+	#pragma omp parallel for schedule(dynamic, 256)
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
 		real U_i = (real)0; // Potential energy
@@ -169,7 +170,7 @@ int simulation_step(simulation_t* simulation) {
 		};
 
 		//for(unsigned int j = 0u; j < N; j++) {
-		for(unsigned int j = (N/2u)*(step_number % 2u); j < (N/2u)*(step_number % 2u) + (N/2u); j++) {
+		for(unsigned int j = (N/4u)*(step_number % 4u); j < (N/4u)*(step_number % 4u) + (N/4u); j++) {
 			if(i == j) {
 				continue;
 			}
@@ -197,9 +198,9 @@ int simulation_step(simulation_t* simulation) {
 
 			U_i += U_ij;
 
-			F_i[0] += (real)2.0 * -U_ij * r_ij[0] * inv_r1;
-			F_i[1] += (real)2.0 * -U_ij * r_ij[1] * inv_r1;
-			F_i[2] += (real)2.0 * -U_ij * r_ij[2] * inv_r1;
+			F_i[0] += (real)4.0 * -U_ij * r_ij[0] * inv_r1;
+			F_i[1] += (real)4.0 * -U_ij * r_ij[1] * inv_r1;
+			F_i[2] += (real)4.0 * -U_ij * r_ij[2] * inv_r1;
 		}
 
 		pot[i] = U_i;
