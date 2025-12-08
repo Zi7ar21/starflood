@@ -88,34 +88,55 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 		pcg4d(s);
 		pcg4d(s); // second round for better statistical quality
 
-		double r[4] = {
-			INV_PCG32_MAX * (double)s[0],
-			INV_PCG32_MAX * (double)s[1],
-			INV_PCG32_MAX * (double)s[2],
-			INV_PCG32_MAX * (double)s[3]
-		};
+		{
+			double r[4] = {
+				INV_PCG32_MAX * (double)s[0],
+				INV_PCG32_MAX * (double)s[1],
+				INV_PCG32_MAX * (double)s[2],
+				INV_PCG32_MAX * (double)s[3]
+			};
 
-		// Box-Muller Transform
-		// https://en.wikipedia.org/wiki/Box–Muller_transform
-		double p[3] = {
-			sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[2]),
-			sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[2]),
-			sqrt( -2.0 * log(r[1]) ) * cos(TAU * r[3])
-		};
+			// Box-Muller Transform
+			// https://en.wikipedia.org/wiki/Box–Muller_transform
+			double p[3] = {
+				sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[2]),
+				sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[2]),
+				sqrt( -2.0 * log(r[1]) ) * cos(TAU * r[3])
+			};
 
-		/*
-		pos[3u*i+0u] = 2.0*((double)s[0]/(double)0xFFFFFFFFu)-1.0;
-		pos[3u*i+1u] = 2.0*((double)s[1]/(double)0xFFFFFFFFu)-1.0;
-		pos[3u*i+2u] = 2.0*((double)s[2]/(double)0xFFFFFFFFu)-1.0;
-		*/
+			/*
+			pos[3u*i+0u] = 2.0*((double)s[0]/(double)0xFFFFFFFFu)-1.0;
+			pos[3u*i+1u] = 2.0*((double)s[1]/(double)0xFFFFFFFFu)-1.0;
+			pos[3u*i+2u] = 2.0*((double)s[2]/(double)0xFFFFFFFFu)-1.0;
+			*/
 
-		pos[3u*i+0u] = (real)(1.000 * p[0]);
-		pos[3u*i+1u] = (real)(0.125 * p[1]);
-		pos[3u*i+2u] = (real)(1.000 * p[2]);
+			pos[3u*i+0u] = (real)(1.000 * p[0]);
+			pos[3u*i+1u] = (real)(0.100 * p[1]);
+			pos[3u*i+2u] = (real)(1.000 * p[2]);
+		}
 
-		vel[3u*i+0u] = (real)( INV_TAU * 0.100 * p[2]);
-		vel[3u*i+1u] = (real)( INV_TAU * 0.000 * p[1]);
-		vel[3u*i+2u] = (real)(-INV_TAU * 0.100 * p[0]);
+		pcg4d(s);
+
+		{
+			double r[4] = {
+				INV_PCG32_MAX * (double)s[0],
+				INV_PCG32_MAX * (double)s[1],
+				INV_PCG32_MAX * (double)s[2],
+				INV_PCG32_MAX * (double)s[3]
+			};
+
+			// Box-Muller Transform
+			// https://en.wikipedia.org/wiki/Box–Muller_transform
+			double v[3] = {
+				sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[2]),
+				sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[2]),
+				sqrt( -2.0 * log(r[1]) ) * cos(TAU * r[3])
+			};
+
+			vel[3u*i+0u] = (real)( INV_TAU * 0.200 * pos[3u*i+2u] + 0.0001 * v[0]);
+			vel[3u*i+1u] = (real)( INV_TAU * 0.100 * pos[3u*i+1u] + 0.0001 * v[1]);
+			vel[3u*i+2u] = (real)(-INV_TAU * 0.200 * pos[3u*i+0u] + 0.0001 * v[2]);
+		}
 	}
 
 	for(size_t i = (size_t)0u; i < (size_t)3u*N; i++) {
@@ -154,7 +175,12 @@ int simulation_step(simulation_t* simulation) {
 	real* acc = sim.acc;
 
 	#ifdef _OPENMP
-	#pragma omp parallel for schedule(dynamic, 256)
+	//#pragma omp target map(pot[0u:N], kin[0u:N], mas[0u:N], pos[0u:3u*N], vel[0u:3u*N], acc[0u:3u*N])
+	#endif
+	{
+	#ifdef _OPENMP
+	#pragma omp parallel for schedule(dynamic, 128)
+	//#pragma omp parallel for
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
 		real U_i = (real)0; // Potential energy
@@ -209,12 +235,13 @@ int simulation_step(simulation_t* simulation) {
 		acc[3u*i+1u] = F_i[1];
 		acc[3u*i+2u] = F_i[2];
 	}
+	}
 
 	for(unsigned int i = 0u; i < N; i++) {
-		double v_i[3] = {
-			(double)vel[3u*i+0u],
-			(double)vel[3u*i+1u],
-			(double)vel[3u*i+2u]
+		real v_i[3] = {
+			(real)vel[3u*i+0u],
+			(real)vel[3u*i+1u],
+			(real)vel[3u*i+2u]
 		};
 
 		kin[i] = (real)0.5 * mas[i] * ((v_i[0]*v_i[0])+(v_i[1]*v_i[1])+(v_i[2]*v_i[2])); // K = (1/2) * m * v^2
@@ -280,14 +307,10 @@ int simulation_free(simulation_t* simulation) {
 	return EXIT_SUCCESS;
 }
 
-int simulation_load(simulation_t* simulation, const char* restrict filename) {
+int simulation_read(simulation_t* simulation, unsigned int N, const char* restrict filename) {
 	simulation_t sim = *simulation;
 
-	void* mem = simulation->mem;
-
-	if(NULL != mem) {
-		fprintf(stderr, "Error: Simulation already allocated!\n");
-
+	if( sizeof(real) != sizeof(float) ) {
 		return EXIT_FAILURE;
 	}
 
@@ -327,10 +350,9 @@ int simulation_load(simulation_t* simulation, const char* restrict filename) {
 
 		return EXIT_FAILURE;
 	}
-	*/
-	//fseek(file, (long)10, SEEK_SET);
 
-	uint32_t N = 1024u;
+	fseek(file, (long)10, SEEK_SET);
+	*/
 
 	if(EXIT_SUCCESS != simulation_init(&sim, N)) {
 		fclose(file);

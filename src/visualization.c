@@ -97,7 +97,7 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 		// Pitch
 		{
-			real theta = (real)TAU * 0.125;
+			real theta = (real)(TAU * 0.250);
 
 			real v_rot[3] = {
 				v[0],
@@ -110,9 +110,9 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 			v[2] = v_rot[2];
 		}
 
-		i32 rgba[4] = {(f32)1.000, (f32)1.000, (f32)1.000, (f32)1.000};
+		i32 rgba[4] = {(i32)1, (i32)1, (i32)1, (i32)1};
 
-		for(unsigned int j = 0u; j < 64u; j++) {
+		for(unsigned int j = 0u; j < 128u; j++) {
 			u32 s[4] = {(u32)j, (u32)i, (u32)step_number, (u32)420691337u};
 
 			pcg4d(s);
@@ -128,12 +128,12 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 			// Gaussian pixel filter
 			// https://en.wikipedia.org/wiki/Box–Muller_transform
 			double sample_offset[2] = {
-				0.66666666666666666666666666666667 * sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[1]),
-				0.66666666666666666666666666666667 * sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[1])
+				0.750 * sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[1]),
+				0.750 * sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[1])
 			};
 
-			int x = ( h * (0.250 * (double)v[0]) )+(0.5 * (double)w) - 0.5 + sample_offset[0];
-			int y = ( h * (0.250 * (double)v[1]) )+(0.5 * (double)h) - 0.5 + sample_offset[1];
+			int x = (int)( ( (double)h * (0.500*(double)v[0]) )+(0.5 * (double)w)-0.5 + sample_offset[0] );
+			int y = (int)( ( (double)h * (0.500*(double)v[1]) )+(0.5 * (double)h)-0.5 + sample_offset[1] );
 
 			if((int)0 <= x && x < (int)w && (int)0 <= y && y < (int)h) {
 				size_t pixel_index = (size_t)4u*((size_t)w*(size_t)y+(size_t)x);

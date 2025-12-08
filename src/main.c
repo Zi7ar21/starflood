@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,36 +13,118 @@
 #pragma message("OpenMP is NOT ENABLED")
 #endif
 
+#include "config.h"
 #include "simulation.h"
 #include "types.h"
 #include "visualization.h"
 
-int main(void) {
+int main(int argc, char *argv[]) {
+	unsigned int N = 65536u;
+
+	unsigned int num_timesteps = 5u;
+
+	int dumping_enabled = false;
+
+	int visualization_enabled = 1;
+
+	unsigned int render_w = 960u;
+	unsigned int render_h = 540u;
+
+	for(int i = 0; i < argc; i++) {
+		if(NULL == argv[i]) {
+			fprintf(stderr, "%s: error: argv[%d] is NULL!\n", argv[0], i);
+
+			return EXIT_FAILURE;
+		}
+
+		if(0 == i) {
+			continue;
+		}
+
+		if( 0 == strcmp("-h", argv[i]) || 0 == strcmp("--help", argv[i]) ) {
+			printf(
+				"Usage: %s [options]...\n"
+				"\n"
+				"Options:\n"
+				"  -h, --help       display this help and exit\n"
+				"  -V, --version    display version information and exit\n"
+				"\n"
+				"Starflood repository: <%s>\n",
+				argv[0],
+				STARFLOOD_REPOSITORY
+			);
+
+			if( (argc - 1) == i ) {
+				return EXIT_SUCCESS;
+			} else {
+				return EXIT_FAILURE;
+			}
+		}
+
+		if( 0 == strcmp("-V", argv[i]) || 0 == strcmp("--version", argv[i]) ) {
+			printf(
+				"Starflood v%d.%d.%d\n"
+				"\n"
+				"Starflood repository: <%s>\n",
+				STARFLOOD_VERSION_MAJOR,
+				STARFLOOD_VERSION_MINOR,
+				STARFLOOD_VERSION_PATCH,
+				STARFLOOD_REPOSITORY
+			);
+
+			if( (argc - 1) == i ) {
+				return EXIT_SUCCESS;
+			} else {
+				return EXIT_FAILURE;
+			}
+		}
+
+		fprintf(stderr, "%s: unrecognized option \'%s\'\nTry \'%s --help\' for more information.\n", argv[0], argv[1], argv[0]);
+
+		return EXIT_FAILURE;
+	}
+
 	printf("=== Starflood ===\n");
 
 	fflush(stdout);
 
+	printf("\n");
 	printf("Configuration:\n");
-
+	printf("  OpenMP:");
+	printf("    Enabled: ");
 	#ifdef _OPENMP
-	printf("  OpenMP is ON (_OPENMP = %d)\n", _OPENMP);
+	printf("true\n");
+	printf("    _OPENMP: %d\n", _OPENMP);
+	printf("    max_threads: %d\n", omp_get_max_threads());
+	printf("    num_devices: %d\n", omp_get_num_devices());
 	#else
-	printf("  OpenMP is OFF\n");
+	printf("false\n");
 	#endif
 
+	printf("Parameters:\n");
+	printf("  Simulation:\n");
+	printf("    N: %u\n", N);
+	printf("    num_timesteps: %u\n", num_timesteps);
+	printf("  Visualization:\n");
+	printf("    Enabled: ");
+
+	if(visualization_enabled) {
+		printf("true\n");
+	} else {
+		printf("false\n");
+	}
+
+	printf("    render_w: %u\n", render_w);
+	printf("    render_h: %u\n", render_h);
 	printf("\n");
 
-	unsigned int num_timesteps = 450u;
-
-	//printf("");
-
-	int rendering_enabled = true;
+	fflush(stdout);
 
 	simulation_t sim;
 
 	sim.mem = NULL;
 
-	if(simulation_init(&sim, 65536u) != EXIT_SUCCESS) {
+	if(simulation_init(&sim, N) != EXIT_SUCCESS) {
 		fprintf(stderr, "Error starting simulation!\n");
 
 		return EXIT_FAILURE;
@@ -53,8 +136,8 @@ int main(void) {
 
 	visualization_t vis;
 
-	if(rendering_enabled) {
-		if(visualization_init(&vis, 960u, 540u) != EXIT_SUCCESS) {
+	if(visualization_enabled) {
+		if( EXIT_SUCCESS != visualization_init(&vis, render_w, render_h) ) {
 			fprintf(stderr, "Error starting visualization!\n");
 
 			simulation_free(&sim);
@@ -63,39 +146,47 @@ int main(void) {
 		}
 	}
 
-	for(unsigned int step_num = 0u; step_num < num_timesteps; step_num++) {
+	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num++) {
 		printf("Step #%3u\n", step_num);
 
-		/*
-		snprintf(filename, (size_t)64u, "./out/step_%04u.data", step_num);
+		if(dumping_enabled) {
+			snprintf(filename, (size_t)64u, "./out/step_%04u.data", step_num);
 
-		if(EXIT_SUCCESS != simulation_dump(&sim, filename)) {
-			fprintf(stderr, "Error: simulation_dump() failed!\n");
+			if( EXIT_SUCCESS != simulation_dump(&sim, filename) ) {
+				fprintf(stderr, "Error: simulation_dump() failed!\n");
+			}
 		}
-		*/
 
-		if(rendering_enabled) {
-			if(EXIT_SUCCESS != visualization_draw(&vis, &sim)) {
+		if(visualization_enabled) {
+			if( EXIT_SUCCESS != visualization_draw(&vis, &sim) ) {
 				fprintf(stderr, "Error: visualization_draw() failed!\n");
 			}
 
 			snprintf(filename, (size_t)64u, "./out/step_%04u.pfm", step_num);
 
-			if(EXIT_SUCCESS != visualization_save(&vis, filename)) {
+			if( EXIT_SUCCESS != visualization_save(&vis, filename) ) {
 				fprintf(stderr, "Error: visualization_save() failed!\n");
 			}
 		}
 
-		simulation_step(&sim);
+		if(num_timesteps != step_num) {
+			simulation_step(&sim);
+		}
 
 		printf("\n");
 	}
 
-	if(rendering_enabled) {
+	printf("Cleaning up...\n");
+
+	fflush(stdout);
+
+	if(visualization_enabled) {
 		visualization_free(&vis);
 	}
 
 	simulation_free(&sim);
+
+	printf("Finished!\n");
 
 	return EXIT_SUCCESS;
 }

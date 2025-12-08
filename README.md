@@ -54,6 +54,10 @@ cd starflood
 
 [to-do]
 
+```sh
+nvc -mp=gpu -gpu=ccnative -g -march=native -O4 -pedantic -std=c11 -Wall -Wextra -Wshadow -o starflood -lm src/main.c src/rng.c src/simulation.c src/visualization.c
+```
+
 ### Mounting a `tmpfs` (Optional)
 
 Disk I/O can be annoying during development if you aren't planning on keeping run data or large frame sqeuences around for a while.
