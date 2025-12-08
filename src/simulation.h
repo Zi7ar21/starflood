@@ -7,7 +7,7 @@
 typedef struct {
 	unsigned int N; // Number of bodies in the simulation
 
-	unsigned int step_number; // # of steps elapsed
+	unsigned int step_number; // Number of steps elapsed
 
 	void* mem; // Shared memory
 

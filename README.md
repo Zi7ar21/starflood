@@ -12,18 +12,16 @@ Starflood is an open-source astrophysical simulation code written in C.
 - File I/O
   - Runs can be dumped in a binary format
   - Visualizations are saved as a frame sequence ([`.pfm` image format](https://netpbm.sourceforge.net/doc/pfm.html))
-- ~~2D~~ (_New!_) **3D** _O(N*log(N))_-complexity tree gravity solver using the **[Barnes-Hut algorithm](https://en.wikipedia.org/wiki/Barnes%E2%80%93Hut_simulation)**!
-- ~~2D~~ (_New!_) **3D** hydrodynamics with **[Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)**!
-- Simultaneous **Simulation** AND **Rendering**!
-- **Profiling** using `omp_get_wtime` for `double`-precision timing (a little less granularity than a nanosecond after 6 months uptime)!
 
 ### Planned (To-do List)
 
 - Add support for [distributed computing](https://en.wikipedia.org/wiki/Distributed_computing)
   - [Message Passing Interface (MPI)](https://en.wikipedia.org/wiki/Message_Passing_Interface)
-- Add support for [Fast Multipole Method (FMM)](https://en.wikipedia.org/wiki/Fast_multipole_method) to physical solver(s)
 - Add support for [GPU compute](https://en.wikipedia.org/wiki/General-purpose_computing_on_graphics_processing_units)
 - Add support for [volume rendering](https://en.wikipedia.org/wiki/Volume_rendering) to visualization
+- Improve physical solver(s)
+  - Add support for [Barnes-Hut](https://en.wikipedia.org/wiki/Barnes–Hut_simulation) tree method
+  - Add support for [Fast Multipole Method (FMM)](https://en.wikipedia.org/wiki/Fast_multipole_method)
 
 ## References
 
@@ -52,10 +50,32 @@ cd starflood
 
 ### Building the Code
 
-[to-do]
+#### Debug
 
 ```sh
-nvc -mp=gpu -gpu=ccnative -g -march=native -O4 -pedantic -std=c11 -Wall -Wextra -Wshadow -o starflood -lm src/main.c src/rng.c src/simulation.c src/visualization.c
+clang -fopenmp -ggdb -march=x86-64 -Og -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood -lm src/*.c
+```
+
+```sh
+gcc -fopenmp -ggdb -march=x86-64 -Og -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood -lm src/*.c
+```
+
+#### Optimized
+
+```sh
+clang -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood -lm src/*.c
+```
+
+```sh
+gcc -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood -lm src/*.c
+```
+
+#### OpenMP Offloading
+
+##### NVIDIA HPC SDK
+
+```sh
+nvc -gpu=ccnative -mp=gpu -fopenmp -g -march=native -O4 -pedantic -std=c11 -Wall -Wextra -Wshadow -o starflood -lm src/*.c
 ```
 
 ### Mounting a `tmpfs` (Optional)
@@ -94,6 +114,14 @@ man tmpfs
 ### Running Starflood
 
 [to-do]
+
+```sh
+rm -f out/* && nice -9 ./starflood
+```
+
+```sh
+ffmpeg -y -framerate 30 -color_primaries bt709 -colorspace bt709 -color_range full -i ./out/step_%04d.pfm -color_primaries bt709 -color_trc bt709 -colorspace bt709 -color_range limited -pix_fmt yuv420p -an -sn -c:v h264_nvenc -preset slow -tune hq -profile:v main -rc-lookahead 16383 -spatial_aq 1 -temporal_aq 1 -coder cabac -b_ref_mode middle -g 15 -bf 2 -b:v 8M -r 30 -an -sn starflood_out.mp4 && mpv --loop starflood_out.mp4
+```
 
 ### Profiling Starflood
 

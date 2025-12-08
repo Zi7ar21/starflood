@@ -19,16 +19,20 @@
 #include "visualization.h"
 
 int main(int argc, char *argv[]) {
-	unsigned int N = 65536u;
+	unsigned int N = (unsigned int)NUM_BODIES;
+	unsigned int num_timesteps = (unsigned int)NUM_TIMESTEPS;
 
-	unsigned int num_timesteps = 5u;
+	int dumping_enabled = 0, visualization_enabled = 0;
 
-	int dumping_enabled = false;
+	#ifdef ENABLE_DUMPING
+	dumping_enabled = 1;
+	#endif
 
-	int visualization_enabled = 1;
+	#ifdef ENABLE_VISUALIZATION
+	visualization_enabled = 1;
+	#endif
 
-	unsigned int render_w = 960u;
-	unsigned int render_h = 540u;
+	unsigned int render_w = 960u, render_h = 540u;
 
 	for(int i = 0; i < argc; i++) {
 		if(NULL == argv[i]) {
@@ -150,7 +154,7 @@ int main(int argc, char *argv[]) {
 		printf("Step #%3u\n", step_num);
 
 		if(dumping_enabled) {
-			snprintf(filename, (size_t)64u, "./out/step_%04u.data", step_num);
+			snprintf(filename, (size_t)64u, SIMULATION_FILENAME, step_num);
 
 			if( EXIT_SUCCESS != simulation_dump(&sim, filename) ) {
 				fprintf(stderr, "Error: simulation_dump() failed!\n");
@@ -162,7 +166,7 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Error: visualization_draw() failed!\n");
 			}
 
-			snprintf(filename, (size_t)64u, "./out/step_%04u.pfm", step_num);
+			snprintf(filename, (size_t)64u, VISUALIZATION_FILENAME, step_num);
 
 			if( EXIT_SUCCESS != visualization_save(&vis, filename) ) {
 				fprintf(stderr, "Error: visualization_save() failed!\n");

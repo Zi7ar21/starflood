@@ -162,8 +162,7 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 int simulation_step(simulation_t* simulation) {
 	simulation_t sim = *simulation;
 
-	//const real timestep = (real)0.03333333333333333333333333333333;
-	const real timestep = (real)0.06666666666666666666666666666667;
+	const real dt = (real)TIMESTEP_SIZE;
 
 	unsigned int N = sim.N;
 	unsigned int step_number = sim.step_number;
@@ -175,17 +174,29 @@ int simulation_step(simulation_t* simulation) {
 	real* acc = sim.acc;
 
 	#ifdef _OPENMP
-	//#pragma omp target map(pot[0u:N], kin[0u:N], mas[0u:N], pos[0u:3u*N], vel[0u:3u*N], acc[0u:3u*N])
+	#pragma omp target map(pot[0u:N], kin[0u:N], mas[0u:N], pos[0u:3u*N], vel[0u:3u*N], acc[0u:3u*N])
 	#endif
 	{
 	#ifdef _OPENMP
-	#pragma omp parallel for schedule(dynamic, 128)
-	//#pragma omp parallel for
+	//#pragma omp parallel for schedule(dynamic, 128)
+	#pragma omp parallel for
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
-		real U_i = (real)0; // Potential energy
+		real U_sum = (real)0.0;
 
-		real F_i[3] = {(real)0.0, (real)0.0, (real)0.0}; // Summed forces
+		real U_c = (real)0.0;
+
+		real F_sum[3] = {
+			(real)0.0,
+			(real)0.0,
+			(real)0.0
+		};
+
+		real F_c[3] = {
+			(real)0.0,
+			(real)0.0,
+			(real)0.0
+		};
 
 		real m_i = mas[i]; // Body mass
 
@@ -195,8 +206,8 @@ int simulation_step(simulation_t* simulation) {
 			pos[3u*i+2u]
 		};
 
-		//for(unsigned int j = 0u; j < N; j++) {
-		for(unsigned int j = (N/4u)*(step_number % 4u); j < (N/4u)*(step_number % 4u) + (N/4u); j++) {
+		for(unsigned int j = 0u; j < N; j++) {
+		//for(unsigned int j = (N/4u)*(step_number % 4u); j < (N/4u)*(step_number % 4u) + (N/4u); j++) {
 			if(i == j) {
 				continue;
 			}
@@ -210,30 +221,56 @@ int simulation_step(simulation_t* simulation) {
 			};
 
 			real r_ij[3] = {
-				r_j[0] - r_i[0],
-				r_j[1] - r_i[1],
-				r_j[2] - r_i[2]
+				r_j[0u] - r_i[0u],
+				r_j[1u] - r_i[1u],
+				r_j[2u] - r_i[2u]
 			};
 
-			real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
+			real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
 
 			real inv_r2 = (real)1.0 / (      r2 +(real)0.000001);
 			real inv_r1 = (real)1.0 / (sqrtf(r2)+(real)0.000001);
 
 			real U_ij = -(real)G * m_i * m_j * inv_r2;
 
-			U_i += U_ij;
+			{
+				// Naïve summation
+				//U_sum += U_ij;
 
-			F_i[0] += (real)4.0 * -U_ij * r_ij[0] * inv_r1;
-			F_i[1] += (real)4.0 * -U_ij * r_ij[1] * inv_r1;
-			F_i[2] += (real)4.0 * -U_ij * r_ij[2] * inv_r1;
+				// Kahan summation
+				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+				real y = U_ij - U_c;
+				volatile real t = U_sum + y;
+				volatile real z = t - U_sum;
+				U_c = z - y;
+				U_sum = t;
+			}
+
+			real F_ij[3] = {
+				-U_ij * r_ij[0u] * inv_r1,
+				-U_ij * r_ij[1u] * inv_r1,
+				-U_ij * r_ij[2u] * inv_r1
+			};
+
+			for(unsigned int k = 0u; k < 3u; k++) {
+				// Naïve summation
+				//F_sum[k] += F_ij[k];
+
+				// Kahan summation
+				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+				real y = F_ij[k] - F_c[k];
+				volatile real t = F_sum[k] + y;
+				volatile real z = t - F_sum[k];
+				F_c[k] = z - y;
+				F_sum[k] = t;
+			}
 		}
 
-		pot[i] = U_i;
+		pot[i] = U_sum;
 
-		acc[3u*i+0u] = F_i[0];
-		acc[3u*i+1u] = F_i[1];
-		acc[3u*i+2u] = F_i[2];
+		acc[3u*i+0u] = F_sum[0u];
+		acc[3u*i+1u] = F_sum[1u];
+		acc[3u*i+2u] = F_sum[2u];
 	}
 	}
 
@@ -265,17 +302,17 @@ int simulation_step(simulation_t* simulation) {
 
 	// 1/2 kick
 	for(unsigned int i = 0u; i < 3u * N; i++) {
-		pos[i] += (real)0.5 * timestep * vel[i];
+		pos[i] += (real)0.5 * dt * vel[i];
 	}
 
 	// Drift
 	for(unsigned int i = 0u; i < 3u * N; i++) {
-		vel[i] += timestep * acc[i];
+		vel[i] += dt * acc[i];
 	}
 
 	// 1/2 kick
 	for(unsigned int i = 0u; i < 3u * N; i++) {
-		pos[i] += (real)0.5 * timestep * vel[i];
+		pos[i] += (real)0.5 * dt * vel[i];
 	}
 
 	sim.step_number++;
@@ -317,7 +354,9 @@ int simulation_read(simulation_t* simulation, unsigned int N, const char* restri
 	FILE* file = fopen(filename, "rb");
 
 	if(NULL == file) {
-		perror("Error");
+		fprintf(stderr, "Error: fopen(\"%s\", \"%s\") ", filename, "rb");
+
+		perror("failed");
 
 		return EXIT_FAILURE;
 	}
@@ -354,7 +393,7 @@ int simulation_read(simulation_t* simulation, unsigned int N, const char* restri
 	fseek(file, (long)10, SEEK_SET);
 	*/
 
-	if(EXIT_SUCCESS != simulation_init(&sim, N)) {
+	if( EXIT_SUCCESS != simulation_init(&sim, N) ) {
 		fclose(file);
 
 		return EXIT_FAILURE;
@@ -380,11 +419,16 @@ int simulation_dump(simulation_t* simulation, const char* restrict filename) {
 	FILE* file = fopen(filename, "wb");
 
 	if(NULL == file) {
-		perror("Error");
+		fprintf(stderr, "Error: fopen(\"%s\", \"%s\") ", filename, "wb");
+
+		perror("failed");
 
 		return EXIT_FAILURE;
 	};
 
+	uint32_t N = (uint32_t)sim.N;
+
+	/*
 	const uint8_t magic_bytes[2] = {(uint8_t)0x53u, (uint8_t)0x46u};
 
 	fwrite(magic_bytes, sizeof(uint8_t), (size_t)2u, file);
@@ -393,9 +437,8 @@ int simulation_dump(simulation_t* simulation, const char* restrict filename) {
 
 	fwrite(&starflood_magic_number, sizeof(uint32_t), (size_t)1u, file);
 
-	uint32_t N = (uint32_t)sim.N;
-
 	fwrite(&N, sizeof(uint32_t), (size_t)1u, file);
+	*/
 
 	fwrite(sim.mem, sizeof(real), (size_t)N * (size_t)(3u*1u+3u*3u), file);
 
