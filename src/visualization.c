@@ -1,9 +1,12 @@
+#define _POSIX_C_SOURCE 199309L
+
 #include "visualization.h"
 
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "config.h"
 #include "rng.h"
@@ -76,12 +79,39 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 	real* pos = sim.pos;
 
+	struct timespec ts0, ts1;
+
+	clock_gettime(CLOCK_REALTIME, &ts0);
+	clock_gettime(CLOCK_REALTIME, &ts1);
+	clock_gettime(CLOCK_REALTIME, &ts0);
+	clock_gettime(CLOCK_REALTIME, &ts1);
+
+	printf("tmin: % 13jd ns\n", (intmax_t)1000000000*(intmax_t)(ts1.tv_sec-ts0.tv_sec)+(intmax_t)(ts1.tv_nsec-ts0.tv_nsec));
+
+	clock_gettime(CLOCK_REALTIME, &ts0);
+	clock_gettime(CLOCK_REALTIME, &ts1);
+	clock_gettime(CLOCK_REALTIME, &ts0);
+	clock_gettime(CLOCK_REALTIME, &ts1);
+
+	clock_gettime(CLOCK_REALTIME, &ts0);
+
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		#ifdef _OPENMP
 		#pragma omp atomic write
 		#endif
 		atomic_buffer[i] = (i32)0;
 	}
+
+	clock_gettime(CLOCK_REALTIME, &ts1);
+
+	printf("wipe: % 13jd ns\n", (intmax_t)1000000000*(intmax_t)(ts1.tv_sec-ts0.tv_sec)+(intmax_t)(ts1.tv_nsec-ts0.tv_nsec));
+
+	clock_gettime(CLOCK_REALTIME, &ts0);
+	clock_gettime(CLOCK_REALTIME, &ts1);
+	clock_gettime(CLOCK_REALTIME, &ts0);
+	clock_gettime(CLOCK_REALTIME, &ts1);
+
+	clock_gettime(CLOCK_REALTIME, &ts0);
 
 	#ifdef _OPENMP
 	#pragma omp parallel for schedule(dynamic, 1024)
@@ -97,7 +127,9 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 		// Pitch
 		{
-			real theta = (real)(TAU * 0.250);
+			//const real theta = (real)0.000;
+			const real theta = (real)(TAU * 0.125);
+			//const real theta = (real)(TAU * 0.250);
 
 			real v_rot[3] = {
 				v[0],
@@ -112,7 +144,7 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 		i32 rgba[4] = {(i32)1, (i32)1, (i32)1, (i32)1};
 
-		for(unsigned int j = 0u; j < 128u; j++) {
+		for(unsigned int j = 0u; j < 256u; j++) {
 			u32 s[4] = {(u32)j, (u32)i, (u32)step_number, (u32)420691337u};
 
 			pcg4d(s);
@@ -132,8 +164,8 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 				0.750 * sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[1])
 			};
 
-			int x = (int)( ( (double)h * (0.500*(double)v[0]) )+(0.5 * (double)w)-0.5 + sample_offset[0] );
-			int y = (int)( ( (double)h * (0.500*(double)v[1]) )+(0.5 * (double)h)-0.5 + sample_offset[1] );
+			int x = (int)( ( (double)h * (0.250*(double)v[0]) )+(0.5 * (double)w)-0.5 + sample_offset[0] );
+			int y = (int)( ( (double)h * (0.250*(double)v[1]) )+(0.5 * (double)h)-0.5 + sample_offset[1] );
 
 			if((int)0 <= x && x < (int)w && (int)0 <= y && y < (int)h) {
 				size_t pixel_index = (size_t)4u*((size_t)w*(size_t)y+(size_t)x);
@@ -148,6 +180,17 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		}
 	}
 
+	clock_gettime(CLOCK_REALTIME, &ts1);
+
+	printf("draw: % 13jd ns\n", (intmax_t)1000000000*(intmax_t)(ts1.tv_sec-ts0.tv_sec)+(intmax_t)(ts1.tv_nsec-ts0.tv_nsec));
+
+	clock_gettime(CLOCK_REALTIME, &ts0);
+	clock_gettime(CLOCK_REALTIME, &ts1);
+	clock_gettime(CLOCK_REALTIME, &ts0);
+	clock_gettime(CLOCK_REALTIME, &ts1);
+
+	clock_gettime(CLOCK_REALTIME, &ts0);
+
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		i32 val = (i32)0;
 
@@ -156,8 +199,12 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		#endif
 		val = atomic_buffer[i];
 
-		render_buffer[i] = (f32)tanh(0.500 * 0.125 * 0.125 * (double)val);
+		render_buffer[i] = (f32)tanh(0.250 * 0.125 * 0.125 * (double)val);
 	}
+
+	clock_gettime(CLOCK_REALTIME, &ts1);
+
+	printf("read: % 13jd ns\n", (intmax_t)1000000000*(intmax_t)(ts1.tv_sec-ts0.tv_sec)+(intmax_t)(ts1.tv_nsec-ts0.tv_nsec));
 
 	*visualization = vis;
 

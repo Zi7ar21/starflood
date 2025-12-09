@@ -7,7 +7,7 @@
 /* File I/O Configuration */
 
 // Uncomment to enable simulation dumping
-#define ENABLE_DUMPING
+//#define ENABLE_DUMPING
 
 // Simulation dump filename pattern
 #define SIMULATION_FILENAME "./out/step_%04u.data"
@@ -24,7 +24,8 @@
 #define NUM_BODIES 65536u
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 450u
+//#define NUM_TIMESTEPS 450u
+#define NUM_TIMESTEPS 900u
 
 // Simulation timestep size (dt)
 #define TIMESTEP_SIZE 0.06666666666666666666666666666667

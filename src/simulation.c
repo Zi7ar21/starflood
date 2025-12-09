@@ -290,11 +290,11 @@ int simulation_step(simulation_t* simulation) {
 		double E_kin = 0.0;
 
 		for(unsigned int i = 0u; i < N; i++) {
-			E_pot += pot[i];
+			E_pot += (double)pot[i];
 		}
 
 		for(unsigned int i = 0u; i < N; i++) {
-			E_kin += kin[i];
+			E_kin += (double)kin[i];
 		}
 
 		printf("E (E_tot) = % .015f\nU (E_pot) = % .015f\nK (E_kin) = % .015f\n", E_pot + E_kin, E_pot, E_kin);
