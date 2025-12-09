@@ -15,10 +15,14 @@ archive/
 *.code-workspace
 
 # Profiling
+*.ncu-proj
+*.ncu-rep
+*.nsight
+*.nsight-cuproj
+*.nsys-rep
 *.profdata
 *.profraw
 perf.data
-nsight/
 
 # Visualizations
 *.mp4

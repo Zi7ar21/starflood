@@ -174,12 +174,8 @@ int simulation_step(simulation_t* simulation) {
 	real* acc = sim.acc;
 
 	#ifdef _OPENMP
-	#pragma omp target map(pot[0u:N], kin[0u:N], mas[0u:N], pos[0u:3u*N], vel[0u:3u*N], acc[0u:3u*N])
-	#endif
-	{
-	#ifdef _OPENMP
 	//#pragma omp parallel for schedule(dynamic, 128)
-	#pragma omp parallel for
+	#pragma omp target teams distribute parallel for map(pot[0u:N], kin[0u:N], mas[0u:N], pos[0u:3u*N], vel[0u:3u*N], acc[0u:3u*N])
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
 		real U_sum = (real)0.0;
@@ -271,7 +267,6 @@ int simulation_step(simulation_t* simulation) {
 		acc[3u*i+0u] = F_sum[0u];
 		acc[3u*i+1u] = F_sum[1u];
 		acc[3u*i+2u] = F_sum[2u];
-	}
 	}
 
 	for(unsigned int i = 0u; i < N; i++) {

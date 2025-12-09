@@ -1,12 +1,9 @@
-#define _POSIX_C_SOURCE 199309L
-
 #include "visualization.h"
 
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #include "config.h"
 #include "rng.h"
@@ -79,39 +76,12 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 	real* pos = sim.pos;
 
-	struct timespec ts0, ts1;
-
-	clock_gettime(CLOCK_REALTIME, &ts0);
-	clock_gettime(CLOCK_REALTIME, &ts1);
-	clock_gettime(CLOCK_REALTIME, &ts0);
-	clock_gettime(CLOCK_REALTIME, &ts1);
-
-	printf("tmin: % 13jd ns\n", (intmax_t)1000000000*(intmax_t)(ts1.tv_sec-ts0.tv_sec)+(intmax_t)(ts1.tv_nsec-ts0.tv_nsec));
-
-	clock_gettime(CLOCK_REALTIME, &ts0);
-	clock_gettime(CLOCK_REALTIME, &ts1);
-	clock_gettime(CLOCK_REALTIME, &ts0);
-	clock_gettime(CLOCK_REALTIME, &ts1);
-
-	clock_gettime(CLOCK_REALTIME, &ts0);
-
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		#ifdef _OPENMP
 		#pragma omp atomic write
 		#endif
 		atomic_buffer[i] = (i32)0;
 	}
-
-	clock_gettime(CLOCK_REALTIME, &ts1);
-
-	printf("wipe: % 13jd ns\n", (intmax_t)1000000000*(intmax_t)(ts1.tv_sec-ts0.tv_sec)+(intmax_t)(ts1.tv_nsec-ts0.tv_nsec));
-
-	clock_gettime(CLOCK_REALTIME, &ts0);
-	clock_gettime(CLOCK_REALTIME, &ts1);
-	clock_gettime(CLOCK_REALTIME, &ts0);
-	clock_gettime(CLOCK_REALTIME, &ts1);
-
-	clock_gettime(CLOCK_REALTIME, &ts0);
 
 	#ifdef _OPENMP
 	#pragma omp parallel for schedule(dynamic, 1024)
@@ -180,17 +150,6 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		}
 	}
 
-	clock_gettime(CLOCK_REALTIME, &ts1);
-
-	printf("draw: % 13jd ns\n", (intmax_t)1000000000*(intmax_t)(ts1.tv_sec-ts0.tv_sec)+(intmax_t)(ts1.tv_nsec-ts0.tv_nsec));
-
-	clock_gettime(CLOCK_REALTIME, &ts0);
-	clock_gettime(CLOCK_REALTIME, &ts1);
-	clock_gettime(CLOCK_REALTIME, &ts0);
-	clock_gettime(CLOCK_REALTIME, &ts1);
-
-	clock_gettime(CLOCK_REALTIME, &ts0);
-
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		i32 val = (i32)0;
 
@@ -201,10 +160,6 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 		render_buffer[i] = (f32)tanh(0.250 * 0.125 * 0.125 * (double)val);
 	}
-
-	clock_gettime(CLOCK_REALTIME, &ts1);
-
-	printf("read: % 13jd ns\n", (intmax_t)1000000000*(intmax_t)(ts1.tv_sec-ts0.tv_sec)+(intmax_t)(ts1.tv_nsec-ts0.tv_nsec));
 
 	*visualization = vis;
 

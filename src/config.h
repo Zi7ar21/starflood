@@ -25,7 +25,7 @@
 
 // Default number of timesteps to run simulation for
 //#define NUM_TIMESTEPS 450u
-#define NUM_TIMESTEPS 900u
+#define NUM_TIMESTEPS 5u
 
 // Simulation timestep size (dt)
 #define TIMESTEP_SIZE 0.06666666666666666666666666666667
