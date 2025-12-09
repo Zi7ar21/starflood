@@ -25,13 +25,15 @@
 
 // Default number of timesteps to run simulation for
 //#define NUM_TIMESTEPS 450u
-#define NUM_TIMESTEPS 5u
+#define NUM_TIMESTEPS 300u
 
 // Simulation timestep size (dt)
-#define TIMESTEP_SIZE 0.06666666666666666666666666666667
+//#define TIMESTEP_SIZE 0.03333333333333333333333333333333
+//#define TIMESTEP_SIZE 0.06666666666666666666666666666667
+#define TIMESTEP_SIZE 0.100
 
 // Gravitational constant (physical units are not yet implemented)
-#define G (real)1.0
+#define G 1.0
 
 // alternative (m^3 * kg^-1 * s^2)
 // https://physics.nist.gov/cgi-bin/cuu/Value?bg
