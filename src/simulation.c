@@ -74,15 +74,25 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 		kin[i] = (real)0.0;
 	}
 
-	{
-		real body_mass = (real)(10.0 / (double)N);
+	real body_mass = (real)(10.0 / (double)N);
 
-		for(unsigned int i = 0u; i < N; i++) {
-			mas[i] = body_mass;
-		}
+	for(unsigned int i = 0u; i < N; i++) {
+		mas[i] = body_mass;
 	}
 
 	for(unsigned int i = (size_t)0u; i < N; i++) {
+		real p[3] = {
+			(real)0.0,
+			(real)0.0,
+			(real)0.0
+		};
+
+		real v[3] = {
+			(real)0.0,
+			(real)0.0,
+			(real)0.0
+		};
+
 		uint32_t s[4] = {(uint32_t)i, (uint32_t)420u, (uint32_t)69u, (uint32_t)1337u};
 
 		pcg4d(s);
@@ -98,21 +108,21 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 
 			// Box-Muller Transform
 			// https://en.wikipedia.org/wiki/Box–Muller_transform
-			double p[3] = {
-				sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[2]),
-				sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[2]),
-				sqrt( -2.0 * log(r[1]) ) * cos(TAU * r[3])
+			double n[3] = {
+				sqrt( -2.0 * log(r[0u]) ) * cos(TAU * r[2u]),
+				sqrt( -2.0 * log(r[0u]) ) * sin(TAU * r[2u]),
+				sqrt( -2.0 * log(r[1u]) ) * cos(TAU * r[3u])
 			};
 
 			/*
-			pos[3u*i+0u] = 2.0*((double)s[0]/(double)0xFFFFFFFFu)-1.0;
-			pos[3u*i+1u] = 2.0*((double)s[1]/(double)0xFFFFFFFFu)-1.0;
-			pos[3u*i+2u] = 2.0*((double)s[2]/(double)0xFFFFFFFFu)-1.0;
+			p[0u] = 1.000 * n[0u];
+			p[1u] = 0.100 * n[1u];
+			p[2u] = 1.000 * n[2u];
 			*/
 
-			pos[3u*i+0u] = (real)(1.000 * p[0]);
-			pos[3u*i+1u] = (real)(0.100 * p[1]);
-			pos[3u*i+2u] = (real)(1.000 * p[2]);
+			p[0u] = 1.000 * n[0u];
+			p[1u] = 1.000 * n[1u];
+			p[2u] = 1.000 * n[2u];
 		}
 
 		pcg4d(s);
@@ -127,16 +137,41 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 
 			// Box-Muller Transform
 			// https://en.wikipedia.org/wiki/Box–Muller_transform
-			double v[3] = {
-				sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[2]),
-				sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[2]),
-				sqrt( -2.0 * log(r[1]) ) * cos(TAU * r[3])
+			double n[3] = {
+				sqrt( -2.0 * log(r[0u]) ) * cos(TAU * r[2u]),
+				sqrt( -2.0 * log(r[0u]) ) * sin(TAU * r[2u]),
+				sqrt( -2.0 * log(r[1u]) ) * cos(TAU * r[3u])
 			};
 
-			vel[3u*i+0u] = (real)( INV_TAU * 0.200 * pos[3u*i+2u] + 0.0001 * v[0]);
-			vel[3u*i+1u] = (real)( INV_TAU * 0.100 * pos[3u*i+1u] + 0.0001 * v[1]);
-			vel[3u*i+2u] = (real)(-INV_TAU * 0.200 * pos[3u*i+0u] + 0.0001 * v[2]);
+			/*
+			v[0u] =  INV_TAU * 0.200 * p[2u] + 0.0001 * n[0u];
+			v[1u] =  INV_TAU * 0.100 * p[1u] + 0.0001 * n[1u];
+			v[2u] = -INV_TAU * 0.200 * p[0u] + 0.0001 * n[2u];
+			*/
+
+			double inv_r = 1.0 / sqrt((p[0u]*p[0u])+(p[1u]*p[1u])+(p[2u]*p[2u])+0.000001);
+
+			//double escape_vel = sqrt(2.0 * G * body_mass * inv_r);
+			double escape_vel = sqrt(2.0 * G * body_mass);
+
+			/*
+			v[0u] = escape_vel * p[0u] * inv_r + 0.0001 * n[0];
+			v[1u] = escape_vel * p[1u] * inv_r + 0.0001 * n[1];
+			v[2u] = escape_vel * p[2u] * inv_r + 0.0001 * n[2];
+			*/
+
+			v[0u] = escape_vel * p[0u] + 0.000001 * n[0];
+			v[1u] = escape_vel * p[1u] + 0.000001 * n[1];
+			v[2u] = escape_vel * p[2u] + 0.000001 * n[2];
 		}
+
+		pos[3u*i+0u] = (real)p[0u];
+		pos[3u*i+1u] = (real)p[1u];
+		pos[3u*i+2u] = (real)p[2u];
+
+		vel[3u*i+0u] = (real)v[0u];
+		vel[3u*i+1u] = (real)v[1u];
+		vel[3u*i+2u] = (real)v[2u];
 	}
 
 	for(size_t i = (size_t)0u; i < (size_t)3u*N; i++) {
