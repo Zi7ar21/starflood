@@ -1,43 +1,27 @@
+# Archives
+*.gz
+*.old
+*.tar
+archive/
+
+
 # Build
 *.o
 *.out
-build
-
-# CMake
-CMakeLists.txt.user
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-
-Testing
-#Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps
 
 # IDEs
 .vs
 .vscode
 *.code-workspace
 
-# Renders
-out
-out-archive
-vid
-millenium_jr
-*.mp4
-*.tar
-*.webm
-
-# Uncatagorized
-sph.py
-encode.sh
-
-# Submodules
-#stb/
-
 # Profiling
+*.profdata
+*.profraw
+perf.data
 nsight/
-#log.csv
+
+# Visualizations
+*.mp4
+*.pfm
+*.webm
+out/
