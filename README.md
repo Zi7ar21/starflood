@@ -53,21 +53,21 @@ cd starflood
 #### Debug
 
 ```sh
-clang -fopenmp -ggdb -march=x86-64 -Og -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood -lm src/*.c
+clang -fopenmp -ggdb -march=x86-64 -Og -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood src/*.c -lm
 ```
 
 ```sh
-gcc -fopenmp -ggdb -march=x86-64 -Og -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood -lm src/*.c
+gcc -fopenmp -ggdb -march=x86-64 -Og -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood src/*.c -lm
 ```
 
 #### Optimized
 
 ```sh
-clang -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood -lm src/*.c
+clang -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood src/*.c -lm
 ```
 
 ```sh
-gcc -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood -lm src/*.c
+gcc -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o starflood src/*.c -lm
 ```
 
 #### OpenMP Offloading
@@ -75,7 +75,7 @@ gcc -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c11 -Wall -Wconv
 ##### NVIDIA HPC SDK
 
 ```sh
-nvc -gpu=ccnative -mp=gpu -fopenmp -g -march=native -O4 -pedantic -std=c11 -Wall -Wextra -Wshadow -o starflood -lm src/*.c
+nvc -gpu=ccnative -mp=gpu -fopenmp -g -march=native -O4 -pedantic -std=c11 -Wall -Wextra -Wshadow -o starflood src/*.c -lm
 ```
 
 ### Mounting a `tmpfs` (Optional)

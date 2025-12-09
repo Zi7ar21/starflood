@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 	visualization_enabled = 1;
 	#endif
 
-	unsigned int render_w = 1080u, render_h = 1080u;
+	unsigned int render_w = 960u, render_h = 960u;
 
 	for(int i = 0; i < argc; i++) {
 		if(NULL == argv[i]) {
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 
 		if( 0 == strcmp("-V", argv[i]) || 0 == strcmp("--version", argv[i]) ) {
 			printf(
-				"Starflood v%d.%d.%d\n"
+				"Starflood %d.%d.%d\n"
 				"\n"
 				"Starflood repository: <%s>\n",
 				STARFLOOD_VERSION_MAJOR,
@@ -90,27 +90,29 @@ int main(int argc, char *argv[]) {
 
 	printf("=== Starflood ===\n");
 
+	printf("  Version %d.%d.%d\n", STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH);
+
 	fflush(stdout);
 
 	printf("\n");
 	printf("Configuration:\n");
-	printf("  OpenMP:");
-	printf("    Enabled: ");
+	printf("    OpenMP Support:\n");
+	printf("        Enabled: ");
 	#ifdef _OPENMP
 	printf("true\n");
-	printf("    _OPENMP: %d\n", _OPENMP);
-	printf("    max_threads: %d\n", omp_get_max_threads());
-	printf("    num_devices: %d\n", omp_get_num_devices());
+	printf("        _OPENMP: %d\n", _OPENMP);
+	printf("        max_threads: %d\n", omp_get_max_threads());
+	printf("        num_devices: %d\n", omp_get_num_devices());
 	#else
 	printf("false\n");
 	#endif
 
 	printf("Parameters:\n");
-	printf("  Simulation:\n");
-	printf("    N: %u\n", N);
-	printf("    num_timesteps: %u\n", num_timesteps);
-	printf("  Visualization:\n");
-	printf("    Enabled: ");
+	printf("    Simulation:\n");
+	printf("        N: %u\n", N);
+	printf("        num_timesteps: %u\n", num_timesteps);
+	printf("    Visualization:\n");
+	printf("        Enabled: ");
 
 	if(visualization_enabled) {
 		printf("true\n");
@@ -118,8 +120,7 @@ int main(int argc, char *argv[]) {
 		printf("false\n");
 	}
 
-	printf("    render_w: %u\n", render_w);
-	printf("    render_h: %u\n", render_h);
+	printf("        Size: %ux%u\n", render_w, render_h);
 	printf("\n");
 
 	fflush(stdout);
