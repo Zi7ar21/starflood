@@ -89,13 +89,13 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 	}
 
 	for(unsigned int i = (size_t)0u; i < N; i++) {
-		real p[3] = {
+		double p[3] = {
 			(real)0.0,
 			(real)0.0,
 			(real)0.0
 		};
 
-		real v[3] = {
+		double v[3] = {
 			(real)0.0,
 			(real)0.0,
 			(real)0.0
@@ -157,7 +157,9 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 			v[2u] = -INV_TAU * 0.200 * p[0u] + 0.0001 * n[2u];
 			*/
 
-			double inv_r = 1.0 / sqrt((p[0u]*p[0u])+(p[1u]*p[1u])+(p[2u]*p[2u])+0.000001);
+			double r2 = (p[0u]*p[0u])+(p[1u]*p[1u])+(p[2u]*p[2u]);
+
+			//double inv_r = 1.0 / sqrt(r2);
 
 			//double escape_vel = sqrt(2.0 * G * body_mass * inv_r);
 			double escape_vel = sqrt(2.0 * G * body_mass);

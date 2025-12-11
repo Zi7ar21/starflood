@@ -1,26 +1,29 @@
 # Starflood
 
-CC = gcc
+CC ?= gcc
 
-CFLAGS = -fopenmp -ggdb -march=x86-64 -mtune=generic -Og -pedantic -std=c11 -Wall -Wextra -Wshadow
+CFLAGS = -fopenmp -ggdb -Og -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow
 
 LDFLAGS = -lm
 
 .PHONY: all
-all: starflood
+all: build/starflood
 
-starflood: src/main.o src/simulation.o src/visualization.o
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ src/main.c src/simulation.c src/visualization.c
+build/starflood: build/main.o build/rng.o build/simulation.o build/visualization.o
+	$(CC) $(CFLAGS) src/*.o -o $@ $(LDFLAGS)
 
-src/main.o:
-	$(CC) -c $(CFLAGS) -o $@ src/main.c
+build/main.o:
+	$(CC) $(CFLAGS) -c -o $@ src/main.c
 
-src/simulation.o:
-	$(CC) -c $(CFLAGS) -o $@ src/simulation.c
+build/rng.o:
+	$(CC) $(CFLAGS) -c -o $@ src/rng.c
 
-src/visualization.o:
-	$(CC) -c $(CFLAGS) -o $@ src/visualization.c
+build/simulation.o:
+	$(CC) $(CFLAGS) -c -o $@ src/simulation.c
+
+build/visualization.o:
+	$(CC) $(CFLAGS) -c -o $@ src/visualization.c
 
 .PHONY: clean
 clean:
-	rm -fv src/main.o src/simulation.o src/visualization.o starflood
+	rm -fv build/*.o build/starflood

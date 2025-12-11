@@ -8,6 +8,7 @@ archive/
 # Build
 *.o
 *.out
+build/
 
 # IDEs
 .vs
