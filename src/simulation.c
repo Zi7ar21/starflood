@@ -35,10 +35,18 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 
 	size_t mem_size = sizeof(real) * buf_size;
 
+	#ifdef STARFLOOD_ALIGNMENT
 	void* mem = aligned_alloc(STARFLOOD_ALIGNMENT, mem_size);
+	#else
+	void* mem = malloc(mem_size);
+	#endif
 
 	if(NULL == mem) {
+		#ifdef STARFLOOD_ALIGNMENT
 		fprintf(stderr, "error in aligned_alloc(%zu, %zu) while allocating memory for the simulation", STARFLOOD_ALIGNMENT, mem_size);
+		#else
+		fprintf(stderr, "error in malloc(%zu) while allocating memory for the simulation", mem_size);
+		#endif
 
 		perror("");
 
@@ -237,8 +245,11 @@ int simulation_step(simulation_t* simulation) {
 			pos[3u*i+2u]
 		};
 
+		#ifndef N_DIV
 		for(unsigned int j = 0u; j < N; j++) {
-		//for(unsigned int j = (N/4u)*(step_number % 4u); j < (N/4u)*(step_number % 4u) + (N/4u); j++) {
+		#else
+		for(unsigned int j = (N/N_DIV)*(step_number % N_DIV); j < (N/N_DIV)*((step_number % N_DIV)+1u); j++) {
+		#endif
 			if(i == j) {
 				continue;
 			}
@@ -299,9 +310,9 @@ int simulation_step(simulation_t* simulation) {
 
 		pot[i] = U_sum;
 
-		acc[3u*i+0u] = F_sum[0u];
-		acc[3u*i+1u] = F_sum[1u];
-		acc[3u*i+2u] = F_sum[2u];
+		acc[3u*i+0u] = (real)4.0 * F_sum[0u];
+		acc[3u*i+1u] = (real)4.0 * F_sum[1u];
+		acc[3u*i+2u] = (real)4.0 * F_sum[2u];
 	}
 
 	for(unsigned int i = 0u; i < N; i++) {

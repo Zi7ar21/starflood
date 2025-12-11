@@ -17,10 +17,18 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 
 	size_t atomic_buffer_size = sizeof(i32)*(size_t)4u*(size_t)w*(size_t)h;
 
+	#ifdef STARFLOOD_ALIGNMENT
 	i32* atomic_buffer = (i32*)aligned_alloc(STARFLOOD_ALIGNMENT, atomic_buffer_size);
+	#else
+	i32* atomic_buffer = (i32*)malloc(atomic_buffer_size);
+	#endif
 
 	if(NULL == (void*)atomic_buffer) {
+		#ifdef STARFLOOD_ALIGNMENT
 		fprintf(stderr, "error in aligned_alloc(%zu, %zu) while allocating atomic_buffer", STARFLOOD_ALIGNMENT, atomic_buffer_size);
+		#else
+		fprintf(stderr, "error in malloc(%zu, %zu) while allocating atomic_buffer", atomic_buffer_size);
+		#endif
 
 		perror("");
 
@@ -31,10 +39,18 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 
 	size_t render_buffer_size = sizeof(f32)*(size_t)4u*(size_t)w*(size_t)h;
 
+	#ifdef STARFLOOD_ALIGNMENT
 	f32* render_buffer = (f32*)aligned_alloc(STARFLOOD_ALIGNMENT, render_buffer_size);
+	#else
+	f32* render_buffer = (f32*)malloc(render_buffer_size);
+	#endif
 
 	if(NULL == (void*)render_buffer) {
-		fprintf(stderr, "error in aligned_alloc(%zu, %zu) while allocating render_buffer", STARFLOOD_ALIGNMENT, atomic_buffer_size);
+		#ifdef STARFLOOD_ALIGNMENT
+		fprintf(stderr, "error in aligned_alloc(%zu, %zu) while allocating render_buffer", STARFLOOD_ALIGNMENT, render_buffer_size);
+		#else
+		fprintf(stderr, "error in malloc(%zu) while allocating render_buffer", render_buffer_size);
+		#endif
 
 		perror("");
 
@@ -158,7 +174,7 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		#endif
 		val = atomic_buffer[i];
 
-		render_buffer[i] = (f32)tanh(0.250 * 0.125 * 0.125 * (double)val);
+		render_buffer[i] = (f32)tanh(0.250 * 0.125 * 0.125 * 0.125 * (double)val);
 	}
 
 	*visualization = vis;

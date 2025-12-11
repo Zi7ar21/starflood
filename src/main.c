@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 	visualization_enabled = 1;
 	#endif
 
-	unsigned int render_w = 960u, render_h = 960u;
+	unsigned int render_w = 480u, render_h = 480u;
 
 	for(int i = 0; i < argc; i++) {
 		if(NULL == argv[i]) {
@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
 
 	sim.mem = NULL;
 
-	if(simulation_init(&sim, N) != EXIT_SUCCESS) {
+	if( EXIT_SUCCESS != simulation_init(&sim, N) ) {
 		fprintf(stderr, "Error starting simulation!\n");
 
 		return EXIT_FAILURE;

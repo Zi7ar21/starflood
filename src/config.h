@@ -21,11 +21,31 @@
 /* Simulation Parameters */
 
 // Default number of bodies in the simulation (N)
-#define NUM_BODIES 65536u
+//#define NUM_BODIES 1024u
+//#define NUM_BODIES 2048u
+//#define NUM_BODIES 4096u
+//#define NUM_BODIES 8192u
+//#define NUM_BODIES 16384u
+//#define NUM_BODIES 32768u
+//#define NUM_BODIES 65536u
+//#define NUM_BODIES 131072u
+#define NUM_BODIES 262144u
+//#define NUM_BODIES 524288u
+//#define NUM_BODIES 1048576u
+
+// Divide the force calculations across this many timesteps (comment to disable)
+#define N_DIV 4u
+
+/*
+#ifdef N_DIV
+#if(0u >= N_DIV)
+#error "N_DIV must be >= 1!"
+#endif
+#endif
+*/
 
 // Default number of timesteps to run simulation for
-//#define NUM_TIMESTEPS 450u
-#define NUM_TIMESTEPS 300u
+#define NUM_TIMESTEPS 900u
 
 // Simulation timestep size (dt)
 //#define TIMESTEP_SIZE 0.03333333333333333333333333333333
