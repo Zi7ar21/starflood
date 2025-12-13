@@ -2,17 +2,17 @@
 
 /* File I/O Configuration */
 
-// Uncomment to enable simulation dumping
-//#define ENABLE_DUMPING
+// Comment to load SIMULATION_FILENAME instead of running simulation by default
+//#define ENABLE_SIMULATION
 
-// Simulation dump filename pattern
-#define SIMULATION_FILENAME "./out/step_%04u.data"
+// Uncomment to enable simulation file I/O
+#define SIMULATION_FILENAME "./out/sim_%04u.data"
 
-// Uncomment to enable visualization
+// Uncomment to enable visualization by default
 #define ENABLE_VISUALIZATION
 
-// Visualization filename pattern
-#define VISUALIZATION_FILENAME "./out/step_%04u.pfm"
+// Uncomment to enable visualization file I/O
+#define VISUALIZATION_FILENAME "./out/vis_%04u.pfm"
 
 /* Simulation Parameters */
 
@@ -30,7 +30,7 @@
 //#define NUM_BODIES 1048576
 
 // Divide the force calculations across this many timesteps (comment to disable)
-#define N_DIV 2
+#define N_DIV 4
 
 /*
 #ifdef N_DIV
@@ -41,7 +41,7 @@
 */
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 900
+#define NUM_TIMESTEPS 90
 
 // Simulation timestep size (dt)
 //#define TIMESTEP_SIZE 0.03333333333333333333333333333333
@@ -61,10 +61,10 @@
 /* Visualization Parameters */
 
 // Number of samples for spatial anti-aliasing
-#define SPATIAL_SAMPLES 16
+#define SPATIAL_SAMPLES 128
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
-#define EXPOSURE -1.500
+#define EXPOSURE -2.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
 #define ORTHO_SCALE -2.000

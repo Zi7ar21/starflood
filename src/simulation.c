@@ -91,7 +91,7 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 		kin[i] = (real)0.0;
 	}
 
-	real body_mass = (real)(10.0 / (double)N);
+	real body_mass = (real)(24.0 / (double)N);
 
 	for(unsigned int i = 0u; i < N; i++) {
 		mas[i] = body_mass;
@@ -169,7 +169,7 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 			//double inv_r = 1.0 / sqrt(r2);
 
 			//double escape_vel = sqrt(2.0 * G * body_mass * inv_r);
-			double escape_vel = sqrt(2.0 * G * body_mass);
+			//double escape_vel = sqrt(2.0 * G * body_mass);
 
 			/*
 			v[0u] = escape_vel * p[0u] * inv_r + 0.0001 * n[0];
@@ -195,7 +195,9 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 		acc[i] = (real)0.0;
 	}
 
+	#ifdef SIMULATION_ENABLED
 	solver_run(pot, acc, mas, pos, N, 0u);
+	#endif
 
 	sim.N   = N;
 	sim.step_number = 0u;
@@ -213,6 +215,11 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 }
 
 int simulation_step(simulation_t* simulation) {
+	#ifdef _OPENMP
+	double t0 = omp_get_wtime();
+	double t1 = omp_get_wtime();
+	#endif
+
 	simulation_t sim = *simulation;
 
 	const real dt = (real)TIMESTEP_SIZE;
@@ -226,26 +233,46 @@ int simulation_step(simulation_t* simulation) {
 	real* vel = sim.vel;
 	real* acc = sim.acc;
 
+	#ifdef _OPENMP
+	t0 = omp_get_wtime();
+	#endif
+
 	// Kick
 	for(unsigned int i = 0u; i < 3u * N; i++) {
 		vel[i] += (real)0.5 * dt * acc[i];
 	}
+
+	#ifdef _OPENMP
+	t1 = omp_get_wtime();
+
+	printf("simulation_step: %.09f ms kick\n", 1000.0*(t1-t0));
+
+	t0 = omp_get_wtime();
+	#endif
 
 	// Drift
 	for(unsigned int i = 0u; i < 3u * N; i++) {
 		pos[i] += dt * vel[i];
 	}
 
-	double t0 = omp_get_wtime();
-	double t1 = omp_get_wtime();
+	#ifdef _OPENMP
+	t1 = omp_get_wtime();
+
+	printf("simulation_step: %.09f ms drift\n", 1000.0*(t1-t0));
+
 	t0 = omp_get_wtime();
+	#endif
 
 	// Update potential energy/acceleration
 	solver_run(pot, acc, mas, pos, N, step_number);
 
+	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("solver_run() took %.09f seconds\n", t1 - t0);
+	printf("simulation_step: %.09f ms solver_run\n", 1000.0*(t1-t0));
+
+	t0 = omp_get_wtime();
+	#endif
 
 	// Update kinetic energy
 	for(unsigned int i = 0u; i < N; i++) {
@@ -258,8 +285,18 @@ int simulation_step(simulation_t* simulation) {
 		kin[i] = (real)0.5 * mas[i] * ((v_i[0]*v_i[0])+(v_i[1]*v_i[1])+(v_i[2]*v_i[2])); // K = (1/2) * m * v^2
 	}
 
+	#ifdef _OPENMP
+	t1 = omp_get_wtime();
+
+	printf("simulation_step: %.09f ms update kinetic energy\n", 1000.0*(t1-t0));
+	#endif
+
 	// Compute total energy
 	{
+		#ifdef _OPENMP
+		t0 = omp_get_wtime();
+		#endif
+
 		double U_sum = 0.0, U_c = 0.0;
 		double K_sum = 0.0, K_c = 0.0;
 
@@ -289,13 +326,29 @@ int simulation_step(simulation_t* simulation) {
 			K_sum = t;
 		}
 
+		#ifdef _OPENMP
+		t1 = omp_get_wtime();
+		#endif
+
 		printf("E (E_tot) = % .015f\nU (E_pot) = % .015f\nK (E_kin) = % .015f\n", U_sum + K_sum, U_sum, K_sum);
 	}
+
+	#ifdef _OPENMP
+	printf("simulation_step: %.09f ms calculate energy sums\n", 1000.0*(t1-t0));
+
+	t0 = omp_get_wtime();
+	#endif
 
 	// Kick
 	for(unsigned int i = 0u; i < 3u * N; i++) {
 		vel[i] += (real)0.5 * dt * acc[i];
 	}
+
+	#ifdef _OPENMP
+	t1 = omp_get_wtime();
+
+	printf("simulation_step: %.09f ms kick\n", 1000.0*(t1-t0));
+	#endif
 
 	sim.step_number++;
 
@@ -326,10 +379,16 @@ int simulation_free(simulation_t* simulation) {
 	return EXIT_SUCCESS;
 }
 
-int simulation_read(simulation_t* simulation, unsigned int N, const char* restrict filename) {
+int simulation_read(simulation_t* simulation, const char* restrict filename) {
 	simulation_t sim = *simulation;
 
 	if( sizeof(real) != sizeof(float) ) {
+		return EXIT_FAILURE;
+	}
+
+	unsigned int N = sim.N;
+
+	if( 0u >= N ) {
 		return EXIT_FAILURE;
 	}
 
@@ -344,49 +403,21 @@ int simulation_read(simulation_t* simulation, unsigned int N, const char* restri
 	}
 
 	/*
-	fseek(file, (long)2, SEEK_SET);
-
-	const uint32_t starflood_magic_number = (uint32_t)0x40C90FDBu;
-
-	uint32_t magic_number = (uint32_t)0xDEADBEEFu;
-
-	fread(&magic_number, sizeof(uint32_t), (size_t)1u, file);
-
-	if(starflood_magic_number!= magic_number) {
-		fprintf(stderr, "Error: Expected magic number 0x%08X, got 0x%08X instead!\n", starflood_magic_number, magic_number);
-
-		fclose(file);
-
-		return EXIT_FAILURE;
-	}
-
-	uint32_t N = (uint32_t)0u;
-
-	fread(&N, sizeof(uint32_t), (size_t)1u, file);
-
-	if((uint32_t)(1024u*1024u) < N) {
-		fprintf(stderr, "Error: Assuming N = %u is too large!\n", (unsigned int)N);
-
-		fclose(file);
-
-		return EXIT_FAILURE;
-	}
-
-	fseek(file, (long)10, SEEK_SET);
-	*/
-
 	if( EXIT_SUCCESS != simulation_init(&sim, N) ) {
 		fclose(file);
 
 		return EXIT_FAILURE;
 	}
+	*/
 
-	//fread(sim.mem, sizeof(real), (size_t)N * (size_t)(3u*1u+3u*3u), file);
+	fread(sim.mem, sizeof(real), (size_t)N * (size_t)(3u*1u+3u*3u), file);
 
+	/*
 	fread(sim.mas, sizeof(float), (size_t)N * (size_t)(1u), file);
 	fread(sim.pos, sizeof(float), (size_t)N * (size_t)(3u), file);
 	fread(sim.vel, sizeof(float), (size_t)N * (size_t)(3u), file);
 	fread(sim.acc, sizeof(float), (size_t)N * (size_t)(3u), file);
+	*/
 
 	fclose(file);
 
@@ -395,7 +426,7 @@ int simulation_read(simulation_t* simulation, unsigned int N, const char* restri
 	return EXIT_SUCCESS;
 }
 
-int simulation_dump(simulation_t* simulation, const char* restrict filename) {
+int simulation_save(simulation_t* simulation, const char* restrict filename) {
 	simulation_t sim = *simulation;
 
 	FILE* file = fopen(filename, "wb");

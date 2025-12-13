@@ -91,12 +91,14 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 }
 
 int visualization_draw(visualization_t* visualization, simulation_t* simulation) {
+	#ifdef _OPENMP
+	double t0 = omp_get_wtime();
+	double t1 = omp_get_wtime();
+	#endif
+
 	simulation_t sim = *simulation;
 
 	visualization_t vis = *visualization;
-
-	double t0 = omp_get_wtime();
-	double t1 = omp_get_wtime();
 
 	unsigned int w = vis.w;
 	unsigned int h = vis.h;
@@ -110,7 +112,9 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 	real* pos = sim.pos;
 
+	#ifdef _OPENMP
 	t0 = omp_get_wtime();
+	#endif
 
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		#ifdef _OPENMP
@@ -119,11 +123,13 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		atomic_buffer[i] = (i32)0;
 	}
 
+	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("clearing atomic_buffer took %.09f seconds\n", t1 - t0);
+	printf("visualization_draw: %.09f ms clear atomic_buffer\n", 1000.0*(t1-t0));
 
 	t0 = omp_get_wtime();
+	#endif
 
 	#ifdef _OPENMP
 	#pragma omp parallel for schedule(dynamic, 1024)
@@ -144,8 +150,8 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		// rotate2d
 		{
 			//const double theta = 0.000 * TAU;
-			//const double theta = 0.125 * TAU;
-			const double theta = 0.250 * TAU;
+			const double theta = 0.125 * TAU;
+			//const double theta = 0.250 * TAU;
 
 			double v[2] = {
 				p[1], // Y
@@ -199,11 +205,13 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		}
 	}
 
+	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("rasterization took %.09f seconds\n", t1 - t0);
+	printf("visualization_draw: %.09f ms rasterization\n", 1000.0*(t1-t0));
 
 	t0 = omp_get_wtime();
+	#endif
 
 	// Since atomic_buffer colors are quantized integers, it needs a floating-point scaling factor
 	double pixel_value_scale = 1.0;
@@ -216,7 +224,9 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 	pixel_value_scale *= exp2(EXPOSURE);
 	#endif
 
+	#ifdef _OPENMP
 	t0 = omp_get_wtime();
+	#endif
 
 	// Read the atomic buffer and finish rendering the visualization
 	for(unsigned int i = 0u; i < w * h; i++) {
@@ -251,9 +261,11 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		}
 	}
 
+	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("post-processing clearing took %.09f seconds\n", t1 - t0);
+	printf("visualization_draw: %.09f ms post-processing\n", 1000.0*(t1-t0));
+	#endif
 
 	*visualization = vis;
 
@@ -261,17 +273,21 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 }
 
 int visualization_save(visualization_t* visualization, const char* restrict filename) {
-	visualization_t vis = *visualization;
-
+	#ifdef _OPENMP
 	double t0 = omp_get_wtime();
 	double t1 = omp_get_wtime();
+	#endif
 
-	t0 = omp_get_wtime();
+	visualization_t vis = *visualization;
 
 	unsigned int image_w = vis.w;
 	unsigned int image_h = vis.h;
 
 	f32* render_buffer = vis.render_buffer;
+
+	#ifdef _OPENMP
+	t0 = omp_get_wtime();
+	#endif
 
 	FILE* file = fopen(filename, "wb");
 
@@ -282,6 +298,14 @@ int visualization_save(visualization_t* visualization, const char* restrict file
 
 		return EXIT_FAILURE;
 	}
+
+	#ifdef _OPENMP
+	t1 = omp_get_wtime();
+
+	printf("visualization_save: %.09f ms fopen()\n", 1000.0*(t1-t0));
+
+	t0 = omp_get_wtime();
+	#endif
 
 	// PFM graphic image file format
 	// https://netpbm.sourceforge.net/doc/pfm.html
@@ -299,11 +323,21 @@ int visualization_save(visualization_t* visualization, const char* restrict file
 		}
 	}
 
-	fclose(file);
-
+	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("visualization_save() took %.09f seconds\n", t1 - t0);
+	printf("visualization_save: %.09f ms fwrite() loop\n", 1000.0*(t1-t0));
+
+	t0 = omp_get_wtime();
+	#endif
+
+	fclose(file);
+
+	#ifdef _OPENMP
+	t1 = omp_get_wtime();
+
+	printf("visualization_save: %.09f ms fclose()\n", 1000.0*(t1-t0));
+	#endif
 
 	return EXIT_SUCCESS;
 }

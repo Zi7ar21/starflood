@@ -6,13 +6,16 @@ Starflood is an open-source astrophysical simulation code written in C.
 
 - Cosmological [N-body simulation](https://en.wikipedia.org/wiki/N-body_simulation)
   - Gravity solver using pairwise summation (aka [particle-particle method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pp)), O(N²)
-- Parallelization using [OpenMP](https://www.openmp.org/)
+- Parallelization using [OpenMP](https://www.openmp.org/) (compiler directive-based)
+  - Device/GPU compute when using a toolchain with offloading support
 - Visualization
   - Rasterization accumulation using [atomic](https://en.wikipedia.org/wiki/Linearizability#Primitive_atomic_instructions) operations
   - [Spatial anti-aliasing](https://en.wikipedia.org/wiki/Spatial_anti-aliasing) ([Gaussian window function](https://en.wikipedia.org/wiki/Window_function#Gaussian_window) stochastic sampling)
 - File I/O
-  - Runs can be dumped in a binary format (machine-dependent)
-  - Visualizations are saved as an RGB 32-bit floating-point (RGB32F) image frame sequence ([`.pfm` image format](https://netpbm.sourceforge.net/doc/pfm.html))
+  - Timesteps from the simulation can be saved in a raw binary format.
+  - Visualization can be done during a run, or later after it has been completed.
+    - The frame sequence is saved as a series of individual images, which can be encoded using tools such as [`ffmpeg`](https://ffmpeg.org/).
+    - [PFM graphic image file format (`.pfm`)](https://netpbm.sourceforge.net/doc/pfm.html)
 
 ### Planned (To-do List)
 

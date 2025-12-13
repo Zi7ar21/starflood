@@ -29,7 +29,7 @@ int simulation_step(simulation_t* simulation);
 int simulation_free(simulation_t* simulation);
 
 // Dump the simulation (write to a file)
-int simulation_dump(simulation_t* simulation, const char* restrict filename);
+int simulation_read(simulation_t* simulation, const char* restrict filename);
 
-// Load a simulation (from a file)
-int simulation_load(simulation_t* simulation, const char* restrict filename);
+// Read a simulation (from a file)
+int simulation_save(simulation_t* simulation, const char* restrict filename);
