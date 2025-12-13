@@ -10,7 +10,7 @@ LDFLAGS = -lm
 all: build/starflood
 
 build/starflood: build/main.o build/rng.o build/simulation.o build/visualization.o
-	$(CC) $(CFLAGS) src/*.o -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) build/*.o -o $@ $(LDFLAGS)
 
 build/main.o:
 	$(CC) $(CFLAGS) -c -o $@ src/main.c
