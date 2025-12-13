@@ -10,6 +10,9 @@ archive/
 *.out
 build/
 
+# Debugging
+vgcore.*
+
 # IDEs
 .vs
 .vscode

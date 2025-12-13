@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include "config.h"
 #include "rng.h"
 #include "simulation.h"
@@ -27,13 +31,13 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 
 	printf("Visualization Memory Addresses:\n");
 
-	size_t atomic_buffer_size = sizeof(i32)*(size_t)4u*(size_t)w*(size_t)h;
-	size_t render_buffer_size = sizeof(f32)*(size_t)4u*(size_t)w*(size_t)h;
+	size_t atomic_buffer_size = (size_t)4u*(size_t)w*(size_t)h;
+	size_t render_buffer_size = (size_t)4u*(size_t)w*(size_t)h;
 
 	size_t atomic_buffer_offset = (size_t)0u;
 	size_t render_buffer_offset = atomic_buffer_offset + atomic_buffer_size;
 
-	size_t mem_size = render_buffer_offset + render_buffer_size;
+	size_t mem_size = sizeof(i32)*atomic_buffer_size + sizeof(i32)*render_buffer_size;
 
 	#ifdef STARFLOOD_ALIGNMENT
 	posix_memalign(&mem, (size_t)STARFLOOD_ALIGNMENT, mem_size);
@@ -57,8 +61,8 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 
 	memset(mem, 0, mem_size);
 
-	atomic_buffer = &(((i32*)mem)[atomic_buffer_offset]);
-	render_buffer = &(((f32*)mem)[render_buffer_offset]);
+	atomic_buffer = (i32*)mem;
+	render_buffer = (f32*)&atomic_buffer[atomic_buffer_size];
 
 	printf("  atomic_buffer: %p (+%zu)\n", (void*)atomic_buffer, atomic_buffer_offset);
 	printf("  render_buffer: %p (+%zu)\n", (void*)render_buffer, render_buffer_offset);
@@ -91,6 +95,9 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 	visualization_t vis = *visualization;
 
+	double t0 = omp_get_wtime();
+	double t1 = omp_get_wtime();
+
 	unsigned int w = vis.w;
 	unsigned int h = vis.h;
 
@@ -103,6 +110,8 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 	real* pos = sim.pos;
 
+	t0 = omp_get_wtime();
+
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		#ifdef _OPENMP
 		#pragma omp atomic write
@@ -110,38 +119,51 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		atomic_buffer[i] = (i32)0;
 	}
 
+	t1 = omp_get_wtime();
+
+	printf("clearing atomic_buffer took %.09f seconds\n", t1 - t0);
+
+	t0 = omp_get_wtime();
+
 	#ifdef _OPENMP
 	#pragma omp parallel for schedule(dynamic, 1024)
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
 		// https://cs418.cs.illinois.edu/website/text/math2.html
-		real v[4] = {
-			pos[3u*i+0u],
-			pos[3u*i+1u],
-			pos[3u*i+2u],
-			(real)1.0
+		double p[4] = {
+			(double)pos[3u*i+0u],
+			(double)pos[3u*i+1u],
+			(double)pos[3u*i+2u],
+			(double)1.000
 		};
 
-		// Pitch
-		{
-			//const real theta = (real)0.000;
-			const real theta = (real)(TAU * 0.125);
-			//const real theta = (real)(TAU * 0.250);
+		for(unsigned int j = 0u; j < 4u; j++) {
+			p[j] *= exp2(ORTHO_SCALE);
+		}
 
-			real v_rot[3] = {
-				v[0],
-				v[1]*cosf(theta)-v[2]*sinf(theta),
-				v[1]*sinf(theta)+v[2]*cosf(theta),
+		// rotate2d
+		{
+			//const double theta = 0.000 * TAU;
+			//const double theta = 0.125 * TAU;
+			const double theta = 0.250 * TAU;
+
+			double v[2] = {
+				p[1], // Y
+				p[2]  // Z
 			};
 
-			v[0] = v_rot[0];
-			v[1] = v_rot[1];
-			v[2] = v_rot[2];
+			double vr[2] = {
+				cos(theta)*v[0]-sin(theta)*v[1],
+				sin(theta)*v[0]+cos(theta)*v[1]
+			};
+
+			p[1] = vr[0];
+			p[2] = vr[1];
 		}
 
 		i32 rgba[4] = {(i32)1, (i32)1, (i32)1, (i32)1};
 
-		for(unsigned int j = 0u; j < 256u; j++) {
+		for(unsigned int j = 0u; j < (unsigned int)SPATIAL_SAMPLES; j++) {
 			u32 s[4] = {(u32)j, (u32)i, (u32)step_number, (u32)420691337u};
 
 			pcg4d(s);
@@ -161,8 +183,8 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 				0.750 * sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[1])
 			};
 
-			int x = (int)( ( (double)h * (0.250*(double)v[0]) )+(0.5 * (double)w)-0.5 + sample_offset[0] );
-			int y = (int)( ( (double)h * (0.250*(double)v[1]) )+(0.5 * (double)h)-0.5 + sample_offset[1] );
+			int x = (int)( ( (double)h * (0.500*p[0]) )+(0.5*(double)w)+sample_offset[0]-0.5 );
+			int y = (int)( ( (double)h * (0.500*p[1]) )+(0.5*(double)h)+sample_offset[1]-0.5 );
 
 			if((int)0 <= x && x < (int)w && (int)0 <= y && y < (int)h) {
 				size_t pixel_index = (size_t)4u*((size_t)w*(size_t)y+(size_t)x);
@@ -177,16 +199,61 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		}
 	}
 
-	for(unsigned int i = 0u; i < 4u * w * h; i++) {
-		i32 val = (i32)0;
+	t1 = omp_get_wtime();
 
-		#ifdef _OPENMP
-		#pragma omp atomic read
-		#endif
-		val = atomic_buffer[i];
+	printf("rasterization took %.09f seconds\n", t1 - t0);
 
-		render_buffer[i] = (f32)tanh(0.250 * 0.125 * 0.125 * 0.125 * (double)val);
+	t0 = omp_get_wtime();
+
+	// Since atomic_buffer colors are quantized integers, it needs a floating-point scaling factor
+	double pixel_value_scale = 1.0;
+
+	#ifdef SPATIAL_SAMPLES
+	pixel_value_scale *= 1.0 / (double)SPATIAL_SAMPLES;
+	#endif
+
+	#ifdef EXPOSURE
+	pixel_value_scale *= exp2(EXPOSURE);
+	#endif
+
+	t0 = omp_get_wtime();
+
+	// Read the atomic buffer and finish rendering the visualization
+	for(unsigned int i = 0u; i < w * h; i++) {
+		double rgba[4] = {
+			(double)0.250,
+			(double)0.250,
+			(double)0.250,
+			(double)1.000
+		};
+
+		for(unsigned int j = 0u; j < 4u; j++) {
+			i32 val = (i32)0;
+
+			#ifdef _OPENMP
+			#pragma omp atomic read
+			#endif
+			val = atomic_buffer[4u*i+j];
+
+			rgba[j] = pixel_value_scale * (double)val;
+		}
+
+		// Tonemapping
+		for(unsigned int j = 0u; j < 4u; j++) {
+			rgba[j] = tanh(rgba[j]);
+		}
+
+		// Set alpha channel to 1.000
+		rgba[3u] = (double)1.000;
+
+		for(unsigned int j = 0u; j < 4u; j++) {
+			render_buffer[4u*i+j] = (f32)rgba[j];
+		}
 	}
+
+	t1 = omp_get_wtime();
+
+	printf("post-processing clearing took %.09f seconds\n", t1 - t0);
 
 	*visualization = vis;
 
@@ -195,6 +262,11 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 int visualization_save(visualization_t* visualization, const char* restrict filename) {
 	visualization_t vis = *visualization;
+
+	double t0 = omp_get_wtime();
+	double t1 = omp_get_wtime();
+
+	t0 = omp_get_wtime();
 
 	unsigned int image_w = vis.w;
 	unsigned int image_h = vis.h;
@@ -228,6 +300,10 @@ int visualization_save(visualization_t* visualization, const char* restrict file
 	}
 
 	fclose(file);
+
+	t1 = omp_get_wtime();
+
+	printf("visualization_save() took %.09f seconds\n", t1 - t0);
 
 	return EXIT_SUCCESS;
 }

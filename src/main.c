@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 	visualization_enabled = 1;
 	#endif
 
-	unsigned int render_w = 480u, render_h = 480u;
+	unsigned int render_w = 960u, render_h = 960u;
 
 	for(int i = 0; i < argc; i++) {
 		if(NULL == argv[i]) {
@@ -125,6 +125,16 @@ int main(int argc, char *argv[]) {
 
 	fflush(stdout);
 
+	visualization_t vis;
+
+	if(visualization_enabled) {
+		if( EXIT_SUCCESS != visualization_init(&vis, render_w, render_h) ) {
+			fprintf(stderr, "Error starting visualization!\n");
+
+			return EXIT_FAILURE;
+		}
+	}
+
 	simulation_t sim;
 
 	sim.mem = NULL;
@@ -132,24 +142,14 @@ int main(int argc, char *argv[]) {
 	if( EXIT_SUCCESS != simulation_init(&sim, N) ) {
 		fprintf(stderr, "Error starting simulation!\n");
 
+		visualization_free(&vis);
+
 		return EXIT_FAILURE;
 	}
 
 	char filename[64];
 
 	//simulation_load(&sim, filename);
-
-	visualization_t vis;
-
-	if(visualization_enabled) {
-		if( EXIT_SUCCESS != visualization_init(&vis, render_w, render_h) ) {
-			fprintf(stderr, "Error starting visualization!\n");
-
-			simulation_free(&sim);
-
-			return EXIT_FAILURE;
-		}
-	}
 
 	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num++) {
 		printf("Step #%3u\n", step_num);

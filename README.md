@@ -80,11 +80,11 @@ make -j$(nproc) all
 #### Debug
 
 ```sh
-clang -fopenmp -ggdb -Og -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
+clang -fopenmp -ggdb -Og -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
 ```
 
 ```sh
-gcc -fopenmp -ggdb -Og -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
+gcc -fopenmp -ggdb -Og -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
 ```
 
 - `-fopenmp`: Enables OpenMP (compiler directive-based parallelization).
@@ -95,11 +95,11 @@ gcc -fopenmp -ggdb -Og -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o
 #### Optimized
 
 ```sh
-clang -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
+clang -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
 ```
 
 ```sh
-gcc -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
+gcc -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
 ```
 
 - `-ffast-math`: Allows replacement of standard math library functions with native instructions (i.e. `sqrt()` becomes the native x86 SSE instruction `sqrtss`). **Note**: This flag may cause runs to be non-deterministic across compilers and vendors!
@@ -114,7 +114,7 @@ gcc -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c11 -Wall -Wconv
 For OpenMP offloading using the [NVIDIA HPC Compilers](https://docs.nvidia.com/hpc-sdk/compilers/):
 
 ```sh
-nvc -gpu=ccnative -mp=gpu -fopenmp -g -march=native -O4 -pedantic -std=c11 -Wall -Wextra -Wshadow -o starflood src/*.c -lm
+nvc -gpu=ccnative -mp=gpu -fopenmp -g -march=native -O4 -pedantic -std=c99 -Wall -Wextra -Wshadow -o build/starflood src/*.c -lm
 ```
 
 - `-mp=gpu`: Enable compilation of OpenMP target directives for the GPU.

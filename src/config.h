@@ -30,7 +30,7 @@
 //#define NUM_BODIES 1048576
 
 // Divide the force calculations across this many timesteps (comment to disable)
-#define N_DIV 4
+#define N_DIV 2
 
 /*
 #ifdef N_DIV
@@ -48,12 +48,26 @@
 //#define TIMESTEP_SIZE 0.06666666666666666666666666666667
 #define TIMESTEP_SIZE 0.100
 
+// Gravitational potential softening parameter
+#define EPSILON 0.001
+
 // Gravitational constant (physical units are not yet implemented)
-#define G 1.0
+#define G 1.000
 
 // alternative (m^3 * kg^-1 * s^2)
 // https://physics.nist.gov/cgi-bin/cuu/Value?bg
 //#define G 6.6743e-11
+
+/* Visualization Parameters */
+
+// Number of samples for spatial anti-aliasing
+#define SPATIAL_SAMPLES 16
+
+// Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
+#define EXPOSURE -1.500
+
+// Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
+#define ORTHO_SCALE -2.000
 
 /* Miscellaneous Configuration */
 

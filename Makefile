@@ -2,14 +2,14 @@
 
 CC ?= gcc
 
-CFLAGS = -fopenmp -ggdb -Og -pedantic -std=c11 -Wall -Wconversion -Wextra -Wshadow
+CFLAGS = -fopenmp -ggdb -Og -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow
 
 LDFLAGS = -lm
 
 .PHONY: all
 all: build/starflood
 
-build/starflood: build/main.o build/rng.o build/simulation.o build/visualization.o
+build/starflood: build/main.o build/rng.o build/simulation.o build/solver.o build/visualization.o
 	$(CC) $(CFLAGS) build/*.o -o $@ $(LDFLAGS)
 
 build/main.o:
@@ -20,6 +20,9 @@ build/rng.o:
 
 build/simulation.o:
 	$(CC) $(CFLAGS) -c -o $@ src/simulation.c
+
+build/solver.o:
+	$(CC) $(CFLAGS) -c -o $@ src/solver.c
 
 build/visualization.o:
 	$(CC) $(CFLAGS) -c -o $@ src/visualization.c

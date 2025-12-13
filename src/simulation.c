@@ -14,6 +14,7 @@
 
 #include "config.h"
 #include "rng.h"
+#include "solver.h"
 
 int simulation_init(simulation_t* simulation, unsigned int N) {
 	simulation_t sim = *simulation;
@@ -67,12 +68,12 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 
 	memset(mem, 0, mem_size);
 
-	pot = &(((real*)mem)[pot_offset]);
-	kin = &(((real*)mem)[kin_offset]);
-	mas = &(((real*)mem)[mas_offset]);
-	pos = &(((real*)mem)[pos_offset]);
-	vel = &(((real*)mem)[vel_offset]);
-	acc = &(((real*)mem)[acc_offset]);
+	pot = (real*)mem + (size_t)pot_offset;
+	kin = (real*)mem + (size_t)kin_offset;
+	mas = (real*)mem + (size_t)mas_offset;
+	pos = (real*)mem + (size_t)pos_offset;
+	vel = (real*)mem + (size_t)vel_offset;
+	acc = (real*)mem + (size_t)acc_offset;
 
 	printf("  pot: %p (+%zu)\n", (void*)pot, pot_offset);
 	printf("  kin: %p (+%zu)\n", (void*)kin, kin_offset);
@@ -96,7 +97,7 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 		mas[i] = body_mass;
 	}
 
-	for(unsigned int i = (size_t)0u; i < N; i++) {
+	for(unsigned int i = 0u; i < N; i++) {
 		double p[3] = {
 			(real)0.0,
 			(real)0.0,
@@ -137,7 +138,7 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 			*/
 
 			p[0u] = 1.000 * n[0u];
-			p[1u] = 1.000 * n[1u];
+			p[1u] = 0.100 * n[1u];
 			p[2u] = 1.000 * n[2u];
 		}
 
@@ -159,13 +160,11 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 				sqrt( -2.0 * log(r[1u]) ) * cos(TAU * r[3u])
 			};
 
-			/*
-			v[0u] =  INV_TAU * 0.200 * p[2u] + 0.0001 * n[0u];
-			v[1u] =  INV_TAU * 0.100 * p[1u] + 0.0001 * n[1u];
-			v[2u] = -INV_TAU * 0.200 * p[0u] + 0.0001 * n[2u];
-			*/
+			v[0u] =  INV_TAU * 0.200 * p[2u] + 0.001 * n[0u];
+			v[1u] =  INV_TAU * 0.100 * p[1u] + 0.001 * n[1u];
+			v[2u] = -INV_TAU * 0.200 * p[0u] + 0.001 * n[2u];
 
-			double r2 = (p[0u]*p[0u])+(p[1u]*p[1u])+(p[2u]*p[2u]);
+			//double r2 = (p[0u]*p[0u])+(p[1u]*p[1u])+(p[2u]*p[2u]);
 
 			//double inv_r = 1.0 / sqrt(r2);
 
@@ -178,9 +177,9 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 			v[2u] = escape_vel * p[2u] * inv_r + 0.0001 * n[2];
 			*/
 
-			v[0u] = escape_vel * p[0u] + 0.000001 * n[0];
-			v[1u] = escape_vel * p[1u] + 0.000001 * n[1];
-			v[2u] = escape_vel * p[2u] + 0.000001 * n[2];
+			//v[0u] = escape_vel * p[0u] + 0.000001 * n[0];
+			//v[1u] = escape_vel * p[1u] + 0.000001 * n[1];
+			//v[2u] = escape_vel * p[2u] + 0.000001 * n[2];
 		}
 
 		pos[3u*i+0u] = (real)p[0u];
@@ -192,13 +191,14 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 		vel[3u*i+2u] = (real)v[2u];
 	}
 
-	for(size_t i = (size_t)0u; i < (size_t)3u*N; i++) {
+	for(unsigned int i = 0u; i < 3u * N; i++) {
 		acc[i] = (real)0.0;
 	}
 
-	sim.step_number = 0u;
+	solver_run(pot, acc, mas, pos, N, 0u);
 
 	sim.N   = N;
+	sim.step_number = 0u;
 	sim.mem = mem;
 	sim.pot = pot;
 	sim.kin = kin;
@@ -226,111 +226,28 @@ int simulation_step(simulation_t* simulation) {
 	real* vel = sim.vel;
 	real* acc = sim.acc;
 
-	#ifdef _OPENMP
-	//#pragma omp parallel for schedule(dynamic, 128)
-	#pragma omp target teams distribute parallel for map(pot[:N], mas[:N], pos[:3u*N], acc[:3u*N])
-	#endif
-	for(unsigned int i = 0u; i < N; i++) {
-		real U_sum = (real)0.0;
-
-		real U_c = (real)0.0;
-
-		real F_sum[3] = {
-			(real)0.0,
-			(real)0.0,
-			(real)0.0
-		};
-
-		real F_c[3] = {
-			(real)0.0,
-			(real)0.0,
-			(real)0.0
-		};
-
-		real m_i = mas[i]; // Body mass
-
-		real r_i[3] = {
-			pos[3u*i+0u],
-			pos[3u*i+1u],
-			pos[3u*i+2u]
-		};
-
-		#ifndef N_DIV
-		for(unsigned int j = 0u; j < N; j++) {
-		#else
-		for(unsigned int j = (N/(unsigned int)N_DIV)*(step_number % (unsigned int)N_DIV); j < (N/(unsigned int)N_DIV)*((step_number % (unsigned int)N_DIV)+1u); j++) {
-		#endif
-			if(i == j) {
-				continue;
-			}
-
-			real m_j = mas[j];
-
-			real r_j[3] = {
-				pos[3u*j+0u],
-				pos[3u*j+1u],
-				pos[3u*j+2u]
-			};
-
-			real r_ij[3] = {
-				r_j[0u] - r_i[0u],
-				r_j[1u] - r_i[1u],
-				r_j[2u] - r_i[2u]
-			};
-
-			real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
-
-			real inv_r2 = (real)1.0 / (      r2 +(real)0.000001);
-			real inv_r1 = (real)1.0 / (sqrtf(r2)+(real)0.000001);
-
-			real U_ij = -(real)G * m_i * m_j * inv_r2;
-
-			{
-				// Naïve summation
-				//U_sum += U_ij;
-
-				// Kahan summation
-				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = U_ij - U_c;
-				volatile real t = U_sum + y;
-				volatile real z = t - U_sum;
-				U_c = z - y;
-				U_sum = t;
-			}
-
-			real F_ij[3] = {
-				-U_ij * r_ij[0u] * inv_r1,
-				-U_ij * r_ij[1u] * inv_r1,
-				-U_ij * r_ij[2u] * inv_r1
-			};
-
-			for(unsigned int k = 0u; k < 3u; k++) {
-				// Naïve summation
-				//F_sum[k] += F_ij[k];
-
-				// Kahan summation
-				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = F_ij[k] - F_c[k];
-				volatile real t = F_sum[k] + y;
-				volatile real z = t - F_sum[k];
-				F_c[k] = z - y;
-				F_sum[k] = t;
-			}
-		}
-
-		pot[i] = U_sum;
-
-		#ifndef N_DIV
-		acc[3u*i+0u] = F_sum[0u];
-		acc[3u*i+1u] = F_sum[1u];
-		acc[3u*i+2u] = F_sum[2u];
-		#else
-		acc[3u*i+0u] = (real)N_DIV * F_sum[0u];
-		acc[3u*i+1u] = (real)N_DIV * F_sum[1u];
-		acc[3u*i+2u] = (real)N_DIV * F_sum[2u];
-		#endif
+	// Kick
+	for(unsigned int i = 0u; i < 3u * N; i++) {
+		vel[i] += (real)0.5 * dt * acc[i];
 	}
 
+	// Drift
+	for(unsigned int i = 0u; i < 3u * N; i++) {
+		pos[i] += dt * vel[i];
+	}
+
+	double t0 = omp_get_wtime();
+	double t1 = omp_get_wtime();
+	t0 = omp_get_wtime();
+
+	// Update potential energy/acceleration
+	solver_run(pot, acc, mas, pos, N, step_number);
+
+	t1 = omp_get_wtime();
+
+	printf("solver_run() took %.09f seconds\n", t1 - t0);
+
+	// Update kinetic energy
 	for(unsigned int i = 0u; i < N; i++) {
 		real v_i[3] = {
 			(real)vel[3u*i+0u],
@@ -375,19 +292,9 @@ int simulation_step(simulation_t* simulation) {
 		printf("E (E_tot) = % .015f\nU (E_pot) = % .015f\nK (E_kin) = % .015f\n", U_sum + K_sum, U_sum, K_sum);
 	}
 
-	// 1/2 kick
+	// Kick
 	for(unsigned int i = 0u; i < 3u * N; i++) {
-		pos[i] += (real)0.5 * dt * vel[i];
-	}
-
-	// Drift
-	for(unsigned int i = 0u; i < 3u * N; i++) {
-		vel[i] += dt * acc[i];
-	}
-
-	// 1/2 kick
-	for(unsigned int i = 0u; i < 3u * N; i++) {
-		pos[i] += (real)0.5 * dt * vel[i];
+		vel[i] += (real)0.5 * dt * acc[i];
 	}
 
 	sim.step_number++;
