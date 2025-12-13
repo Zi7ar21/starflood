@@ -1,9 +1,5 @@
 #pragma once
 
-#include <stddef.h>
-
-#include "types.h"
-
 /* File I/O Configuration */
 
 // Uncomment to enable simulation dumping
@@ -21,31 +17,31 @@
 /* Simulation Parameters */
 
 // Default number of bodies in the simulation (N)
-//#define NUM_BODIES 1024u
-//#define NUM_BODIES 2048u
-//#define NUM_BODIES 4096u
-//#define NUM_BODIES 8192u
-//#define NUM_BODIES 16384u
-//#define NUM_BODIES 32768u
-//#define NUM_BODIES 65536u
-//#define NUM_BODIES 131072u
-#define NUM_BODIES 262144u
-//#define NUM_BODIES 524288u
-//#define NUM_BODIES 1048576u
+//#define NUM_BODIES 1024
+//#define NUM_BODIES 2048
+//#define NUM_BODIES 4096
+//#define NUM_BODIES 8192
+//#define NUM_BODIES 16384
+//#define NUM_BODIES 32768
+//#define NUM_BODIES 65536
+//#define NUM_BODIES 131072
+#define NUM_BODIES 262144
+//#define NUM_BODIES 524288
+//#define NUM_BODIES 1048576
 
 // Divide the force calculations across this many timesteps (comment to disable)
-#define N_DIV 4u
+#define N_DIV 4
 
 /*
 #ifdef N_DIV
-#if(0u >= N_DIV)
+#if(0 >= N_DIV)
 #error "N_DIV must be >= 1!"
 #endif
 #endif
 */
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 900u
+#define NUM_TIMESTEPS 900
 
 // Simulation timestep size (dt)
 //#define TIMESTEP_SIZE 0.03333333333333333333333333333333
@@ -61,9 +57,14 @@
 
 /* Miscellaneous Configuration */
 
-// Memory alignment
-// Default: 4 MiB (4 * 1024 * 1024 bytes)
-#define STARFLOOD_ALIGNMENT (size_t)4194304u
+// Uncomment to enable memory alignment (good practice)
+// 4 KiB (4*1024 = 4096 bytes) is the smallest on many architectures
+// however, larger page sizes exist:
+// x86 huge pages are 2 MiB (2*1024*1024 = 2097152 bytes)
+// RISCV32 "megapage" is 4 MiB (4*1024*1024 = 4194304 bytes)
+// There is really no point increasing this
+// much before you are just wasting memory
+#define STARFLOOD_ALIGNMENT 4194304
 
 // Repository information (--help/--version)
 #define STARFLOOD_REPOSITORY "https://github.com/Zi7ar21/starflood"

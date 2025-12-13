@@ -64,7 +64,7 @@ There are a few parameters at the top of [src/config.h](src/config.h) worth look
 
 ```c
 // number of bodies in the simulation (N)
-#define NUM_BODIES 65536u
+#define NUM_BODIES 65536
 ```
 
 ### Building the Code

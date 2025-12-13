@@ -1,3 +1,6 @@
+// Needed for posix_memalign()
+#define _POSIX_C_SOURCE 200112L
+
 #include "simulation.h"
 
 #include <math.h>
@@ -15,6 +18,15 @@
 int simulation_init(simulation_t* simulation, unsigned int N) {
 	simulation_t sim = *simulation;
 
+	void* mem = NULL;
+
+	real* pot = (real*)NULL;
+	real* kin = (real*)NULL;
+	real* mas = (real*)NULL;
+	real* pos = (real*)NULL;
+	real* vel = (real*)NULL;
+	real* acc = (real*)NULL;
+
 	printf("Simulation Memory Addresses:\n");
 
 	size_t pot_size = (size_t)1u * (size_t)N;
@@ -31,24 +43,22 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 	size_t vel_offset = pos_offset + pos_size;
 	size_t acc_offset = vel_offset + vel_size;
 
-	size_t buf_size = acc_offset + acc_size;
-
-	size_t mem_size = sizeof(real) * buf_size;
+	size_t mem_size = sizeof(real) * (acc_offset + acc_size);
 
 	#ifdef STARFLOOD_ALIGNMENT
-	void* mem = aligned_alloc(STARFLOOD_ALIGNMENT, mem_size);
+	posix_memalign(&mem, (size_t)STARFLOOD_ALIGNMENT, mem_size);
 	#else
-	void* mem = malloc(mem_size);
+	mem = malloc(mem_size);
 	#endif
 
 	if(NULL == mem) {
 		#ifdef STARFLOOD_ALIGNMENT
-		fprintf(stderr, "error in aligned_alloc(%zu, %zu) while allocating memory for the simulation", STARFLOOD_ALIGNMENT, mem_size);
+		fprintf(stderr, "error in posix_memalign(&mem, %zu, %zu) while allocating memory for the ", (size_t)STARFLOOD_ALIGNMENT, mem_size);
 		#else
-		fprintf(stderr, "error in malloc(%zu) while allocating memory for the simulation", mem_size);
+		fprintf(stderr, "error in malloc(%zu) while allocating memory for the ", mem_size);
 		#endif
 
-		perror("");
+		perror("simulation");
 
 		return EXIT_FAILURE;
 	}
@@ -57,14 +67,12 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 
 	memset(mem, 0, mem_size);
 
-	real* buf = (real*)mem;
-
-	real* pot = &(buf[pot_offset]);
-	real* kin = &(buf[kin_offset]);
-	real* mas = &(buf[mas_offset]);
-	real* pos = &(buf[pos_offset]);
-	real* vel = &(buf[vel_offset]);
-	real* acc = &(buf[acc_offset]);
+	pot = &(((real*)mem)[pot_offset]);
+	kin = &(((real*)mem)[kin_offset]);
+	mas = &(((real*)mem)[mas_offset]);
+	pos = &(((real*)mem)[pos_offset]);
+	vel = &(((real*)mem)[vel_offset]);
+	acc = &(((real*)mem)[acc_offset]);
 
 	printf("  pot: %p (+%zu)\n", (void*)pot, pot_offset);
 	printf("  kin: %p (+%zu)\n", (void*)kin, kin_offset);
@@ -220,7 +228,7 @@ int simulation_step(simulation_t* simulation) {
 
 	#ifdef _OPENMP
 	//#pragma omp parallel for schedule(dynamic, 128)
-	#pragma omp target teams distribute parallel for map(pot[0u:N], kin[0u:N], mas[0u:N], pos[0u:3u*N], vel[0u:3u*N], acc[0u:3u*N])
+	#pragma omp target teams distribute parallel for map(pot[:N], mas[:N], pos[:3u*N], acc[:3u*N])
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
 		real U_sum = (real)0.0;
@@ -250,7 +258,7 @@ int simulation_step(simulation_t* simulation) {
 		#ifndef N_DIV
 		for(unsigned int j = 0u; j < N; j++) {
 		#else
-		for(unsigned int j = (N/N_DIV)*(step_number % N_DIV); j < (N/N_DIV)*((step_number % N_DIV)+1u); j++) {
+		for(unsigned int j = (N/(unsigned int)N_DIV)*(step_number % (unsigned int)N_DIV); j < (N/(unsigned int)N_DIV)*((step_number % (unsigned int)N_DIV)+1u); j++) {
 		#endif
 			if(i == j) {
 				continue;
@@ -312,9 +320,15 @@ int simulation_step(simulation_t* simulation) {
 
 		pot[i] = U_sum;
 
-		acc[3u*i+0u] = (real)4.0 * F_sum[0u];
-		acc[3u*i+1u] = (real)4.0 * F_sum[1u];
-		acc[3u*i+2u] = (real)4.0 * F_sum[2u];
+		#ifndef N_DIV
+		acc[3u*i+0u] = F_sum[0u];
+		acc[3u*i+1u] = F_sum[1u];
+		acc[3u*i+2u] = F_sum[2u];
+		#else
+		acc[3u*i+0u] = (real)N_DIV * F_sum[0u];
+		acc[3u*i+1u] = (real)N_DIV * F_sum[1u];
+		acc[3u*i+2u] = (real)N_DIV * F_sum[2u];
+		#endif
 	}
 
 	for(unsigned int i = 0u; i < N; i++) {
@@ -393,12 +407,12 @@ int simulation_free(simulation_t* simulation) {
 	}
 
 	sim.mem = NULL;
-	sim.pot = NULL;
-	sim.kin = NULL;
-	sim.mas = NULL;
-	sim.pos = NULL;
-	sim.vel = NULL;
-	sim.acc = NULL;
+	sim.pot = (real*)NULL;
+	sim.kin = (real*)NULL;
+	sim.mas = (real*)NULL;
+	sim.pos = (real*)NULL;
+	sim.vel = (real*)NULL;
+	sim.acc = (real*)NULL;
 
 	*simulation = sim;
 

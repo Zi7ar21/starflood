@@ -1,3 +1,6 @@
+// Needed for posix_memalign()
+#define _POSIX_C_SOURCE 200112L
+
 #include "visualization.h"
 
 #include <math.h>
@@ -13,60 +16,68 @@
 int visualization_init(visualization_t* visualization, unsigned int w, unsigned int h) {
 	visualization_t vis = *visualization;
 
-	printf("visualization memory addresses:\n");
+	void* mem = NULL;
+
+	i32* atomic_buffer = (i32*)NULL;
+	f32* render_buffer = (f32*)NULL;
+
+	if( sizeof(i32) != sizeof(f32) ) {
+		return EXIT_FAILURE;
+	}
+
+	printf("Visualization Memory Addresses:\n");
 
 	size_t atomic_buffer_size = sizeof(i32)*(size_t)4u*(size_t)w*(size_t)h;
-
-	#ifdef STARFLOOD_ALIGNMENT
-	i32* atomic_buffer = (i32*)aligned_alloc(STARFLOOD_ALIGNMENT, atomic_buffer_size);
-	#else
-	i32* atomic_buffer = (i32*)malloc(atomic_buffer_size);
-	#endif
-
-	if(NULL == (void*)atomic_buffer) {
-		#ifdef STARFLOOD_ALIGNMENT
-		fprintf(stderr, "error in aligned_alloc(%zu, %zu) while allocating atomic_buffer", STARFLOOD_ALIGNMENT, atomic_buffer_size);
-		#else
-		fprintf(stderr, "error in malloc(%zu, %zu) while allocating atomic_buffer", atomic_buffer_size);
-		#endif
-
-		perror("");
-
-		return EXIT_FAILURE;
-	}
-
-	printf("  atomic_buffer: %p\n", (void*)atomic_buffer);
-
 	size_t render_buffer_size = sizeof(f32)*(size_t)4u*(size_t)w*(size_t)h;
 
+	size_t atomic_buffer_offset = (size_t)0u;
+	size_t render_buffer_offset = atomic_buffer_offset + atomic_buffer_size;
+
+	size_t mem_size = render_buffer_offset + render_buffer_size;
+
 	#ifdef STARFLOOD_ALIGNMENT
-	f32* render_buffer = (f32*)aligned_alloc(STARFLOOD_ALIGNMENT, render_buffer_size);
+	posix_memalign(&mem, (size_t)STARFLOOD_ALIGNMENT, mem_size);
 	#else
-	f32* render_buffer = (f32*)malloc(render_buffer_size);
+	mem = malloc(mem_size);
 	#endif
 
-	if(NULL == (void*)render_buffer) {
+	if(NULL == mem) {
 		#ifdef STARFLOOD_ALIGNMENT
-		fprintf(stderr, "error in aligned_alloc(%zu, %zu) while allocating render_buffer", STARFLOOD_ALIGNMENT, render_buffer_size);
+		fprintf(stderr, "error in posix_memalign(&mem, %zu, %zu) while allocating memory for the ", (size_t)STARFLOOD_ALIGNMENT, mem_size);
 		#else
-		fprintf(stderr, "error in malloc(%zu) while allocating render_buffer", render_buffer_size);
+		fprintf(stderr, "error in malloc(%zu) while allocating memory for the ", mem_size);
 		#endif
 
-		perror("");
-
-		free(atomic_buffer);
+		perror("visualization");
 
 		return EXIT_FAILURE;
 	}
 
-	printf("  render_buffer: %p\n", (void*)atomic_buffer);
+	printf("  mem: %p\n", mem);
+
+	memset(mem, 0, mem_size);
+
+	atomic_buffer = &(((i32*)mem)[atomic_buffer_offset]);
+	render_buffer = &(((f32*)mem)[render_buffer_offset]);
+
+	printf("  atomic_buffer: %p (+%zu)\n", (void*)atomic_buffer, atomic_buffer_offset);
+	printf("  render_buffer: %p (+%zu)\n", (void*)render_buffer, render_buffer_offset);
 	printf("\n");
 
-	memset((void*)atomic_buffer, 0, atomic_buffer_size);
-	memset((void*)render_buffer, 0, render_buffer_size);
+	for(unsigned int i = 0u; i < 4u * w * h; i++) {
+		#ifdef _OPENMP
+		#pragma omp atomic write
+		#endif
+		atomic_buffer[i] = (i32)0;
+	}
+
+	for(unsigned int i = 0u; i < 4u * w * h; i++) {
+		render_buffer[i] = (f32)0.000;
+	}
 
 	vis.w = w;
 	vis.h = h;
+	vis.mem = mem;
 	vis.atomic_buffer = atomic_buffer;
 	vis.render_buffer = render_buffer;
 
@@ -224,11 +235,16 @@ int visualization_save(visualization_t* visualization, const char* restrict file
 int visualization_free(visualization_t* visualization) {
 	visualization_t vis = *visualization;
 
-	free(vis.render_buffer);
-	free(vis.atomic_buffer);
+	{
+		void* mem = vis.mem;
 
-	vis.atomic_buffer = NULL;
-	vis.render_buffer = NULL;
+		free(mem);
+	}
+
+	vis.mem = NULL;
+
+	vis.atomic_buffer = (i32*)NULL;
+	vis.render_buffer = (f32*)NULL;
 
 	*visualization = vis;
 

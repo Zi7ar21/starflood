@@ -9,8 +9,9 @@ typedef struct {
 	unsigned int w;
 	unsigned int h;
 
-	i32* atomic_buffer;
+	void* mem;
 
+	i32* atomic_buffer;
 	f32* render_buffer;
 } visualization_t;
 
