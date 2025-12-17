@@ -5,16 +5,16 @@
 #define OUTPUT_INTERVAL 4
 
 // Comment to load SIMULATION_FILENAME instead of running simulation by default
-#define ENABLE_SIMULATION
+//#define ENABLE_SIMULATION
 
 // Uncomment to enable simulation file I/O
-#define SIMULATION_FILENAME "/out/sim/step_%04u.data"
+#define SIMULATION_FILENAME "./out/sim/sim_%04u.data"
 
 // Uncomment to enable visualization by default
 #define ENABLE_VISUALIZATION
 
 // Uncomment to enable visualization file I/O
-#define VISUALIZATION_FILENAME "/out/vis/step_%04u.pfm"
+#define VISUALIZATION_FILENAME "./out/vis/step_%04u.pfm"
 
 /* Simulation Parameters */
 
@@ -67,13 +67,13 @@
 /* Visualization Parameters */
 
 // Number of samples for spatial anti-aliasing
-#define SPATIAL_SAMPLES 128
+#define SPATIAL_SAMPLES 512
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
-#define EXPOSURE -4.000
+#define EXPOSURE -3.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE -2.000
+#define ORTHO_SCALE -1.000
 
 /* Miscellaneous Configuration */
 

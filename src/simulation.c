@@ -385,8 +385,6 @@ int simulation_step(simulation_t* simulation) {
 	printf("simulation_step: %.09f ms kick\n", 1000.0*(t1-t0));
 	#endif
 
-	sim.step_number++;
-
 	*simulation = sim;
 
 	return EXIT_SUCCESS;

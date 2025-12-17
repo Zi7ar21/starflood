@@ -1,5 +1,8 @@
 #include "rng.h"
 
+#ifdef _OPENMP
+#pragma omp declare target
+#endif
 // https://www.jcgt.org/published/0009/03/02/
 void pcg4d(uint32_t* restrict s) {
 	uint32_t v[4] = {s[0], s[1], s[2], s[3]};
@@ -29,3 +32,6 @@ void pcg4d(uint32_t* restrict s) {
 	s[2] = v[2];
 	s[3] = v[3];
 }
+#ifdef _OPENMP
+#pragma omp end declare target
+#endif
