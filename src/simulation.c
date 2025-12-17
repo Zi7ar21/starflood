@@ -30,21 +30,21 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 
 	printf("Simulation Memory Addresses:\n");
 
-	size_t pot_size = (size_t)1u * (size_t)N;
-	size_t kin_size = (size_t)1u * (size_t)N;
-	size_t mas_size = (size_t)1u * (size_t)N;
-	size_t pos_size = (size_t)3u * (size_t)N;
-	size_t vel_size = (size_t)3u * (size_t)N;
-	size_t acc_size = (size_t)3u * (size_t)N;
+	size_t pot_length = (size_t)1u * (size_t)N;
+	size_t kin_length = (size_t)1u * (size_t)N;
+	size_t mas_length = (size_t)1u * (size_t)N;
+	size_t pos_length = (size_t)3u * (size_t)N;
+	size_t vel_length = (size_t)3u * (size_t)N;
+	size_t acc_length = (size_t)3u * (size_t)N;
 
 	size_t pot_offset = (size_t)0u;
-	size_t kin_offset = pot_offset + pot_size;
-	size_t mas_offset = kin_offset + kin_size;
-	size_t pos_offset = mas_offset + mas_size;
-	size_t vel_offset = pos_offset + pos_size;
-	size_t acc_offset = vel_offset + vel_size;
+	size_t kin_offset = pot_offset + pot_length;
+	size_t mas_offset = kin_offset + kin_length;
+	size_t pos_offset = mas_offset + mas_length;
+	size_t vel_offset = pos_offset + pos_length;
+	size_t acc_offset = vel_offset + vel_length;
 
-	size_t mem_size = sizeof(real) * (acc_offset + acc_size);
+	size_t mem_size = sizeof(real) * (acc_offset + acc_length);
 
 	#ifdef STARFLOOD_ALIGNMENT
 	posix_memalign(&mem, (size_t)STARFLOOD_ALIGNMENT, mem_size);
@@ -91,31 +91,28 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 		kin[i] = (real)0.0;
 	}
 
-	real body_mass = (real)(24.0 / (double)N);
+	double body_mass = 1.0 / (double)N;
 
 	for(unsigned int i = 0u; i < N; i++) {
-		mas[i] = body_mass;
+		mas[i] = (real)body_mass;
 	}
 
 	for(unsigned int i = 0u; i < N; i++) {
-		double p[3] = {
-			(real)0.0,
-			(real)0.0,
-			(real)0.0
-		};
+		double p[3] = {0.0, 0.0, 0.0}; // position
+		double v[3] = {0.0, 0.0, 0.0}; // velocity
 
-		double v[3] = {
-			(real)0.0,
-			(real)0.0,
-			(real)0.0
-		};
-
-		uint32_t s[4] = {(uint32_t)i, (uint32_t)420u, (uint32_t)69u, (uint32_t)1337u};
-
-		pcg4d(s);
-		pcg4d(s); // second round for better statistical quality
-
+		// Initialize position
 		{
+			uint32_t s[4] = {
+				(uint32_t)i,
+				(uint32_t)0x203F83D3u,
+				(uint32_t)0x710BE493u,
+				(uint32_t)0xA294E7F1u
+			};
+
+			pcg4d(s);
+			pcg4d(s); // second round for better statistical quality
+
 			double r[4] = {
 				INV_PCG32_MAX * (double)s[0],
 				INV_PCG32_MAX * (double)s[1],
@@ -138,13 +135,22 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 			*/
 
 			p[0u] = 1.000 * n[0u];
-			p[1u] = 0.100 * n[1u];
+			p[1u] = 1.000 * n[1u];
 			p[2u] = 1.000 * n[2u];
 		}
 
-		pcg4d(s);
-
+		// Initialize velocity
 		{
+			uint32_t s[4] = {
+				(uint32_t)i,
+				(uint32_t)0xAE8D7CF2u,
+				(uint32_t)0xE4827F00u,
+				(uint32_t)0xE44CA389u
+			};
+
+			pcg4d(s);
+			pcg4d(s); // second round for better statistical quality
+
 			double r[4] = {
 				INV_PCG32_MAX * (double)s[0],
 				INV_PCG32_MAX * (double)s[1],
@@ -160,26 +166,55 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 				sqrt( -2.0 * log(r[1u]) ) * cos(TAU * r[3u])
 			};
 
-			v[0u] =  INV_TAU * 0.200 * p[2u] + 0.001 * n[0u];
-			v[1u] =  INV_TAU * 0.100 * p[1u] + 0.001 * n[1u];
-			v[2u] = -INV_TAU * 0.200 * p[0u] + 0.001 * n[2u];
-
-			//double r2 = (p[0u]*p[0u])+(p[1u]*p[1u])+(p[2u]*p[2u]);
-
-			//double inv_r = 1.0 / sqrt(r2);
-
-			//double escape_vel = sqrt(2.0 * G * body_mass * inv_r);
-			//double escape_vel = sqrt(2.0 * G * body_mass);
-
 			/*
-			v[0u] = escape_vel * p[0u] * inv_r + 0.0001 * n[0];
-			v[1u] = escape_vel * p[1u] * inv_r + 0.0001 * n[1];
-			v[2u] = escape_vel * p[2u] * inv_r + 0.0001 * n[2];
+			v[0u] =  INV_TAU * 0.125 * p[2u] + 0.001 * n[0u];
+			v[1u] =  INV_TAU * 0.000 * p[1u] + 0.001 * n[1u];
+			v[2u] = -INV_TAU * 0.125 * p[0u] + 0.001 * n[2u];
 			*/
 
-			//v[0u] = escape_vel * p[0u] + 0.000001 * n[0];
-			//v[1u] = escape_vel * p[1u] + 0.000001 * n[1];
-			//v[2u] = escape_vel * p[2u] + 0.000001 * n[2];
+			/*
+			double r2 = (p[0u]*p[0u])+(p[2u]*p[2u]);
+
+			double inv_r2 = 1.0 / (      r2+0.1  );
+			double inv_r1 = 1.0 / ( sqrt(r2+0.1) );
+			*/
+
+			v[0u] = 0.250 * sqrt(G * body_mass) *  p[2u] + 0.000001 * n[0u];
+			v[1u] = 0.000 * sqrt(G * body_mass) *  p[1u] + 0.000001 * n[1u];
+			v[2u] = 0.250 * sqrt(G * body_mass) * -p[0u] + 0.000001 * n[2u];
+		}
+
+		{
+			uint32_t s[4] = {
+				(uint32_t)i,
+				(uint32_t)0xE5C4E174u,
+				(uint32_t)0xCB77B51Eu,
+				(uint32_t)0xA82C87A3u
+			};
+
+			pcg4d(s);
+			pcg4d(s); // second round for better statistical quality
+
+			double r[4] = {
+				INV_PCG32_MAX * (double)s[0],
+				INV_PCG32_MAX * (double)s[1],
+				INV_PCG32_MAX * (double)s[2],
+				INV_PCG32_MAX * (double)s[3]
+			};
+
+			// Thin disk
+			if(0.000 <= r[0u] && r[0u] < 0.850) {
+				p[1u] *= 0.025;
+			}
+
+			/*
+			p[0u] += r[1u] < 0.500 ?  4.000 : -4.000;
+			p[1u] += r[1u] < 0.500 ?  1.000 : -1.000;
+			v[0u] *= r[1u] < 0.500 ?  1.000 : -1.000;
+			v[2u] *= r[1u] < 0.500 ?  1.000 : -1.000;
+			v[0u] += r[1u] < 0.500 ? -0.005 :  0.005;
+			v[1u] += r[1u] < 0.500 ? -0.005 :  0.005;
+			*/
 		}
 
 		pos[3u*i+0u] = (real)p[0u];

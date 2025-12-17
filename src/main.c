@@ -7,10 +7,10 @@
 #include <string.h>
 
 #ifdef _OPENMP
-#pragma message("OpenMP is ENABLED")
+//#pragma message("OpenMP is ENABLED")
 #include <omp.h>
 #else
-#pragma message("OpenMP is NOT ENABLED")
+//#pragma message("OpenMP is NOT ENABLED")
 #endif
 
 #include "config.h"
@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
 
 	unsigned int num_bodies = (unsigned int)NUM_BODIES, num_timesteps = (unsigned int)NUM_TIMESTEPS;
 
-	unsigned int visualization_dimensions[2] = {960u, 960u};
+	unsigned int visualization_dimensions[2] = {1080u, 1080u};
 
 	visualization_t vis;
 
@@ -149,6 +149,13 @@ int main(int argc, char** argv) {
 	}
 
 	printf("        N: %u\n", num_bodies);
+
+	#ifdef N_DIV
+	printf("        N_DIV: %u\n", (unsigned int)N_DIV);
+	#else
+	printf("        N_DIV: %u\n", 0u);
+	#endif
+
 	printf("        num_timesteps: %u\n", num_timesteps);
 	printf("    Visualization:\n");
 	printf("        enabled: %d\n", enable_visualization);
@@ -187,14 +194,14 @@ int main(int argc, char** argv) {
 		printf("Step #%3u\n", step_num);
 
 		#ifdef SIMULATION_FILENAME
-		snprintf(sim_filename, filename_size, SIMULATION_FILENAME, step_num);
+		snprintf(sim_filename, filename_size, SIMULATION_FILENAME, step_num / (unsigned int)OUTPUT_INTERVAL);
 		#endif
 
 		#ifdef VISUALIZATION_FILENAME
-		snprintf(vis_filename, filename_size, VISUALIZATION_FILENAME, step_num);
+		snprintf(vis_filename, filename_size, VISUALIZATION_FILENAME, step_num / (unsigned int)OUTPUT_INTERVAL);
 		#endif
 
-		if(enable_simulation_io) {
+		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_simulation_io ) {
 			if(enable_simulation) {
 				if( EXIT_SUCCESS != simulation_save(&sim, sim_filename) ) {
 					fprintf(stderr, "Error: simulation_save() failed!\n");
@@ -206,15 +213,15 @@ int main(int argc, char** argv) {
 			}
 		}
 
-		if(enable_visualization) {
+		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_visualization) {
 			if( EXIT_SUCCESS != visualization_draw(&vis, &sim) ) {
 				fprintf(stderr, "Error: visualization_draw() failed!\n");
 			}
-		}
 
-		if(enable_visualization && enable_visualization_io) {
-			if( EXIT_SUCCESS != visualization_save(&vis, vis_filename) ) {
-				fprintf(stderr, "Error: visualization_save() failed!\n");
+			if(enable_visualization_io) {
+				if( EXIT_SUCCESS != visualization_save(&vis, vis_filename) ) {
+					fprintf(stderr, "Error: visualization_save() failed!\n");
+				}
 			}
 		}
 

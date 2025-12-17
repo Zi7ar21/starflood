@@ -18,6 +18,9 @@ vgcore.*
 .vscode
 *.code-workspace
 
+# Logs
+*.log
+
 # Profiling
 *.ncu-proj
 *.ncu-rep

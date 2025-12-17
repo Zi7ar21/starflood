@@ -31,13 +31,13 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 
 	printf("Visualization Memory Addresses:\n");
 
-	size_t atomic_buffer_size = (size_t)4u*(size_t)w*(size_t)h;
-	size_t render_buffer_size = (size_t)4u*(size_t)w*(size_t)h;
+	size_t atomic_buffer_length = (size_t)4u * (size_t)w * (size_t)h;
+	size_t render_buffer_length = (size_t)4u * (size_t)w * (size_t)h;
 
 	size_t atomic_buffer_offset = (size_t)0u;
-	size_t render_buffer_offset = atomic_buffer_offset + atomic_buffer_size;
+	size_t render_buffer_offset = atomic_buffer_offset + atomic_buffer_length;
 
-	size_t mem_size = sizeof(i32)*atomic_buffer_size + sizeof(i32)*render_buffer_size;
+	size_t mem_size = (sizeof(i32)*atomic_buffer_length)+(sizeof(i32)*render_buffer_length);
 
 	#ifdef STARFLOOD_ALIGNMENT
 	posix_memalign(&mem, (size_t)STARFLOOD_ALIGNMENT, mem_size);
@@ -61,8 +61,8 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 
 	memset(mem, 0, mem_size);
 
-	atomic_buffer = (i32*)mem;
-	render_buffer = (f32*)&atomic_buffer[atomic_buffer_size];
+	atomic_buffer = (i32*)mem + (size_t)atomic_buffer_offset;
+	render_buffer = (f32*)mem + (size_t)render_buffer_offset;
 
 	printf("  atomic_buffer: %p (+%zu)\n", (void*)atomic_buffer, atomic_buffer_offset);
 	printf("  render_buffer: %p (+%zu)\n", (void*)render_buffer, render_buffer_offset);
@@ -131,17 +131,51 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 	t0 = omp_get_wtime();
 	#endif
 
+	/*
+	double tran[16u] = {
+		 1.000,  0.000,  0.000,  tr[0],
+		 0.000,  1.000,  0.000,  tr[1],
+		 0.000,  0.000,  1.000,  tr[2],
+		 0.000,  0.000,  0.000,  1.000
+	};
+
+	double view[16u] = {
+		 1.000,  0.000,  0.000,  0.000,
+		 0.000,  1.000,  0.000,  0.000,
+		 0.000,  0.000,  1.000,  0.000,
+		 0.000,  0.000,  0.000,  1.000
+	};
+
+	real matrix[16];
+	*/
+
 	#ifdef _OPENMP
 	#pragma omp parallel for schedule(dynamic, 1024)
 	#endif
-	for(unsigned int i = 0u; i < N; i++) {
+	for(unsigned int id = 0u; id < N; id++) {
 		// https://cs418.cs.illinois.edu/website/text/math2.html
 		double p[4] = {
-			(double)pos[3u*i+0u],
-			(double)pos[3u*i+1u],
-			(double)pos[3u*i+2u],
-			(double)1.000
+			(double)pos[3u*id+0u],
+			(double)pos[3u*id+1u],
+			(double)pos[3u*id+2u],
+			(double)1.0
 		};
+
+		/*
+		{
+			real mv[4] = {
+				(matrix[ 0]*vector[0])+(matrix[ 1]*vector[1])+(matrix[ 2]*vector[2])+(matrix[ 3]*vector[3]),
+				(matrix[ 4]*vector[0])+(matrix[ 5]*vector[1])+(matrix[ 6]*vector[2])+(matrix[ 7]*vector[3]),
+				(matrix[ 8]*vector[0])+(matrix[ 9]*vector[1])+(matrix[10]*vector[2])+(matrix[11]*vector[3]),
+				(matrix[12]*vector[0])+(matrix[13]*vector[1])+(matrix[14]*vector[2])+(matrix[15]*vector[3]),
+			};
+
+			p[0] = p_new[0];
+			p[1] = p_new[1];
+			p[2] = p_new[2];
+			p[3] = p_new[3];
+		}
+		*/
 
 		for(unsigned int j = 0u; j < 4u; j++) {
 			p[j] *= exp2(ORTHO_SCALE);
@@ -149,9 +183,10 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 
 		// rotate2d
 		{
-			//const double theta = 0.000 * TAU;
-			const double theta = 0.125 * TAU;
-			//const double theta = 0.250 * TAU;
+			//const double theta = 0.0000 * TAU;
+			//const double theta = 0.0625 * TAU;
+			//const double theta = 0.1250 * TAU;
+			const double theta = 0.2500 * TAU;
 
 			double v[2] = {
 				p[1], // Y
@@ -170,7 +205,7 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 		i32 rgba[4] = {(i32)1, (i32)1, (i32)1, (i32)1};
 
 		for(unsigned int j = 0u; j < (unsigned int)SPATIAL_SAMPLES; j++) {
-			u32 s[4] = {(u32)j, (u32)i, (u32)step_number, (u32)420691337u};
+			u32 s[4] = {(u32)j, (u32)id, (u32)step_number, (u32)0xCF52CA01u};
 
 			pcg4d(s);
 			//pcg4d(s);

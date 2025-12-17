@@ -1,10 +1,35 @@
 # Starflood
 
-CC ?= gcc
+#CC := clang
+CC := gcc
 
-CFLAGS = -fopenmp -ggdb -Og -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow
+# Clang/GCC optimized for debug (default)
+CFLAGS := -Og
+# Clang tuned for native hardware
+#CFLAGS := -flto=auto -march=native -O2
+# GCC   tuned for native hardware
+#CFLAGS := -flto=auto -ftree-vectorize -march=native -O2
 
-LDFLAGS = -lm
+# Enable OpenMP (compiler directive-based parallelization)
+CFLAGS := -fopenmp $(CFLAGS)
+
+# Generate debugging information (regular)
+#DEBUG_CFLAGS := -g 
+# Generate debugging information with extensions for GNU Project Debugger (GDB)
+DEBUG_CFLAGS := -ggdb
+
+
+
+
+# Set the C language standard
+CFLAGS := $(CFLAGS) -pedantic -std=c99
+# Enable warnings
+CFLAGS := $(CFLAGS) -Wall -Wconversion -Wextra -Wshadow
+# Use debug flags
+CFLAGS := $(DEBUG_CFLAGS) $(CFLAGS)
+
+# Link the standard math library
+LDFLAGS := -lm
 
 .PHONY: all
 all: build/starflood

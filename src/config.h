@@ -2,17 +2,19 @@
 
 /* File I/O Configuration */
 
+#define OUTPUT_INTERVAL 4
+
 // Comment to load SIMULATION_FILENAME instead of running simulation by default
-//#define ENABLE_SIMULATION
+#define ENABLE_SIMULATION
 
 // Uncomment to enable simulation file I/O
-#define SIMULATION_FILENAME "./out/sim_%04u.data"
+#define SIMULATION_FILENAME "/out/sim/step_%04u.data"
 
 // Uncomment to enable visualization by default
 #define ENABLE_VISUALIZATION
 
 // Uncomment to enable visualization file I/O
-#define VISUALIZATION_FILENAME "./out/vis_%04u.pfm"
+#define VISUALIZATION_FILENAME "/out/vis/step_%04u.pfm"
 
 /* Simulation Parameters */
 
@@ -41,18 +43,22 @@
 */
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 90
+#define NUM_TIMESTEPS 10000
 
 // Simulation timestep size (dt)
 //#define TIMESTEP_SIZE 0.03333333333333333333333333333333
 //#define TIMESTEP_SIZE 0.06666666666666666666666666666667
-#define TIMESTEP_SIZE 0.100
+//#define TIMESTEP_SIZE 0.100
+#define TIMESTEP_SIZE 1.000
 
 // Gravitational potential softening parameter
 #define EPSILON 0.001
 
 // Gravitational constant (physical units are not yet implemented)
 #define G 1.000
+
+// alternative (pc * (km/s)^2 * M_sol^-1)
+//#define G 4.3009172706e-3
 
 // alternative (m^3 * kg^-1 * s^2)
 // https://physics.nist.gov/cgi-bin/cuu/Value?bg
@@ -64,7 +70,7 @@
 #define SPATIAL_SAMPLES 128
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
-#define EXPOSURE -2.000
+#define EXPOSURE -4.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
 #define ORTHO_SCALE -2.000

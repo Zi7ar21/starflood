@@ -24,7 +24,6 @@ Starflood is an open-source astrophysical simulation code written in C.
   - [Molecular cloud/Stellar nursery](https://en.wikipedia.org/wiki/Molecular_cloud)
 - Add support for [distributed computing](https://en.wikipedia.org/wiki/Distributed_computing)
   - [Message Passing Interface (MPI)](https://en.wikipedia.org/wiki/Message_Passing_Interface)
-- Add support for [GPU compute](https://en.wikipedia.org/wiki/General-purpose_computing_on_graphics_processing_units)
 - Add support for [volume rendering](https://en.wikipedia.org/wiki/Volume_rendering) to visualization
 - Improve physical solver(s)
   - Add support for [Barnes-Hut](https://en.wikipedia.org/wiki/Barnes–Hut_simulation) tree method
@@ -34,6 +33,8 @@ Starflood is an open-source astrophysical simulation code written in C.
 
 - _[Create Your Own Smoothed-Particle Hydrodynamics Simulation (With Python)](https://github.com/pmocz/sph-python)_ by Philip Mocz
   - Used as a reference implementation of [SPH](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics), which is nice since the Wikipedia article only contains mathematical formulae/equations!
+- _[Dynamics and Astrophysics of Galaxies](https://galaxiesbook.org/)_ by Jo Bovy
+  - Web-based book
 - _[GADGET-4 (GAlaxies with Dark matter and Gas intEracT)](https://wwwmpa.mpa-garching.mpg.de/gadget4/)_ by Volker Springel et al.
   - Used as a reference for what a well-organized astrophysical simulation codebase should look like. Also an awesome collaboration/project that was an inspiration to me.
 - _[The Barnes-Hut Approximation: Efficient computation of N-body forces](https://jheer.github.io/barnes-hut/)_ by Jeffrey Heer
@@ -57,6 +58,8 @@ First, clone the Starflood repository:
 git clone https://github.com/Zi7ar21/starflood.git
 ```
 
+Then, change to the repository root:
+
 ```sh
 cd starflood
 ```
@@ -72,38 +75,29 @@ There are a few parameters at the top of [src/config.h](src/config.h) worth look
 
 ### Building the Code
 
+First, create a directory for the build files.
+
 ```sh
 mkdir -p build
 ```
+
+#### GNU Make
+
+First, make any desired changes to the [Makefile](Makefile). Some lines are commented/uncommented near the top of the file that you might want to tweak.
+
+To compile in parallel, use `-j` to specify the number of jobs:
 
 ```sh
 make -j$(nproc) all
 ```
 
-#### Debug
+To clean up after the build (required if any modificaitons have been made to the source code):
 
 ```sh
-clang -fopenmp -ggdb -Og -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
+make clean
 ```
 
-```sh
-gcc -fopenmp -ggdb -Og -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
-```
-
-- `-fopenmp`: Enables OpenMP (compiler directive-based parallelization).
-- `-ggdb`: Includes debugging information/symbols ideal for [GNU Project Debugger (GDB)](https://www.gnu.org/software/gdb).
-- `-pedantic -Wall -Wconversion -Wextra -Wshadow`: Enables useful warnings.
-- `-lm`: Links the standard math library.
-
-#### Optimized
-
-```sh
-clang -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
-```
-
-```sh
-gcc -ffast-math -fopenmp -ggdb -march=native -O3 -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
-```
+##### Flag Description
 
 - `-ffast-math`: Allows replacement of standard math library functions with native instructions (i.e. `sqrt()` becomes the native x86 SSE instruction `sqrtss`). **Note**: This flag may cause runs to be non-deterministic across compilers and vendors!
 - `-march=native`: Generate binaries optimized for the compiler host machine (i.e. cache optimizations and enables any supported SIMD instruction sets, such as [x86 AVX](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) or [ARM NEON](https://en.wikipedia.org/wiki/ARM_architecture_family#Advanced_SIMD_(Neon))).
@@ -137,24 +131,9 @@ mkdir -p out
 sudo mount -o size=4G -t tmpfs tmpfs out
 ```
 
-Where `size=1G` indicates a filesystem size of 4 GiB. You can calculate how much storage is needed for an RGB 32-bit floating-point (RGB32F) image frame sequence using the following equation:
+Where `size=4G` indicates a filesystem size of 4 GiB.
 
-```math
-S = 4 * 3 * W * H * N
-```
-
-where:
-
-- `S` is the size (in bytes) of the image frame sequence
-- `4` is the number of bytes/float (assuming a float is 32 bits)
-- `3` is the number of channels per pixel (RGB)
-- `W` is the width of an image
-- `H` is the height of an image
-- `N` is the number of frames
-
-To get the number of Gibibytes (GiB) of storage needed, divide `s` by `1024 * 1024` (`1048576`).
-
-Just remember to unmount it when you are finished!
+Remember to unmount the tmpfs when you are finished!
 
 ```sh
 sudo umount out
@@ -171,7 +150,7 @@ man tmpfs
 This section is still a work-in-progress!
 
 ```sh
-mkdir -p out
+mkdir -p out/sim out/vis
 ```
 
 #### Running with Niceness
@@ -184,10 +163,12 @@ nice -9 ./build/starflood
 
 A higher niceness means the scheduler will deprioritize the process, meaning any other programs on your system will keep running smoothly.
 
-#### Encoding the Visualization Frame Sequence using `ffmpeg`
+### Encoding an Image Frame Sequence with `ffmpeg`
+
+#### NVIDIA NVENC H.264
 
 ```sh
-ffmpeg -y -r 30 -framerate 30 -i ./out/step_%04d.pfm -c:v h264_nvenc -vf "scale=in_transfer=linear:out_transfer=bt709" -b:v 8M -pix_fmt yuv420p -an -sn -dn -g 15 -bf 2 -preset slow -tune hq -profile:v main -rc-lookahead 16383 -spatial_aq 1 -temporal_aq 1 -coder cabac -b_ref_mode middle starflood_out.mp4 && mpv --loop starflood_out.mp4
+ffmpeg -y -r 30 -framerate 30 -i ./out/vis/step_%04d.pfm -c:v h264_nvenc -vf "scale=in_transfer=linear:out_transfer=bt709" -b:v 8M -pix_fmt yuv420p -an -sn -dn -g 15 -bf 2 -preset slow -tune hq -profile:v main -rc-lookahead 16383 -spatial_aq 1 -temporal_aq 1 -coder cabac -b_ref_mode middle starflood_out.mp4 && mpv --loop starflood_out.mp4
 ```
 
 ### Profiling Starflood
