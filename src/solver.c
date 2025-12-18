@@ -9,6 +9,11 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 	#ifdef N_DIV
 	unsigned int j_length = N / (unsigned int)N_DIV;
 	unsigned int j_offset = (step_number % (unsigned int)N_DIV) * j_length;
+
+	if(0u >= step_number) {
+		j_offset = 0u;
+		j_length = N;
+	}
 	#endif
 
 	#ifdef _OPENMP

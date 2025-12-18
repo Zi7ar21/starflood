@@ -92,8 +92,8 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 
 int visualization_draw(const visualization_t* restrict visualization, const simulation_t* restrict simulation) {
 	#ifdef _OPENMP
-	double t0 = omp_get_wtime();
-	double t1 = omp_get_wtime();
+	volatile double t0 = omp_get_wtime();
+	volatile double t1 = omp_get_wtime();
 	#endif
 
 	simulation_t sim = *simulation;
@@ -110,6 +110,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 
 	unsigned int N = sim.N;
 
+	real* pot = sim.pot; // for color
 	real* pos = sim.pos;
 	real* vel = sim.vel; // for motion blur
 
@@ -133,7 +134,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("visualization_draw: %.09f ms clear atomic_buffer\n", 1000.0*(t1-t0));
+	printf("visualization_draw: %.09f ms clear atomic_buffer\n", 1.0e3*(t1 - t0));
 
 	t0 = omp_get_wtime();
 	#endif
@@ -151,14 +152,14 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		double gam = 0.0; // yaw
 
 		//bet = 0.0000 * TAU;
-		//bet = 0.0625 * TAU;
-		bet = 0.1250 * TAU;
+		bet = 0.0625 * TAU;
+		//bet = 0.1250 * TAU;
 		//bet = 0.2500 * TAU;
 		//bet = 0.001 * time * TAU;
 
 		//gam = 0.0000 * TAU;
-		gam = 0.0625 * TAU;
-		//gam = 0.1250 * TAU;
+		//gam = 0.0625 * TAU;
+		gam = 0.1250 * TAU;
 		//gam = 0.2500 * TAU;
 
 		double cos_alp = cos(alp), sin_alp = sin(alp);
@@ -257,7 +258,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOADING
-		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pos[:3u*N], vel[:3u*N])
+		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pot[:N], pos[:3u*N], vel[:3u*N])
 		#else
 		#pragma omp parallel for schedule(dynamic, 1024)
 		#endif
@@ -277,6 +278,12 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 			(double)(vel[3u*idx+0u]),
 			(double)(vel[3u*idx+1u]),
 			(double)(vel[3u*idx+2u])
+		};
+
+		double color[3] = {
+			0.5 * cos( TAU * ( (-10000.0 * (double)pot[idx])-(0.0/3.0) ) ) + 0.5,
+			0.5 * cos( TAU * ( (-10000.0 * (double)pot[idx])-(1.0/3.0) ) ) + 0.5,
+			0.5 * cos( TAU * ( (-10000.0 * (double)pot[idx])-(2.0/3.0) ) ) + 0.5,
 		};
 
 		// y = A * x
@@ -316,10 +323,10 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 
 			double sample_offset[2] = {0.0, 0.0};
 
-			i32 color[4] = {
-				(i32)1,
-				(i32)1,
-				(i32)1,
+			i32 accumulation_color[4] = {
+				(i32)(100.0 * color[0]),
+				(i32)(100.0 * color[1]),
+				(i32)(100.0 * color[2]),
 				(i32)1
 			};
 
@@ -411,7 +418,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 					#ifdef _OPENMP
 					#pragma omp atomic update
 					#endif
-					atomic_buffer[4u*pixel_index+i] += color[i];
+					atomic_buffer[4u*pixel_index+i] += accumulation_color[i];
 				}
 			}
 		}
@@ -420,13 +427,15 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("visualization_draw: %.09f ms rasterization\n", 1000.0*(t1-t0));
+	printf("visualization_draw: %.09f ms rasterization\n", 1.0e3*(t1 - t0));
 
 	t0 = omp_get_wtime();
 	#endif
 
 	// Since atomic_buffer colors are quantized integers, it needs a floating-point scaling factor
 	double pixel_value_scale = 1.0;
+
+	pixel_value_scale *= 0.01;
 
 	#ifdef SPATIAL_SAMPLES
 	pixel_value_scale *= 1.0 / (double)SPATIAL_SAMPLES;
@@ -476,7 +485,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("visualization_draw: %.09f ms post-processing\n", 1000.0*(t1-t0));
+	printf("visualization_draw: %.09f ms post-processing\n", 1.0e3*(t1 - t0));
 	#endif
 
 	return EXIT_SUCCESS;
@@ -484,8 +493,8 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 
 int visualization_save(const visualization_t* restrict visualization, const char* restrict filename) {
 	#ifdef _OPENMP
-	double t0 = omp_get_wtime();
-	double t1 = omp_get_wtime();
+	volatile double t0 = omp_get_wtime();
+	volatile double t1 = omp_get_wtime();
 	#endif
 
 	visualization_t vis = *visualization;
@@ -512,7 +521,7 @@ int visualization_save(const visualization_t* restrict visualization, const char
 	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("visualization_save: %.09f ms fopen()\n", 1000.0*(t1-t0));
+	printf("visualization_save: %.09f ms fopen()\n", 1.0e3*(t1 - t0));
 
 	t0 = omp_get_wtime();
 	#endif
@@ -571,7 +580,7 @@ int visualization_save(const visualization_t* restrict visualization, const char
 	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("visualization_save: %.09f ms fwrite() loop\n", 1000.0*(t1-t0));
+	printf("visualization_save: %.09f ms fwrite() loop\n", 1.0e3*(t1 - t0));
 
 	t0 = omp_get_wtime();
 	#endif
@@ -581,7 +590,7 @@ int visualization_save(const visualization_t* restrict visualization, const char
 	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("visualization_save: %.09f ms fclose()\n", 1000.0*(t1-t0));
+	printf("visualization_save: %.09f ms fclose()\n", 1.0e3*(t1 - t0));
 	#endif
 
 	return EXIT_SUCCESS;

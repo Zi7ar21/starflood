@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #FILENAME="starflood_$(date +%Y%m%d_%H%M%S%N).mp4"
-FILENAME="starflood_2025-12-16_side.mp4"
+FILENAME="starflood_2025-12-17.mp4"
 #FILENAME="starflood_out.mp4"
 
 echo ${FILENAME}

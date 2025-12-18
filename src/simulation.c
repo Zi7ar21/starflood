@@ -251,8 +251,8 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 
 int simulation_step(simulation_t* simulation) {
 	#ifdef _OPENMP
-	double t0 = omp_get_wtime();
-	double t1 = omp_get_wtime();
+	volatile double t0 = omp_get_wtime();
+	volatile double t1 = omp_get_wtime();
 	#endif
 
 	simulation_t sim = *simulation;
@@ -280,7 +280,7 @@ int simulation_step(simulation_t* simulation) {
 	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("simulation_step: %.09f ms kick\n", 1000.0*(t1-t0));
+	printf("simulation_step: %.09f ms kick\n", 1.0e3*(t1 - t0));
 
 	t0 = omp_get_wtime();
 	#endif
@@ -293,7 +293,7 @@ int simulation_step(simulation_t* simulation) {
 	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("simulation_step: %.09f ms drift\n", 1000.0*(t1-t0));
+	printf("simulation_step: %.09f ms drift\n", 1.0e3*(t1 - t0));
 
 	t0 = omp_get_wtime();
 	#endif
@@ -304,7 +304,7 @@ int simulation_step(simulation_t* simulation) {
 	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("simulation_step: %.09f ms solver_run\n", 1000.0*(t1-t0));
+	printf("simulation_step: %.09f ms solver_run\n", 1.0e3*(t1 - t0));
 
 	t0 = omp_get_wtime();
 	#endif
@@ -323,7 +323,7 @@ int simulation_step(simulation_t* simulation) {
 	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("simulation_step: %.09f ms update kinetic energy\n", 1000.0*(t1-t0));
+	printf("simulation_step: %.09f ms update kinetic energy\n", 1.0e3*(t1 - t0));
 	#endif
 
 	// Compute total energy
@@ -369,7 +369,7 @@ int simulation_step(simulation_t* simulation) {
 	}
 
 	#ifdef _OPENMP
-	printf("simulation_step: %.09f ms calculate energy sums\n", 1000.0*(t1-t0));
+	printf("simulation_step: %.09f ms calculate energy sums\n", 1.0e3*(t1 - t0));
 
 	t0 = omp_get_wtime();
 	#endif
@@ -382,7 +382,7 @@ int simulation_step(simulation_t* simulation) {
 	#ifdef _OPENMP
 	t1 = omp_get_wtime();
 
-	printf("simulation_step: %.09f ms kick\n", 1000.0*(t1-t0));
+	printf("simulation_step: %.09f ms kick\n", 1.0e3*(t1 - t0));
 	#endif
 
 	*simulation = sim;
