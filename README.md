@@ -9,7 +9,7 @@ Starflood is an open-source astrophysical simulation code written in C.
 - Parallelization using [OpenMP](https://www.openmp.org/) (compiler directive-based)
   - Device/GPU compute when using a toolchain with offloading support
 - Visualization
-  - Rasterization accumulation using [atomic](https://en.wikipedia.org/wiki/Linearizability#Primitive_atomic_instructions) operations
+  - Accumulation rasterization using [atomic](https://en.wikipedia.org/wiki/Linearizability#Primitive_atomic_instructions) operations
   - [Spatial anti-aliasing](https://en.wikipedia.org/wiki/Spatial_anti-aliasing) ([Gaussian window function](https://en.wikipedia.org/wiki/Window_function#Gaussian_window) stochastic sampling)
 - File I/O
   - Timesteps from the simulation can be saved in a raw binary format.

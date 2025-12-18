@@ -412,7 +412,7 @@ int simulation_free(simulation_t* simulation) {
 	return EXIT_SUCCESS;
 }
 
-int simulation_read(simulation_t* simulation, const char* restrict filename) {
+int simulation_read(simulation_t* restrict simulation, const char* restrict filename) {
 	simulation_t sim = *simulation;
 
 	if( sizeof(real) != sizeof(float) ) {
@@ -459,7 +459,7 @@ int simulation_read(simulation_t* simulation, const char* restrict filename) {
 	return EXIT_SUCCESS;
 }
 
-int simulation_save(simulation_t* simulation, const char* restrict filename) {
+int simulation_save(simulation_t* restrict simulation, const char* restrict filename) {
 	simulation_t sim = *simulation;
 
 	FILE* file = fopen(filename, "wb");

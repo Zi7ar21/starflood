@@ -4,14 +4,14 @@ CC := clang
 #CC := gcc
 
 # Clang/GCC optimized for debug (default)
-#CFLAGS := -Og
+CFLAGS := -Og
 # Clang tuned for native hardware
-CFLAGS := -flto=auto -march=native -O3
+#CFLAGS := -flto=auto -march=native -O3
 # GCC   tuned for native hardware
 #CFLAGS := -flto=auto -ftree-vectorize -march=native -O2
 
 # non-deterministic, but faster performance
-CFLAGS := -ffast-math $(CFLAGS)
+#CFLAGS := -ffast-math $(CFLAGS)
 
 # Enable OpenMP (compiler directive-based parallelization)
 CFLAGS := -fopenmp $(CFLAGS)

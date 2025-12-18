@@ -31,16 +31,9 @@
 //#define NUM_BODIES 524288
 //#define NUM_BODIES 1048576
 
-// Divide the force calculations across this many timesteps (comment to disable)
+// Uncomment to divide the force calculations across
+// multiple timesteps (faster, but less accurate)
 #define N_DIV 4
-
-/*
-#ifdef N_DIV
-#if(0 >= N_DIV)
-#error "N_DIV must be >= 1!"
-#endif
-#endif
-*/
 
 // Default number of timesteps to run simulation for
 #define NUM_TIMESTEPS 10000
@@ -74,6 +67,9 @@
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
 #define ORTHO_SCALE -1.000
+
+// Uncomment to enable motion blur
+#define SHUTTER_SPEED 0.500
 
 /* Miscellaneous Configuration */
 

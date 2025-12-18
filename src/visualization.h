@@ -9,16 +9,16 @@ typedef struct {
 	unsigned int w;
 	unsigned int h;
 
-	void* mem;
+	void* mem; // Shared memory for the visualization
 
-	i32* atomic_buffer;
-	f32* render_buffer;
+	i32* atomic_buffer; // atomic buffer for accumulation rasterization
+	f32* render_buffer; // render buffer for the post-processed render
 } visualization_t;
 
 int visualization_init(visualization_t* visualization, unsigned int w, unsigned int h);
 
-int visualization_draw(visualization_t* visualization, simulation_t* simulation);
+int visualization_draw(const visualization_t* restrict visualization, const simulation_t* restrict simulation);
 
-int visualization_save(visualization_t* visualization, const char* restrict filename); 
+int visualization_save(const visualization_t* restrict visualization, const char* restrict filename); 
 
-int visualization_free(visualization_t* visualization);
+int visualization_free(visualization_t* restrict visualization);

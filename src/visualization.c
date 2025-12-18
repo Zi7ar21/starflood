@@ -90,7 +90,7 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 	return EXIT_SUCCESS;
 }
 
-int visualization_draw(visualization_t* visualization, simulation_t* simulation) {
+int visualization_draw(const visualization_t* restrict visualization, const simulation_t* restrict simulation) {
 	#ifdef _OPENMP
 	double t0 = omp_get_wtime();
 	double t1 = omp_get_wtime();
@@ -106,12 +106,18 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 	i32* atomic_buffer = vis.atomic_buffer;
 	f32* render_buffer = vis.render_buffer;
 
-	unsigned int N = sim.N;
-
 	unsigned int step_number = sim.step_number;
+
+	unsigned int N = sim.N;
 
 	real* pos = sim.pos;
 	real* vel = sim.vel; // for motion blur
+
+	#ifdef OUTPUT_INTERVAL
+	double time = TIMESTEP_SIZE * (double)step_number;
+	#else
+	double time = TIMESTEP_SIZE * (double)step_number;
+	#endif
 
 	#ifdef _OPENMP
 	t0 = omp_get_wtime();
@@ -132,7 +138,6 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 	t0 = omp_get_wtime();
 	#endif
 
-	/*
 	// model matrix
 	double matM[16];
 
@@ -238,7 +243,6 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 			matMVP[i] = C[i];
 		}
 	}
-	*/
 
 	#ifdef _OPENMP
 	//#pragma omp parallel for schedule(dynamic, 1024)
@@ -246,60 +250,65 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 	#endif
 	for(unsigned int idx = 0u; idx < N; idx++) {
 		// https://cs418.cs.illinois.edu/website/text/math2.html
+
+		// homogenous coordinates
 		double p[4] = {
-			(double)pos[3u*idx+0u],
-			(double)pos[3u*idx+1u],
-			(double)pos[3u*idx+2u],
-			(double)1.0
+			(double)(pos[3u*idx+0u]),
+			(double)(pos[3u*idx+1u]),
+			(double)(pos[3u*idx+2u]),
+			(double)(           1.0)
 		};
 
 		double v[3] = {
-			(double)vel[3u*idx+0u],
-			(double)vel[3u*idx+1u],
-			(double)vel[3u*idx+2u]
+			(double)(vel[3u*idx+0u]),
+			(double)(vel[3u*idx+1u]),
+			(double)(vel[3u*idx+2u])
 		};
 
-		/*
-		// scale velocity vector for motion blur later
-		for(int i = 0; i < 3; i++) {
-			#ifdef OUTPUT_INTERVAL
-			v[i] *= (double)TIMESTEP_SIZE * (double)OUTPUT_INTERVAL;
-			#else
-			v[i] *= (double)TIMESTEP_SIZE;
-			#endif
-		}
-		*/
-
-		/*
+		// y = A * x
 		{
-			double p_transformed[4] = {
-				(matMVP[ 0]*p[0])+(matMVP[ 1]*p[1])+(matMVP[ 2]*p[2])+(matMVP[ 3]*p[3]),
-				(matMVP[ 4]*p[0])+(matMVP[ 5]*p[1])+(matMVP[ 6]*p[2])+(matMVP[ 7]*p[3]),
-				(matMVP[ 8]*p[0])+(matMVP[ 9]*p[1])+(matMVP[10]*p[2])+(matMVP[11]*p[3]),
-				(matMVP[12]*p[0])+(matMVP[13]*p[1])+(matMVP[14]*p[2])+(matMVP[15]*p[3]),
+			double A[16], x[4], y[4];
+
+			for(int i = 0; i < 16; i++) {
+				A[i] = matMVP[i];
+			}
+
+			for(int i = 0; i < 16; i++) {
+				x[i] = p[i];
+			}
+
+			for(int i = 0; i < 4; i++) {
+				y[i] = (A[4*i+0]*x[0])+(A[4*i+1]*x[1])+(A[4*i+2]*x[2])+(A[4*i+3]*x[3]);
+			}
+
+			for(int i = 0; i < 4; i++) {
+				p[i] = y[i];
+			}
+		}
+
+		for(unsigned int samp_number = 0u; samp_number < (unsigned int)SPATIAL_SAMPLES; samp_number++) {
+			double p_i[3] = {
+				p[0],
+				p[1],
+				p[2]
 			};
 
-			p[0] = p_transformed[0];
-			p[1] = p_transformed[1];
-			p[2] = p_transformed[2];
-			p[3] = p_transformed[3];
-		}
-		*/
-
-		for(unsigned int i = 0u; i < (unsigned int)SPATIAL_SAMPLES; i++) {
-			double p_i[3] = {p[0], p[1], p[2]};
-
-			// color
-			i32 rgba[4] = {(i32)1, (i32)1, (i32)1, (i32)1};
-
-			u32 s[4] = {(u32)i, (u32)idx, (u32)step_number, (u32)0xCF52CA01u};
+			u32 s[4] = {(u32)samp_number, (u32)idx, (u32)step_number, (u32)0xCF52CA01u};
 
 			pcg4d(s);
 			//pcg4d(s); // second round for better statistical quality
 
-			double vis_time = 0.0;
+			double time_offset = 0.0;
 
-			// Animate the visualization (procedural)
+			double sample_offset[2] = {0.0, 0.0};
+
+			i32 color[4] = {
+				(i32)1,
+				(i32)1,
+				(i32)1,
+				(i32)1
+			};
+
 			{
 				pcg4d(s);
 
@@ -310,103 +319,83 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 					INV_PCG32_MAX * (double)s[3]
 				};
 
-				//vis_time = 0.05 * (double)(step_number/(unsigned int)OUTPUT_INTERVAL);
+				// spatial anti-aliasing (gaussian)
+				// https://en.wikipedia.org/wiki/Box–Muller_transform
+				{
+					sample_offset[0] = 0.750 * sqrt( -2.0 * log(r[2]) ) * cos(TAU * r[3]);
+					sample_offset[1] = 0.750 * sqrt( -2.0 * log(r[2]) ) * sin(TAU * r[3]);
+				}
 
-				vis_time = 0.03333333333333333333333333333333 * ( (double)(step_number/(unsigned int)OUTPUT_INTERVAL) + 1.000 * r[0] ); // motion blur
+				{
+					#ifdef SHUTTER_SPEED
+					time_offset += SHUTTER_SPEED * (r[1] - 0.5); // motion blur
+					#endif
 
-				// velocity vector-based motion blur
-				for(int j = 0; j < 3; j++) {
-					p_i[j] -= r[0] * ( (double)OUTPUT_INTERVAL*(double)TIMESTEP_SIZE*v[j] );
+					time_offset *= (double)OUTPUT_INTERVAL * TIMESTEP_SIZE;
+
+					// predicted position using velocity vector
+					for(int i = 0; i < 3; i++) {
+						p_i[i] += time_offset * v[i];
+					}
 				}
 			}
 
-			for(int j = 0; j < 3; j++) {
-				p_i[j] *= exp2(ORTHO_SCALE);
-			}
-
 			// rotate2d
 			{
-				//const double theta = 0.0000 * TAU;
-				const double theta = 0.0625 * TAU;
-				//const double theta = 0.1250 * TAU;
-				//const double theta = 0.2500 * TAU;
-				//double theta = -0.1238719273791827389 * vis_time * TAU;
+				double x[2], y[2];
 
-				double rvec[2] = {
-					p_i[1], // Y
-					p_i[2]  // Z
-				};
+				x[0] = p_i[1]; // Y
+				x[1] = p_i[2]; // Z
+
+				//const double theta = 0.0000 * TAU; // side-on
+				const double theta = 0.0625 * TAU; // slightly tilted
+				//const double theta = 0.1250 * TAU; // edge-on
+				//const double theta = 0.2500 * TAU; // top-down
 
 				double cos_theta = cos(theta), sin_theta = sin(theta);
 
-				double p_rot[2] = {
-					cos_theta*rvec[0]-sin_theta*rvec[1],
-					sin_theta*rvec[0]+cos_theta*rvec[1]
-				};
+				y[0] = cos_theta*x[0]-sin_theta*x[1];
+				y[1] = sin_theta*x[0]+cos_theta*x[1];
 
-				p_i[0] =   p_i[0];
-				p_i[1] = p_rot[0];
-				p_i[2] = p_rot[1];
+				p_i[1] = y[0];
+				p_i[2] = y[1];
 			}
 
 			// rotate2d
 			{
+				double x[2], y[2];
+
+				x[0] = p_i[0]; // X
+				x[1] = p_i[2]; // Z
+
 				//const double theta = 0.0000 * TAU;
 				//const double theta = 0.0625 * TAU;
 				//const double theta = 0.1250 * TAU;
 				//const double theta = 0.2500 * TAU;
-				double theta = 0.1 * vis_time * TAU;
-
-				double rvec[2] = {
-					p_i[0], // X
-					p_i[2]  // Z
-				};
+				double theta = 0.001 * (time + time_offset) * TAU;
 
 				double cos_theta = cos(theta), sin_theta = sin(theta);
 
-				double p_rot[2] = {
-					cos_theta*rvec[0]-sin_theta*rvec[1],
-					sin_theta*rvec[0]+cos_theta*rvec[1]
-				};
+				y[0] = cos_theta*x[0]-sin_theta*x[1];
+				y[1] = sin_theta*x[0]+cos_theta*x[1];
 
-				p_i[0] = p_rot[0];
-				p_i[1] =   p_i[1];
-				p_i[2] = p_rot[1];
+				p_i[0] = y[0];
+				p_i[2] = y[1];
 			}
 
-			double sample_offset[2] = {0.0, 0.0};
-
-			// Gaussian pixel filter
-			// https://en.wikipedia.org/wiki/Box–Muller_transform
-			{
-				pcg4d(s);
-
-				double r[4] = {
-					INV_PCG32_MAX * (double)s[0],
-					INV_PCG32_MAX * (double)s[1],
-					INV_PCG32_MAX * (double)s[2],
-					INV_PCG32_MAX * (double)s[3]
-				};
-
-				sample_offset[0] = 0.750 * sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[1]);
-				sample_offset[1] = 0.750 * sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[1]);
-			}
-
-			double coord[2] = {
-				( (double)h * (0.500*p_i[0]) ) + (0.5*(double)w) + sample_offset[0] - 0.5,
-				( (double)h * (0.500*p_i[1]) ) + (0.5*(double)h) + sample_offset[1] - 0.5
+			int coord[2] = {
+				(int)( ( (double)h * (0.500 * p_i[0]) ) + (0.5 * (double)w) + sample_offset[0] - 0.5),
+				(int)( ( (double)h * (0.500 * p_i[1]) ) + (0.5 * (double)h) + sample_offset[1] - 0.5)
 			};
 
-			int x = (int)coord[0], y = (int)coord[1];
+			if((int)0 <= coord[0] && coord[0] < (int)w && (int)0 <= coord[1] && coord[1] < (int)h) {
+				size_t pixel_index = (size_t)w*(size_t)coord[1]+(size_t)coord[0];
 
-			if((int)0 <= x && x < (int)w && (int)0 <= y && y < (int)h) {
-				size_t pixel_index = (size_t)4u*((size_t)w*(size_t)y+(size_t)x);
-
-				for(size_t k = (size_t)0u; k < (size_t)4u; k++) {
+				for(size_t i = (size_t)0u; i < (size_t)4u; i++) {
 					#ifdef _OPENMP
 					#pragma omp atomic update
 					#endif
-					atomic_buffer[pixel_index + k] += rgba[k];
+					atomic_buffer[4u*pixel_index+i] += color[i];
 				}
 			}
 		}
@@ -474,12 +463,10 @@ int visualization_draw(visualization_t* visualization, simulation_t* simulation)
 	printf("visualization_draw: %.09f ms post-processing\n", 1000.0*(t1-t0));
 	#endif
 
-	*visualization = vis;
-
 	return EXIT_SUCCESS;
 }
 
-int visualization_save(visualization_t* visualization, const char* restrict filename) {
+int visualization_save(const visualization_t* restrict visualization, const char* restrict filename) {
 	#ifdef _OPENMP
 	double t0 = omp_get_wtime();
 	double t1 = omp_get_wtime();
@@ -549,7 +536,7 @@ int visualization_save(visualization_t* visualization, const char* restrict file
 	return EXIT_SUCCESS;
 }
 
-int visualization_free(visualization_t* visualization) {
+int visualization_free(visualization_t* restrict visualization) {
 	visualization_t vis = *visualization;
 
 	{

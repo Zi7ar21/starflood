@@ -5,11 +5,11 @@
 #include "types.h"
 
 typedef struct {
-	unsigned int N; // Number of bodies in the simulation
-
 	unsigned int step_number; // Number of steps elapsed
 
-	void* mem; // Shared memory
+	unsigned int N; // Number of bodies in the simulation
+
+	void* mem; // Shared memory for the simulation
 
 	real* pot; // Potential Energy (Scalar)
 	real* kin; //   Kinetic Energy (Scalar)
@@ -29,7 +29,7 @@ int simulation_step(simulation_t* simulation);
 int simulation_free(simulation_t* simulation);
 
 // Dump the simulation (write to a file)
-int simulation_read(simulation_t* simulation, const char* restrict filename);
+int simulation_read(simulation_t* restrict simulation, const char* restrict filename);
 
 // Read a simulation (from a file)
-int simulation_save(simulation_t* simulation, const char* restrict filename);
+int simulation_save(simulation_t* restrict simulation, const char* restrict filename);
