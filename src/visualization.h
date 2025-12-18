@@ -21,4 +21,4 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 
 int visualization_save(const visualization_t* restrict visualization, const char* restrict filename); 
 
-int visualization_free(visualization_t* restrict visualization);
+int visualization_free(visualization_t* visualization);

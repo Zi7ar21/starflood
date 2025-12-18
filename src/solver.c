@@ -12,8 +12,11 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 	#endif
 
 	#ifdef _OPENMP
-	//#pragma omp parallel for schedule(dynamic, 128)
-	#pragma omp target teams distribute parallel for map(tofrom: pot[:N], mas[:N], pos[:3u*N], acc[:3u*N])
+		#ifdef ENABLE_OFFLOADING
+		#pragma omp target teams distribute parallel for map(tofrom: pot[:N], mas[:N], pos[:3u*N], acc[:3u*N])
+		#else
+		#pragma omp parallel for schedule(dynamic, 128)
+		#endif
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
 		real U_sum = (real)0.0;

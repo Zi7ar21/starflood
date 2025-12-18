@@ -150,6 +150,17 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		double bet = 0.0; // pitch
 		double gam = 0.0; // yaw
 
+		//bet = 0.0000 * TAU;
+		//bet = 0.0625 * TAU;
+		bet = 0.1250 * TAU;
+		//bet = 0.2500 * TAU;
+		//bet = 0.001 * time * TAU;
+
+		//gam = 0.0000 * TAU;
+		gam = 0.0625 * TAU;
+		//gam = 0.1250 * TAU;
+		//gam = 0.2500 * TAU;
+
 		double cos_alp = cos(alp), sin_alp = sin(alp);
 		double cos_bet = cos(bet), sin_bet = sin(bet);
 		double cos_gam = cos(gam), sin_gam = sin(gam);
@@ -245,8 +256,11 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	}
 
 	#ifdef _OPENMP
-	//#pragma omp parallel for schedule(dynamic, 1024)
-	#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pos[:3u*N], vel[:3u*N])
+		#ifdef ENABLE_OFFLOADING
+		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pos[:3u*N], vel[:3u*N])
+		#else
+		#pragma omp parallel for schedule(dynamic, 1024)
+		#endif
 	#endif
 	for(unsigned int idx = 0u; idx < N; idx++) {
 		// https://cs418.cs.illinois.edu/website/text/math2.html
@@ -573,7 +587,7 @@ int visualization_save(const visualization_t* restrict visualization, const char
 	return EXIT_SUCCESS;
 }
 
-int visualization_free(visualization_t* restrict visualization) {
+int visualization_free(visualization_t* visualization) {
 	visualization_t vis = *visualization;
 
 	{

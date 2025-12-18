@@ -1,14 +1,20 @@
 # Starflood
 
-CC := clang
+#CC := clang
 #CC := gcc
+CC := nvc
 
 # Clang/GCC optimized for debug (default)
-CFLAGS := -Og
+#CFLAGS := -Og
+
 # Clang tuned for native hardware
-#CFLAGS := -flto=auto -march=native -O3
+#CFLAGS := -flto=auto -march=native -O2
+
 # GCC   tuned for native hardware
 #CFLAGS := -flto=auto -ftree-vectorize -march=native -O2
+
+# NVIDIA HPC SDK tuned for native hardware with device offloading
+CFLAGS := -gpu=ccnative -mp=gpu -march=native -O4 --diag_suppress lossy_conversion
 
 # non-deterministic, but faster performance
 #CFLAGS := -ffast-math $(CFLAGS)
@@ -17,9 +23,9 @@ CFLAGS := -Og
 CFLAGS := -fopenmp $(CFLAGS)
 
 # Generate debugging information (regular)
-#DEBUG_CFLAGS := -g 
+DEBUG_CFLAGS := -g 
 # Generate debugging information with extensions for GNU Project Debugger (GDB)
-DEBUG_CFLAGS := -ggdb
+#DEBUG_CFLAGS := -ggdb
 
 
 
@@ -37,14 +43,11 @@ LDFLAGS := -lm
 .PHONY: all
 all: build/starflood
 
-build/starflood: build/main.o build/rng.o build/simulation.o build/solver.o build/visualization.o
+build/starflood: build/main.o build/simulation.o build/solver.o build/visualization.o
 	$(CC) $(CFLAGS) build/*.o -o $@ $(LDFLAGS)
 
 build/main.o:
 	$(CC) $(CFLAGS) -c -o $@ src/main.c
-
-build/rng.o:
-	$(CC) $(CFLAGS) -c -o $@ src/rng.c
 
 build/simulation.o:
 	$(CC) $(CFLAGS) -c -o $@ src/simulation.c

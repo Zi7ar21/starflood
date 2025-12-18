@@ -1,5 +1,10 @@
 #pragma once
 
+/* Execution Configuration */
+
+// Uncomment to utilize offloading (when using a supported toolchain with OpenMP enabled)
+#define ENABLE_OFFLOADING
+
 /* File I/O Configuration */
 
 #define OUTPUT_INTERVAL 4
@@ -8,7 +13,7 @@
 //#define ENABLE_SIMULATION
 
 // Uncomment to enable simulation file I/O
-#define SIMULATION_FILENAME "./out/sim/sim_%04u"
+#define SIMULATION_FILENAME "./out/sim/step_%04u.raw"
 
 // Uncomment to enable visualization by default
 #define ENABLE_VISUALIZATION
