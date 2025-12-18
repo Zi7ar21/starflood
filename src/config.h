@@ -8,13 +8,13 @@
 //#define ENABLE_SIMULATION
 
 // Uncomment to enable simulation file I/O
-#define SIMULATION_FILENAME "./out/sim/sim_%04u.data"
+#define SIMULATION_FILENAME "./out/sim/sim_%04u"
 
 // Uncomment to enable visualization by default
 #define ENABLE_VISUALIZATION
 
 // Uncomment to enable visualization file I/O
-#define VISUALIZATION_FILENAME "./out/vis/step_%04u.pfm"
+#define VISUALIZATION_FILENAME "./out/vis/step_%04u.ppm"
 
 /* Simulation Parameters */
 
