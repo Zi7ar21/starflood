@@ -17,8 +17,8 @@ typedef struct {
 
 int visualization_init(visualization_t* visualization, unsigned int w, unsigned int h);
 
-int visualization_draw(const visualization_t* restrict visualization, const simulation_t* restrict simulation);
-
-int visualization_save(const visualization_t* restrict visualization, const char* restrict filename); 
-
 int visualization_free(visualization_t* visualization);
+
+int visualization_save(const visualization_t* restrict visualization, const char* restrict filename);
+
+int visualization_draw(const visualization_t* restrict visualization, const simulation_t* restrict simulation);

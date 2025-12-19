@@ -1,39 +1,50 @@
-# Starflood
+# ===== Starflood Makefile =====
 
 #CC := clang
 #CC := gcc
 CC := nvc
 
+# === Basic Optimization Flags ===
+# Please ensure only one of the following sets
+# of flags matching your compiler are uncommented
+
 # Clang/GCC optimized for debug (default)
 #CFLAGS := -Og
 
-# Clang tuned for native hardware
-#CFLAGS := -flto=auto -march=native -O2
+# Clang/GCC tuned for performance on compiler host machine
+#CFLAGS := -flto=auto -march=native -O3
 
-# GCC   tuned for native hardware
-#CFLAGS := -flto=auto -ftree-vectorize -march=native -O2
+# NVIDIA HPC Compilers tuned for performance on compiler host machine with device offloading
+#CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
+#CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O2 --diag_suppress lossy_conversion
+#CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O3 --diag_suppress lossy_conversion
+#CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
 
-# NVIDIA HPC SDK tuned for native hardware with device offloading
-CFLAGS := -gpu=ccnative -mp=gpu -march=native -O4 --diag_suppress lossy_conversion
+# === More Optimization Flags ===
+# Uncomment any of the following special flags
 
-# non-deterministic, but faster performance
-#CFLAGS := -ffast-math $(CFLAGS)
-
-# Enable OpenMP (compiler directive-based parallelization)
+# Clang/GCC enable OpenMP (compiler directive-based parallelization)
 CFLAGS := -fopenmp $(CFLAGS)
+
+# Clang/GCC unsafe floating-point optimizations
+# Note: This makes floating-point math non-deterministic
+# across different compilers/platforms/vendors
+#CFLAGS := -ffast-math $(CFLAGS)
 
 # Generate debugging information (regular)
 DEBUG_CFLAGS := -g 
-# Generate debugging information with extensions for GNU Project Debugger (GDB)
+
+# Clang/GCC generate debugging information with extensions for GNU Project Debugger (GDB)
 #DEBUG_CFLAGS := -ggdb
 
-
-
+# === Regular Flags ===
 
 # Set the C language standard
 CFLAGS := $(CFLAGS) -pedantic -std=c99
+
 # Enable warnings
 CFLAGS := $(CFLAGS) -Wall -Wconversion -Wextra -Wshadow
+
 # Use debug flags
 CFLAGS := $(DEBUG_CFLAGS) $(CFLAGS)
 

@@ -249,6 +249,109 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 	return EXIT_SUCCESS;
 }
 
+int simulation_free(simulation_t* simulation) {
+	simulation_t sim = *simulation;
+
+	{
+		void* mem = sim.mem;
+
+		free(mem);
+	}
+
+	sim.mem = NULL;
+	sim.pot = (real*)NULL;
+	sim.kin = (real*)NULL;
+	sim.mas = (real*)NULL;
+	sim.pos = (real*)NULL;
+	sim.vel = (real*)NULL;
+	sim.acc = (real*)NULL;
+
+	*simulation = sim;
+
+	return EXIT_SUCCESS;
+}
+
+int simulation_read(simulation_t* restrict simulation, const char* restrict filename) {
+	simulation_t sim = *simulation;
+
+	if( sizeof(real) != sizeof(float) ) {
+		return EXIT_FAILURE;
+	}
+
+	unsigned int N = sim.N;
+
+	if( 0u >= N ) {
+		return EXIT_FAILURE;
+	}
+
+	FILE* file = fopen(filename, "rb");
+
+	if(NULL == file) {
+		fprintf(stderr, "Error: fopen(\"%s\", \"%s\") ", filename, "rb");
+
+		perror("failed");
+
+		return EXIT_FAILURE;
+	}
+
+	/*
+	if( EXIT_SUCCESS != simulation_init(&sim, N) ) {
+		fclose(file);
+
+		return EXIT_FAILURE;
+	}
+	*/
+
+	fread(sim.mem, sizeof(real), (size_t)N * (size_t)(3u*1u+3u*3u), file);
+
+	/*
+	fread(sim.mas, sizeof(float), (size_t)N * (size_t)(1u), file);
+	fread(sim.pos, sizeof(float), (size_t)N * (size_t)(3u), file);
+	fread(sim.vel, sizeof(float), (size_t)N * (size_t)(3u), file);
+	fread(sim.acc, sizeof(float), (size_t)N * (size_t)(3u), file);
+	*/
+
+	fclose(file);
+
+	*simulation = sim;
+
+	return EXIT_SUCCESS;
+}
+
+int simulation_save(simulation_t* restrict simulation, const char* restrict filename) {
+	simulation_t sim = *simulation;
+
+	FILE* file = fopen(filename, "wb");
+
+	if(NULL == file) {
+		fprintf(stderr, "Error: fopen(\"%s\", \"%s\") ", filename, "wb");
+
+		perror("failed");
+
+		return EXIT_FAILURE;
+	};
+
+	uint32_t N = (uint32_t)sim.N;
+
+	/*
+	const uint8_t magic_bytes[2] = {(uint8_t)0x53u, (uint8_t)0x46u};
+
+	fwrite(magic_bytes, sizeof(uint8_t), (size_t)2u, file);
+
+	const uint32_t starflood_magic_number = (uint32_t)0x40C90FDBu;
+
+	fwrite(&starflood_magic_number, sizeof(uint32_t), (size_t)1u, file);
+
+	fwrite(&N, sizeof(uint32_t), (size_t)1u, file);
+	*/
+
+	fwrite(sim.mem, sizeof(real), (size_t)N * (size_t)(3u*1u+3u*3u), file);
+
+	fclose(file);
+
+	return EXIT_SUCCESS;
+}
+
 int simulation_step(simulation_t* simulation) {
 	#ifdef _OPENMP
 	volatile double t0 = omp_get_wtime();
@@ -386,109 +489,6 @@ int simulation_step(simulation_t* simulation) {
 	#endif
 
 	*simulation = sim;
-
-	return EXIT_SUCCESS;
-}
-
-int simulation_free(simulation_t* simulation) {
-	simulation_t sim = *simulation;
-
-	{
-		void* mem = sim.mem;
-
-		free(mem);
-	}
-
-	sim.mem = NULL;
-	sim.pot = (real*)NULL;
-	sim.kin = (real*)NULL;
-	sim.mas = (real*)NULL;
-	sim.pos = (real*)NULL;
-	sim.vel = (real*)NULL;
-	sim.acc = (real*)NULL;
-
-	*simulation = sim;
-
-	return EXIT_SUCCESS;
-}
-
-int simulation_read(simulation_t* restrict simulation, const char* restrict filename) {
-	simulation_t sim = *simulation;
-
-	if( sizeof(real) != sizeof(float) ) {
-		return EXIT_FAILURE;
-	}
-
-	unsigned int N = sim.N;
-
-	if( 0u >= N ) {
-		return EXIT_FAILURE;
-	}
-
-	FILE* file = fopen(filename, "rb");
-
-	if(NULL == file) {
-		fprintf(stderr, "Error: fopen(\"%s\", \"%s\") ", filename, "rb");
-
-		perror("failed");
-
-		return EXIT_FAILURE;
-	}
-
-	/*
-	if( EXIT_SUCCESS != simulation_init(&sim, N) ) {
-		fclose(file);
-
-		return EXIT_FAILURE;
-	}
-	*/
-
-	fread(sim.mem, sizeof(real), (size_t)N * (size_t)(3u*1u+3u*3u), file);
-
-	/*
-	fread(sim.mas, sizeof(float), (size_t)N * (size_t)(1u), file);
-	fread(sim.pos, sizeof(float), (size_t)N * (size_t)(3u), file);
-	fread(sim.vel, sizeof(float), (size_t)N * (size_t)(3u), file);
-	fread(sim.acc, sizeof(float), (size_t)N * (size_t)(3u), file);
-	*/
-
-	fclose(file);
-
-	*simulation = sim;
-
-	return EXIT_SUCCESS;
-}
-
-int simulation_save(simulation_t* restrict simulation, const char* restrict filename) {
-	simulation_t sim = *simulation;
-
-	FILE* file = fopen(filename, "wb");
-
-	if(NULL == file) {
-		fprintf(stderr, "Error: fopen(\"%s\", \"%s\") ", filename, "wb");
-
-		perror("failed");
-
-		return EXIT_FAILURE;
-	};
-
-	uint32_t N = (uint32_t)sim.N;
-
-	/*
-	const uint8_t magic_bytes[2] = {(uint8_t)0x53u, (uint8_t)0x46u};
-
-	fwrite(magic_bytes, sizeof(uint8_t), (size_t)2u, file);
-
-	const uint32_t starflood_magic_number = (uint32_t)0x40C90FDBu;
-
-	fwrite(&starflood_magic_number, sizeof(uint32_t), (size_t)1u, file);
-
-	fwrite(&N, sizeof(uint32_t), (size_t)1u, file);
-	*/
-
-	fwrite(sim.mem, sizeof(real), (size_t)N * (size_t)(3u*1u+3u*3u), file);
-
-	fclose(file);
 
 	return EXIT_SUCCESS;
 }

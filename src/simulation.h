@@ -22,9 +22,6 @@ typedef struct {
 // Initialize the simulation
 int simulation_init(simulation_t* simulation, unsigned int N);
 
-// Step the simulation
-int simulation_step(simulation_t* simulation);
-
 // Free the simulation
 int simulation_free(simulation_t* simulation);
 
@@ -33,3 +30,6 @@ int simulation_read(simulation_t* restrict simulation, const char* restrict file
 
 // Read a simulation (from a file)
 int simulation_save(simulation_t* restrict simulation, const char* restrict filename);
+
+// Step the simulation
+int simulation_step(simulation_t* simulation);

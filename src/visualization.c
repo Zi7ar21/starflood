@@ -90,6 +90,130 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 	return EXIT_SUCCESS;
 }
 
+int visualization_free(visualization_t* visualization) {
+	visualization_t vis = *visualization;
+
+	{
+		void* mem = vis.mem;
+
+		free(mem);
+	}
+
+	vis.mem = NULL;
+
+	vis.atomic_buffer = (i32*)NULL;
+	vis.render_buffer = (f32*)NULL;
+
+	*visualization = vis;
+
+	return EXIT_SUCCESS;
+}
+
+int visualization_save(const visualization_t* restrict visualization, const char* restrict filename) {
+	#ifdef _OPENMP
+	volatile double t0 = omp_get_wtime();
+	volatile double t1 = omp_get_wtime();
+	#endif
+
+	visualization_t vis = *visualization;
+
+	unsigned int image_w = vis.w;
+	unsigned int image_h = vis.h;
+
+	f32* render_buffer = vis.render_buffer;
+
+	#ifdef _OPENMP
+	t0 = omp_get_wtime();
+	#endif
+
+	FILE* file = fopen(filename, "wb");
+
+	if(NULL == file) {
+		fprintf(stderr, "Error: fopen(%s, \"wb\") failed: ", filename);
+
+		perror("Error");
+
+		return EXIT_FAILURE;
+	}
+
+	#ifdef _OPENMP
+	t1 = omp_get_wtime();
+
+	printf("visualization_save: %.09f ms fopen()\n", 1.0e3*(t1 - t0));
+
+	t0 = omp_get_wtime();
+	#endif
+
+	/*
+	// PFM graphic image file format
+	// https://netpbm.sourceforge.net/doc/pfm.html
+	fprintf(file, "PF\n%zu %zu\n-1.0\n", (size_t)image_w, (size_t)image_h);
+
+	for(unsigned int y = 0u; y < image_h; y++) {
+		for(unsigned int x = 0u; x < image_w; x++) {
+			f32 rgb[3] = {
+				render_buffer[4u*(image_w*y+x)+0u],
+				render_buffer[4u*(image_w*y+x)+1u],
+				render_buffer[4u*(image_w*y+x)+2u]
+			};
+
+			fwrite(rgb, sizeof(f32), (size_t)3u, file);
+		}
+	}
+	*/
+
+	// PPM Netpbm color image format
+	// https://netpbm.sourceforge.net/doc/ppm.html
+	fprintf(file, "P6\n%zu %zu %u\n", (size_t)image_w, (size_t)image_h, 255u);
+
+	for(unsigned int y = 0u; y < image_h; y++) {
+		for(unsigned int x = 0u; x < image_w; x++) {
+			f32 color[3] = {
+				(f32)render_buffer[4u*(image_w*((image_h-1u)-y)+x)+0u],
+				(f32)render_buffer[4u*(image_w*((image_h-1u)-y)+x)+1u],
+				(f32)render_buffer[4u*(image_w*((image_h-1u)-y)+x)+2u]
+			};
+
+			// Clamp values to range [0, 1]
+			for(int i = 0; i < 3; i++) {
+				color[i] = fminf(fmaxf(color[i], 0.0), 1.0);
+			}
+
+			// BT.709 non-linear encoding
+			for(int i = 0; i < 3; i++) {
+				color[i] = (f32)0.018053968510807 <= color[i] ? (f32)1.099296826809442 * powf(color[i], (f32)0.45) - (f32)0.099296826809442 : (f32)4.500 * color[i];
+			}
+
+			// 8-bit quantization [0, 255]
+			unsigned char rgb[3] = {
+				(unsigned char)( (f32)255.0 * color[0] ),
+				(unsigned char)( (f32)255.0 * color[1] ),
+				(unsigned char)( (f32)255.0 * color[2] )
+			};
+
+			fwrite(rgb, sizeof(unsigned char), (size_t)3u, file);
+		}
+	}
+
+	#ifdef _OPENMP
+	t1 = omp_get_wtime();
+
+	printf("visualization_save: %.09f ms fwrite() loop\n", 1.0e3*(t1 - t0));
+
+	t0 = omp_get_wtime();
+	#endif
+
+	fclose(file);
+
+	#ifdef _OPENMP
+	t1 = omp_get_wtime();
+
+	printf("visualization_save: %.09f ms fclose()\n", 1.0e3*(t1 - t0));
+	#endif
+
+	return EXIT_SUCCESS;
+}
+
 int visualization_draw(const visualization_t* restrict visualization, const simulation_t* restrict simulation) {
 	#ifdef _OPENMP
 	volatile double t0 = omp_get_wtime();
@@ -487,130 +611,6 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 
 	printf("visualization_draw: %.09f ms post-processing\n", 1.0e3*(t1 - t0));
 	#endif
-
-	return EXIT_SUCCESS;
-}
-
-int visualization_save(const visualization_t* restrict visualization, const char* restrict filename) {
-	#ifdef _OPENMP
-	volatile double t0 = omp_get_wtime();
-	volatile double t1 = omp_get_wtime();
-	#endif
-
-	visualization_t vis = *visualization;
-
-	unsigned int image_w = vis.w;
-	unsigned int image_h = vis.h;
-
-	f32* render_buffer = vis.render_buffer;
-
-	#ifdef _OPENMP
-	t0 = omp_get_wtime();
-	#endif
-
-	FILE* file = fopen(filename, "wb");
-
-	if(NULL == file) {
-		fprintf(stderr, "Error: fopen(%s, \"wb\") failed: ", filename);
-
-		perror("Error");
-
-		return EXIT_FAILURE;
-	}
-
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("visualization_save: %.09f ms fopen()\n", 1.0e3*(t1 - t0));
-
-	t0 = omp_get_wtime();
-	#endif
-
-	/*
-	// PFM graphic image file format
-	// https://netpbm.sourceforge.net/doc/pfm.html
-	fprintf(file, "PF\n%zu %zu\n-1.0\n", (size_t)image_w, (size_t)image_h);
-
-	for(unsigned int y = 0u; y < image_h; y++) {
-		for(unsigned int x = 0u; x < image_w; x++) {
-			f32 rgb[3] = {
-				render_buffer[4u*(image_w*y+x)+0u],
-				render_buffer[4u*(image_w*y+x)+1u],
-				render_buffer[4u*(image_w*y+x)+2u]
-			};
-
-			fwrite(rgb, sizeof(f32), (size_t)3u, file);
-		}
-	}
-	*/
-
-	// PPM Netpbm color image format
-	// https://netpbm.sourceforge.net/doc/ppm.html
-	fprintf(file, "P6\n%zu %zu %u\n", (size_t)image_w, (size_t)image_h, 255u);
-
-	for(unsigned int y = 0u; y < image_h; y++) {
-		for(unsigned int x = 0u; x < image_w; x++) {
-			f32 color[3] = {
-				(f32)render_buffer[4u*(image_w*((image_h-1u)-y)+x)+0u],
-				(f32)render_buffer[4u*(image_w*((image_h-1u)-y)+x)+1u],
-				(f32)render_buffer[4u*(image_w*((image_h-1u)-y)+x)+2u]
-			};
-
-			// Clamp values to range [0, 1]
-			for(int i = 0; i < 3; i++) {
-				color[i] = fminf(fmaxf(color[i], 0.0), 1.0);
-			}
-
-			// BT.709 non-linear encoding
-			for(int i = 0; i < 3; i++) {
-				color[i] = (f32)0.018053968510807 <= color[i] ? (f32)1.099296826809442 * powf(color[i], (f32)0.45) - (f32)0.099296826809442 : (f32)4.500 * color[i];
-			}
-
-			// 8-bit quantization [0, 255]
-			unsigned char rgb[3] = {
-				(unsigned char)( (f32)255.0 * color[0] ),
-				(unsigned char)( (f32)255.0 * color[1] ),
-				(unsigned char)( (f32)255.0 * color[2] )
-			};
-
-			fwrite(rgb, sizeof(unsigned char), (size_t)3u, file);
-		}
-	}
-
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("visualization_save: %.09f ms fwrite() loop\n", 1.0e3*(t1 - t0));
-
-	t0 = omp_get_wtime();
-	#endif
-
-	fclose(file);
-
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("visualization_save: %.09f ms fclose()\n", 1.0e3*(t1 - t0));
-	#endif
-
-	return EXIT_SUCCESS;
-}
-
-int visualization_free(visualization_t* visualization) {
-	visualization_t vis = *visualization;
-
-	{
-		void* mem = vis.mem;
-
-		free(mem);
-	}
-
-	vis.mem = NULL;
-
-	vis.atomic_buffer = (i32*)NULL;
-	vis.render_buffer = (f32*)NULL;
-
-	*visualization = vis;
 
 	return EXIT_SUCCESS;
 }
