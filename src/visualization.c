@@ -465,7 +465,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 				A[i] = matMVP[i];
 			}
 
-			for(int i = 0; i < 16; i++) {
+			for(int i = 0; i < 4; i++) {
 				x[i] = p[i];
 			}
 

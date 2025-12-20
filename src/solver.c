@@ -23,7 +23,7 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 		real U_sum = (real)0.0;
 
 		#ifdef SOLVER_USE_KAHAN_SUMMATION_ENERGY
-		U_c = (real)0.0;
+		real U_c = (real)0.0;
 		#endif
 
 		real F_sum[3] = {

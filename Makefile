@@ -1,8 +1,8 @@
 # ===== Starflood Makefile =====
 
 #CC := clang
-#CC := gcc
-CC := nvc
+CC := gcc
+#CC := nvc
 
 # === Basic Optimization Flags ===
 # Please ensure only one of the following sets
@@ -12,13 +12,13 @@ CC := nvc
 #CFLAGS := -Og
 
 # Clang/GCC tuned for performance on compiler host machine
-#CFLAGS := -flto=auto -march=native -O3
+CFLAGS := -flto=auto -march=native -O3
 
 # NVIDIA HPC Compilers tuned for performance on compiler host machine with device offloading
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O3 --diag_suppress lossy_conversion
-CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
+#CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
 
 # === More Optimization Flags ===
 # Uncomment any of the following special flags
@@ -29,13 +29,19 @@ CFLAGS := -fopenmp $(CFLAGS)
 # Clang/GCC unsafe floating-point optimizations
 # Note: This makes floating-point math non-deterministic
 # across different compilers/platforms/vendors
-#CFLAGS := -ffast-math $(CFLAGS)
+CFLAGS := -ffast-math $(CFLAGS)
 
 # Generate debugging information (regular)
 DEBUG_CFLAGS := -g 
 
 # Clang/GCC generate debugging information with extensions for GNU Project Debugger (GDB)
 #DEBUG_CFLAGS := -ggdb
+
+# === Profiling Guided Optimization ===
+
+#CFLAGS := -fprofile-instr-generate $(CFLAGS)
+#llvm-profdata merge -output=starflood.profdata default.profraw
+#CFLAGS := -fprofile-instr-use=starflood.profdata
 
 # === Regular Flags ===
 
