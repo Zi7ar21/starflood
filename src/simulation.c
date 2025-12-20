@@ -33,7 +33,7 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 		return STARFLOOD_FAILURE;
 	}
 
-	fprintf(sim_step_timings.file, "%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "solver_run", "calc_kin", "pot_sum","kin_sum", "kick_1");
+	fprintf(sim_step_timings.file, "%s,%s,%s,%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "solver_run", "calc_kin", "pot_sum", "kin_sum", "kick_1");
 
 	fflush(sim_step_timings.file);
 	#endif
@@ -297,6 +297,10 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 
 int simulation_free(simulation_t* restrict simulation) {
 	TIMING_INIT();
+
+	#ifdef LOG_TIMINGS_SIM_STEP
+	fclose(sim_step_timings.file);
+	#endif
 
 	simulation_t sim = *simulation;
 

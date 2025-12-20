@@ -14,13 +14,30 @@
 
 #include "common.h"
 #include "config.h"
+#include "log.h"
 #include "rng.h"
 #include "simulation.h"
 #include "types.h"
 #include "timing.h"
 
+#ifdef LOG_TIMINGS_VIS_DRAW
+log_t vis_draw_timings;
+#endif
+
 int visualization_init(visualization_t* restrict visualization, unsigned int w, unsigned int h) {
 	TIMING_INIT();
+
+	#ifdef LOG_TIMINGS_VIS_DRAW
+	vis_draw_timings.file = fopen("./out/timings_vis_draw.csv", "w");
+
+	if(NULL == (void*)vis_draw_timings.file) {
+		return STARFLOOD_FAILURE;
+	}
+
+	fprintf(vis_draw_timings.file, "%s,%s,%s,%s,%s\n", "step_number", "clear_atomic_buffer", "calc_matMVP", "rasterize_atomic", "finalize");
+
+	fflush(vis_draw_timings.file);
+	#endif
 
 	visualization_t vis = *visualization;
 
@@ -120,6 +137,10 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 
 int visualization_free(visualization_t* restrict visualization) {
 	TIMING_INIT();
+
+	#ifdef LOG_TIMINGS_VIS_DRAW
+	fclose(vis_draw_timings.file);
+	#endif
 
 	visualization_t vis = *visualization;
 
@@ -254,6 +275,10 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	real* pos = sim.pos;
 	real* vel = sim.vel; // for motion blur
 
+	#ifdef LOG_TIMINGS_VIS_DRAW
+	fprintf(vis_draw_timings.file, "%u", step_number);
+	#endif
+
 	#ifdef OUTPUT_INTERVAL
 	double time = TIMESTEP_SIZE * (double)step_number;
 	#else
@@ -271,6 +296,9 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 
 	TIMING_STOP();
 	TIMING_PRINT("visualization_draw()", "clear_atomic_buffer");
+	#ifdef LOG_TIMINGS_VIS_DRAW
+	LOG_TIMING(vis_draw_timings);
+	#endif
 	TIMING_START();
 
 	// model matrix
@@ -392,6 +420,13 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		}
 	}
 
+	TIMING_STOP();
+	TIMING_PRINT("visualization_draw()", "calc_matMVP");
+	#ifdef LOG_TIMINGS_VIS_DRAW
+	LOG_TIMING(vis_draw_timings);
+	#endif
+	TIMING_START();
+
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOADING
 		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pot[:N], pos[:3u*N], vel[:3u*N])
@@ -488,7 +523,11 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 					time_offset += SHUTTER_SPEED * (r[1] - 0.5); // motion blur
 					#endif
 
+					#ifdef OUTPUT_INTERVAL
 					time_offset *= (double)OUTPUT_INTERVAL * TIMESTEP_SIZE;
+					#else
+					time_offset *= TIMESTEP_SIZE;
+					#endif
 
 					// predicted position using velocity vector
 					for(int i = 0; i < 3; i++) {
@@ -561,7 +600,10 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_draw()", "atomic_rasterization");
+	TIMING_PRINT("visualization_draw()", "rasterize_atomic");
+	#ifdef LOG_TIMINGS_VIS_DRAW
+	LOG_TIMING(vis_draw_timings);
+	#endif
 	TIMING_START();
 
 	// Since atomic_buffer colors are quantized integers, it needs a floating-point scaling factor
@@ -614,6 +656,11 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 
 	TIMING_STOP();
 	TIMING_PRINT("visualization_draw()", "finalize");
+	#ifdef LOG_TIMINGS_VIS_DRAW
+	LOG_TIMING(vis_draw_timings);
+	fprintf(vis_draw_timings.file, "\n");
+	fflush(vis_draw_timings.file);
+	#endif
 
 	return STARFLOOD_SUCCESS;
 }

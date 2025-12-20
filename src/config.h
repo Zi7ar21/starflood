@@ -10,19 +10,19 @@
 /* === File I/O === */
 
 // Uncomment to only output files every N steps
-#define OUTPUT_INTERVAL 5
+//#define OUTPUT_INTERVAL 5
 
 // Comment to load SIMULATION_FILENAME instead of running simulation by default
 #define ENABLE_SIMULATION
 
 // Uncomment to enable simulation file I/O
-#define SIMULATION_FILENAME "./out/sim/step_%04u.raw"
+//#define SIMULATION_FILENAME "./out/sim/step_%04u.raw"
 
 // Uncomment to enable visualization by default
-#define ENABLE_VISUALIZATION
+//#define ENABLE_VISUALIZATION
 
 // Uncomment to enable visualization file I/O
-#define VISUALIZATION_FILENAME "./out/vis/step_%04u.ppm"
+//#define VISUALIZATION_FILENAME "./out/vis/step_%04u.ppm"
 
 /* === Logging === */
 
@@ -37,10 +37,13 @@
 //#define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC_RAW
 
 // Uncomment to use omp_get_wtime() instead of POSIX functions, requires OpenMP to be enabled
-#define TIMING_USE_OMP_GET_WTIME
+//#define TIMING_USE_OMP_GET_WTIME
 
 // Uncomment to log simulation_step() timings
 #define LOG_TIMINGS_SIM_STEP
+
+// Uncomment to log visualization_draw() timings
+#define LOG_TIMINGS_VIS_DRAW
 
 /* === Run Parameters === */
 
@@ -51,9 +54,9 @@
 //#define NUM_BODIES 8192
 //#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-#define NUM_BODIES 65536
+//#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
-//#define NUM_BODIES 262144
+#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
 //#define NUM_BODIES 1048576
 
@@ -62,7 +65,7 @@
 //#define N_DIV 4
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 10
+#define NUM_TIMESTEPS 100
 
 // Simulation timestep size (dt)
 //#define TIMESTEP_SIZE 0.03333333333333333333333333333333
@@ -84,6 +87,18 @@
 // alternative (m^3 * kg^-1 * s^2)
 // https://physics.nist.gov/cgi-bin/cuu/Value?bg
 //#define G 6.6743e-11
+
+/* === Solver === */
+
+// Uncomment to use Kahan Summation in the solver for higher simulation accuracy
+// Useful for single-precision floating-point calculations
+#define SOLVER_USE_KAHAN_SUMMATION
+
+// Uncomment to use Kahan Summation even for potential energy summation
+// Potential energy isn't currently used for the simulation, only the energy
+// statistics, so this can be commented for a slight speedup, say, when using
+// GPU compute.
+//#define SOLVER_USE_KAHAN_SUMMATION_ENERGY
 
 /* === Visualization === */
 

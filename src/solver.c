@@ -22,7 +22,9 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 	for(unsigned int i = 0u; i < N; i++) {
 		real U_sum = (real)0.0;
 
-		real U_c = (real)0.0;
+		#ifdef SOLVER_USE_KAHAN_SUMMATION_ENERGY
+		U_c = (real)0.0;
+		#endif
 
 		real F_sum[3] = {
 			(real)0.0,
@@ -30,11 +32,13 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 			(real)0.0
 		};
 
+		#ifdef SOLVER_USE_KAHAN_SUMMATION
 		real F_c[3] = {
 			(real)0.0,
 			(real)0.0,
 			(real)0.0
 		};
+		#endif
 
 		real m_i = mas[i]; // Body mass
 
@@ -82,9 +86,7 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 			real U_ij = -(real)G * m_i * m_j * inv_r2;
 
 			{
-				// Naïve summation
-				//U_sum += U_ij;
-
+				#ifdef SOLVER_USE_KAHAN_SUMMATION_ENERGY
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
 				real y = U_ij - U_c;
@@ -92,6 +94,10 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 				volatile real z = t - U_sum;
 				U_c = z - y;
 				U_sum = t;
+				#else
+				// Naïve summation
+				U_sum += U_ij;
+				#endif
 			}
 
 			// Force acting upon body i by body j
@@ -102,9 +108,7 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 			};
 
 			for(unsigned int k = 0u; k < 3u; k++) {
-				// Naïve summation
-				//F_sum[k] += F_ij[k];
-
+				#ifdef SOLVER_USE_KAHAN_SUMMATION
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
 				real y = F_ij[k] - F_c[k];
@@ -112,6 +116,10 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 				volatile real z = t - F_sum[k];
 				F_c[k] = z - y;
 				F_sum[k] = t;
+				#else
+				// Naïve summation
+				F_sum[k] += F_ij[k];
+				#endif
 			}
 		}
 

@@ -265,7 +265,11 @@ int main(int argc, char** argv) {
 		snprintf(vis_filename, filename_size, VISUALIZATION_FILENAME, step_num / (unsigned int)OUTPUT_INTERVAL);
 		#endif
 
+		#ifdef OUTPUT_INTERVAL
 		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_simulation_io ) {
+		#else
+		if(enable_simulation_io) {
+		#endif
 			if(enable_simulation) {
 				if( STARFLOOD_SUCCESS != simulation_save(&sim, sim_filename) ) {
 					fprintf(stderr, "Error: %s failed!\n", "simulation_save()");
@@ -277,7 +281,11 @@ int main(int argc, char** argv) {
 			}
 		}
 
+		#ifdef OUTPUT_INTERVAL
 		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_visualization) {
+		#else
+		if(enable_visualization) {
+		#endif
 			if( STARFLOOD_SUCCESS != visualization_draw(&vis, &sim) ) {
 				fprintf(stderr, "Error: %s failed!\n", "visualization_draw()");
 			}
