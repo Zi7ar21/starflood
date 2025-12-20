@@ -6,7 +6,7 @@
 	#define TIMING_INIT()
 	#define TIMING_START()
 	#define TIMING_STOP()
-	#define TIMING_PRINT()
+	#define TIMING_PRINT(function_name,label_name) 
 	#define LOG_TIMING(log)
 #else
 	#ifndef TIMING_USE_OMP_GET_WTIME

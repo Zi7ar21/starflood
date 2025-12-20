@@ -37,7 +37,7 @@
 //#define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC_RAW
 
 // Uncomment to use omp_get_wtime() instead of POSIX functions, requires OpenMP to be enabled
-//#define TIMING_USE_OMP_GET_WTIME
+#define TIMING_USE_OMP_GET_WTIME
 
 // Uncomment to log simulation_step() timings
 #define LOG_TIMINGS_SIM_STEP

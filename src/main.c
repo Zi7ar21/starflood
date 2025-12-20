@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
 	printf("        _OPENMP: %d\n", _OPENMP);
 	printf("        max_threads: %d\n", omp_get_max_threads());
 	printf("        num_devices: %d\n", omp_get_num_devices());
-	printf("        wtick: %.06f ns\n", 1.0e3*omp_get_wtick());
+	printf("        wtick: %.03f ns\n", 1.0e9*omp_get_wtick());
 	#else
 	printf("false\n");
 	#endif

@@ -43,10 +43,20 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 
 	size_t mem_size = (sizeof(i32)*atomic_buffer_length)+(sizeof(i32)*render_buffer_length);
 
+	TIMING_START();
+
 	#ifdef STARFLOOD_ALIGNMENT
 	posix_memalign(&mem, (size_t)STARFLOOD_ALIGNMENT, mem_size);
 	#else
 	mem = malloc(mem_size);
+	#endif
+
+	TIMING_STOP();
+
+	#ifdef STARFLOOD_ALIGNMENT
+	TIMING_PRINT("visualization_init()", "posix_memalign()");
+	#else
+	TIMING_PRINT("visualization_init()", "malloc()");
 	#endif
 
 	if(NULL == mem) {
@@ -63,7 +73,12 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 
 	printf("  mem: %p\n", mem);
 
+	TIMING_START();
+
 	memset(mem, 0, mem_size);
+
+	TIMING_STOP();
+	TIMING_PRINT("visualization_init()", "memset()");
 
 	atomic_buffer = (i32*)mem + (size_t)atomic_buffer_offset;
 	render_buffer = (f32*)mem + (size_t)render_buffer_offset;
@@ -72,6 +87,8 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 	printf("  render_buffer: %p (+%zu)\n", (void*)render_buffer, render_buffer_offset);
 	printf("\n");
 
+	TIMING_START();
+
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		#ifdef _OPENMP
 		#pragma omp atomic write
@@ -79,9 +96,16 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 		atomic_buffer[i] = (i32)0;
 	}
 
+	TIMING_STOP();
+	TIMING_PRINT("visualization_init()", "initialize atomic_buffer");
+	TIMING_START();
+
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		render_buffer[i] = (f32)0.000;
 	}
+
+	TIMING_STOP();
+	TIMING_PRINT("visualization_init()", "initialize render_buffer");
 
 	vis.w = w;
 	vis.h = h;
@@ -99,7 +123,12 @@ int visualization_free(visualization_t* restrict visualization) {
 
 	visualization_t vis = *visualization;
 
+	TIMING_START();
+
 	free(vis.mem);
+
+	TIMING_STOP();
+	TIMING_PRINT("visualization_free()", "free()");
 
 	vis.mem = NULL;
 
