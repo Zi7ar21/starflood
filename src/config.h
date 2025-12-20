@@ -16,13 +16,13 @@
 #define ENABLE_SIMULATION
 
 // Uncomment to enable simulation file I/O
-//#define SIMULATION_FILENAME "./out/sim/step_%04u.raw"
+#define SIMULATION_FILENAME "./out/sim/step_%04u.raw"
 
 // Uncomment to enable visualization by default
-//#define ENABLE_VISUALIZATION
+#define ENABLE_VISUALIZATION
 
 // Uncomment to enable visualization file I/O
-//#define VISUALIZATION_FILENAME "./out/vis/step_%04u.ppm"
+#define VISUALIZATION_FILENAME "./out/vis/step_%04u.ppm"
 
 /* === Logging === */
 
@@ -52,9 +52,9 @@
 //#define NUM_BODIES 2048
 //#define NUM_BODIES 4096
 //#define NUM_BODIES 8192
-#define NUM_BODIES 16384
+//#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-//#define NUM_BODIES 65536
+#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
 //#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
@@ -106,7 +106,7 @@
 #define SPATIAL_SAMPLES 256
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
-#define EXPOSURE -3.000
+#define EXPOSURE -1.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
 #define ORTHO_SCALE -1.000

@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
 	unsigned int num_bodies = (unsigned int)NUM_BODIES, num_timesteps = (unsigned int)NUM_TIMESTEPS;
 
-	unsigned int visualization_dimensions[2] = {640u, 360u};
+	unsigned int visualization_dimensions[2] = {1920u, 1080u};
 
 	visualization_t vis;
 
@@ -258,11 +258,19 @@ int main(int argc, char** argv) {
 		sim.step_number = step_num;
 
 		#ifdef SIMULATION_FILENAME
-		snprintf(sim_filename, filename_size, SIMULATION_FILENAME, step_num / (unsigned int)OUTPUT_INTERVAL);
+			#ifdef OUTPUT_INTERVAL
+			snprintf(sim_filename, filename_size, SIMULATION_FILENAME, step_num / (unsigned int)OUTPUT_INTERVAL);
+			#else
+			snprintf(sim_filename, filename_size, SIMULATION_FILENAME, step_num);
+			#endif
 		#endif
 
 		#ifdef VISUALIZATION_FILENAME
-		snprintf(vis_filename, filename_size, VISUALIZATION_FILENAME, step_num / (unsigned int)OUTPUT_INTERVAL);
+			#ifdef OUTPUT_INTERVAL
+			snprintf(vis_filename, filename_size, VISUALIZATION_FILENAME, step_num / (unsigned int)OUTPUT_INTERVAL);
+			#else
+			snprintf(vis_filename, filename_size, VISUALIZATION_FILENAME, step_num);
+			#endif
 		#endif
 
 		#ifdef OUTPUT_INTERVAL

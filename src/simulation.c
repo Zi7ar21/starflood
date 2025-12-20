@@ -280,6 +280,10 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	TIMING_PRINT("simulation_init()", "initialize acc");
 	TIMING_START();
 
+	#ifdef ENABLE_SIMULATION
+	solver_run(pot, acc, mas, pos, N, 0u);
+	#endif
+
 	sim.N   = N;
 	sim.step_number = 0u;
 	sim.mem = mem;
@@ -458,9 +462,9 @@ int simulation_step(simulation_t* restrict simulation) {
 	real* acc = sim.acc;
 
 	// for the very first leapfrog kick
-	if(0u >= step_number) {
-		solver_run(pot, acc, mas, pos, N, step_number);
-	}
+	//if(0u >= step_number) {
+	//	solver_run(pot, acc, mas, pos, N, step_number);
+	//}
 
 	#ifdef LOG_TIMINGS_SIM_STEP
 	fprintf(sim_step_timings.file, "%u", step_number);
