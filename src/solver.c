@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include "common.h"
 #include "config.h"
 #include "types.h"
 
@@ -9,16 +10,11 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 	#ifdef N_DIV
 	unsigned int j_length = N / (unsigned int)N_DIV;
 	unsigned int j_offset = (step_number % (unsigned int)N_DIV) * j_length;
-
-	if(0u >= step_number) {
-		j_offset = 0u;
-		j_length = N;
-	}
 	#endif
 
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOADING
-		#pragma omp target teams distribute parallel for map(tofrom: pot[:N], mas[:N], pos[:3u*N], acc[:3u*N])
+		#pragma omp target teams distribute parallel for map(to: mas[:N], pos[:3u*N]) map(tofrom: pot[:N], acc[:3u*N]) 
 		#else
 		#pragma omp parallel for schedule(dynamic, 128)
 		#endif
@@ -132,5 +128,5 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 		#endif
 	}
 
-	return 0;
+	return STARFLOOD_SUCCESS;
 }

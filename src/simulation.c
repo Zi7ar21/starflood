@@ -1,4 +1,4 @@
-// Needed for posix_memalign()
+// needed for clock_gettime()
 #define _POSIX_C_SOURCE 200112L
 
 #include "simulation.h"
@@ -12,11 +12,32 @@
 #include <omp.h>
 #endif
 
+#include "common.h"
 #include "config.h"
+#include "log.h"
 #include "rng.h"
 #include "solver.h"
+#include "timing.h"
 
-int simulation_init(simulation_t* simulation, unsigned int N) {
+#ifdef LOG_TIMINGS_SIM_STEP
+log_t sim_step_timings;
+#endif
+
+int simulation_init(simulation_t* restrict simulation, unsigned int N) {
+	TIMING_INIT();
+
+	#ifdef LOG_TIMINGS_SIM_STEP
+	sim_step_timings.file = fopen("./out/timings_sim_step.csv", "w");
+
+	if(NULL == (void*)sim_step_timings.file) {
+		return STARFLOOD_FAILURE;
+	}
+
+	fprintf(sim_step_timings.file, "%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "solver_run", "calc_kin", "pot_sum","kin_sum", "kick_1");
+
+	fflush(sim_step_timings.file);
+	#endif
+
 	simulation_t sim = *simulation;
 
 	void* mem = NULL;
@@ -46,27 +67,42 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 
 	size_t mem_size = sizeof(real) * (acc_offset + acc_length);
 
+	TIMING_START();
+
 	#ifdef STARFLOOD_ALIGNMENT
 	posix_memalign(&mem, (size_t)STARFLOOD_ALIGNMENT, mem_size);
 	#else
 	mem = malloc(mem_size);
 	#endif
 
+	TIMING_STOP();
+
+	#ifdef STARFLOOD_ALIGNMENT
+	TIMING_PRINT("simulation_init()", "posix_memalign()");
+	#else
+	TIMING_PRINT("simulation_init()", "malloc()");
+	#endif
+
 	if(NULL == mem) {
 		#ifdef STARFLOOD_ALIGNMENT
-		fprintf(stderr, "error in posix_memalign(&mem, %zu, %zu) while allocating memory for the ", (size_t)STARFLOOD_ALIGNMENT, mem_size);
+		fprintf(stderr, "%s error: mem is NULL after posix_memalign(&mem, %zu, %zu", "simulation_init()", (size_t)STARFLOOD_ALIGNMENT, mem_size);
 		#else
-		fprintf(stderr, "error in malloc(%zu) while allocating memory for the ", mem_size);
+		fprintf(stderr, "%s error: mem is NULL after malloc(%zu", "simulation_init()", mem_size);
 		#endif
 
-		perror("simulation");
+		perror(")");
 
-		return EXIT_FAILURE;
+		return STARFLOOD_FAILURE;
 	}
 
 	printf("  mem: %p\n", mem);
 
+	TIMING_START();
+
 	memset(mem, 0, mem_size);
+
+	TIMING_STOP();
+	TIMING_PRINT("simulation_init()", "memset()");
 
 	pot = (real*)mem + (size_t)pot_offset;
 	kin = (real*)mem + (size_t)kin_offset;
@@ -83,6 +119,8 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 	printf("  acc: %p (+%zu)\n", (void*)acc, acc_offset);
 	printf("\n");
 
+	TIMING_START();
+
 	for(unsigned int i = 0u; i < N; i++) {
 		pot[i] = (real)0.0;
 	}
@@ -91,16 +129,25 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 		kin[i] = (real)0.0;
 	}
 
+	TIMING_STOP();
+	TIMING_PRINT("simulation_init()", "initialize pot/kin");
+	TIMING_START();
+
 	double body_mass = 1.0 / (double)N;
 
 	for(unsigned int i = 0u; i < N; i++) {
 		mas[i] = (real)body_mass;
 	}
 
+	TIMING_STOP();
+	TIMING_PRINT("simulation_init()", "initialize mas");
+	TIMING_START();
+
 	for(unsigned int i = 0u; i < N; i++) {
 		double p[3] = {0.0, 0.0, 0.0}; // position
 		double v[3] = {0.0, 0.0, 0.0}; // velocity
 
+		#ifdef ENABLE_SIMULATION
 		// Initialize position
 		{
 			uint32_t s[4] = {
@@ -167,12 +214,6 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 			};
 
 			/*
-			v[0u] =  INV_TAU * 0.125 * p[2u] + 0.001 * n[0u];
-			v[1u] =  INV_TAU * 0.000 * p[1u] + 0.001 * n[1u];
-			v[2u] = -INV_TAU * 0.125 * p[0u] + 0.001 * n[2u];
-			*/
-
-			/*
 			double r2 = (p[0u]*p[0u])+(p[2u]*p[2u]);
 
 			double inv_r2 = 1.0 / (      r2+0.1  );
@@ -216,6 +257,7 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 			v[1u] += r[1u] < 0.500 ? -0.005 :  0.005;
 			*/
 		}
+		#endif
 
 		pos[3u*i+0u] = (real)p[0u];
 		pos[3u*i+1u] = (real)p[1u];
@@ -226,13 +268,17 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 		vel[3u*i+2u] = (real)v[2u];
 	}
 
+	TIMING_STOP();
+	TIMING_PRINT("simulation_init()", "initialize pos/vel");
+	TIMING_START();
+
 	for(unsigned int i = 0u; i < 3u * N; i++) {
 		acc[i] = (real)0.0;
 	}
 
-	#ifdef SIMULATION_ENABLED
-	solver_run(pot, acc, mas, pos, N, 0u);
-	#endif
+	TIMING_STOP();
+	TIMING_PRINT("simulation_init()", "initialize acc");
+	TIMING_START();
 
 	sim.N   = N;
 	sim.step_number = 0u;
@@ -246,17 +292,20 @@ int simulation_init(simulation_t* simulation, unsigned int N) {
 
 	*simulation = sim;
 
-	return EXIT_SUCCESS;
+	return STARFLOOD_SUCCESS;
 }
 
-int simulation_free(simulation_t* simulation) {
+int simulation_free(simulation_t* restrict simulation) {
+	TIMING_INIT();
+
 	simulation_t sim = *simulation;
 
-	{
-		void* mem = sim.mem;
+	TIMING_START();
 
-		free(mem);
-	}
+	free(sim.mem);
+
+	TIMING_STOP();
+	TIMING_PRINT("simulation_free()", "free()");
 
 	sim.mem = NULL;
 	sim.pot = (real*)NULL;
@@ -268,39 +317,48 @@ int simulation_free(simulation_t* simulation) {
 
 	*simulation = sim;
 
-	return EXIT_SUCCESS;
+	return STARFLOOD_SUCCESS;
 }
 
 int simulation_read(simulation_t* restrict simulation, const char* restrict filename) {
+	TIMING_INIT();
+
 	simulation_t sim = *simulation;
 
 	if( sizeof(real) != sizeof(float) ) {
-		return EXIT_FAILURE;
+		return STARFLOOD_FAILURE;
 	}
 
 	unsigned int N = sim.N;
 
 	if( 0u >= N ) {
-		return EXIT_FAILURE;
+		return STARFLOOD_FAILURE;
 	}
+
+	TIMING_START();
 
 	FILE* file = fopen(filename, "rb");
 
+	TIMING_STOP();
+	TIMING_PRINT("simulation_read()", "fopen()");
+
 	if(NULL == file) {
-		fprintf(stderr, "Error: fopen(\"%s\", \"%s\") ", filename, "rb");
+		fprintf(stderr, "%s error: fopen(\"%s\", \"%s\") ", "simulation_read()", filename, "rb");
 
 		perror("failed");
 
-		return EXIT_FAILURE;
+		return STARFLOOD_FAILURE;
 	}
 
 	/*
-	if( EXIT_SUCCESS != simulation_init(&sim, N) ) {
+	if( STARFLOOD_SUCCESS != simulation_init(&sim, N) ) {
 		fclose(file);
 
-		return EXIT_FAILURE;
+		return STARFLOOD_FAILURE;
 	}
 	*/
+
+	TIMING_START();
 
 	fread(sim.mem, sizeof(real), (size_t)N * (size_t)(3u*1u+3u*3u), file);
 
@@ -311,27 +369,44 @@ int simulation_read(simulation_t* restrict simulation, const char* restrict file
 	fread(sim.acc, sizeof(float), (size_t)N * (size_t)(3u), file);
 	*/
 
+	TIMING_STOP();
+	TIMING_PRINT("simulation_read()", "fread()");
+	TIMING_START();
+
 	fclose(file);
+
+	TIMING_STOP();
+	TIMING_PRINT("simulation_read()", "fclose()");
 
 	*simulation = sim;
 
-	return EXIT_SUCCESS;
+	return STARFLOOD_SUCCESS;
 }
 
 int simulation_save(simulation_t* restrict simulation, const char* restrict filename) {
+	TIMING_INIT();
+
 	simulation_t sim = *simulation;
+
+	uint32_t N = (uint32_t)sim.N;
+
+	TIMING_START();
 
 	FILE* file = fopen(filename, "wb");
 
-	if(NULL == file) {
-		fprintf(stderr, "Error: fopen(\"%s\", \"%s\") ", filename, "wb");
+	TIMING_STOP();
+	TIMING_PRINT("simulation_save()", "fopen()");
+	TIMING_START();
+
+	if(NULL == (void*)file) {
+		fprintf(stderr, "%s error: fopen(\"%s\", \"%s\") ", "simulation_save()", filename, "wb");
 
 		perror("failed");
 
-		return EXIT_FAILURE;
+		return STARFLOOD_FAILURE;
 	};
 
-	uint32_t N = (uint32_t)sim.N;
+	TIMING_START();
 
 	/*
 	const uint8_t magic_bytes[2] = {(uint8_t)0x53u, (uint8_t)0x46u};
@@ -347,16 +422,23 @@ int simulation_save(simulation_t* restrict simulation, const char* restrict file
 
 	fwrite(sim.mem, sizeof(real), (size_t)N * (size_t)(3u*1u+3u*3u), file);
 
-	fclose(file);
+	TIMING_STOP();
+	TIMING_PRINT("simulation_save()", "fwrite()");
+	TIMING_START();
 
-	return EXIT_SUCCESS;
+	if( 0 != fclose(file) ) {
+		return STARFLOOD_FAILURE;
+	}
+
+	TIMING_STOP();
+	TIMING_PRINT("simulation_save()", "fclose()");
+	TIMING_START();
+
+	return STARFLOOD_SUCCESS;
 }
 
-int simulation_step(simulation_t* simulation) {
-	#ifdef _OPENMP
-	volatile double t0 = omp_get_wtime();
-	volatile double t1 = omp_get_wtime();
-	#endif
+int simulation_step(simulation_t* restrict simulation) {
+	TIMING_INIT();
 
 	simulation_t sim = *simulation;
 
@@ -371,48 +453,51 @@ int simulation_step(simulation_t* simulation) {
 	real* vel = sim.vel;
 	real* acc = sim.acc;
 
-	#ifdef _OPENMP
-	t0 = omp_get_wtime();
-	#endif
+	// for the very first leapfrog kick
+	if(0u >= step_number) {
+		solver_run(pot, acc, mas, pos, N, step_number);
+	}
 
-	// Kick
+	#ifdef LOG_TIMINGS_SIM_STEP
+	fprintf(sim_step_timings.file, "%u", step_number);
+	#endif
+	TIMING_START();
+
+	// kick_0
 	for(unsigned int i = 0u; i < 3u * N; i++) {
 		vel[i] += (real)0.5 * dt * acc[i];
 	}
 
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("simulation_step: %.09f ms kick\n", 1.0e3*(t1 - t0));
-
-	t0 = omp_get_wtime();
+	TIMING_STOP();
+	TIMING_PRINT("simulation_step()", "kick_0");
+	#ifdef LOG_TIMINGS_SIM_STEP
+	LOG_TIMING(sim_step_timings);
 	#endif
+	TIMING_START();
 
-	// Drift
+	// drift
 	for(unsigned int i = 0u; i < 3u * N; i++) {
 		pos[i] += dt * vel[i];
 	}
 
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("simulation_step: %.09f ms drift\n", 1.0e3*(t1 - t0));
-
-	t0 = omp_get_wtime();
+	TIMING_STOP();
+	TIMING_PRINT("simulation_step()", "drift");
+	#ifdef LOG_TIMINGS_SIM_STEP
+	LOG_TIMING(sim_step_timings);
 	#endif
+	TIMING_START();
 
-	// Update potential energy/acceleration
+	// run solver
 	solver_run(pot, acc, mas, pos, N, step_number);
 
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("simulation_step: %.09f ms solver_run\n", 1.0e3*(t1 - t0));
-
-	t0 = omp_get_wtime();
+	TIMING_STOP();
+	TIMING_PRINT("simulation_step()", "solver_run");
+	#ifdef LOG_TIMINGS_SIM_STEP
+	LOG_TIMING(sim_step_timings);
 	#endif
+	TIMING_START();
 
-	// Update kinetic energy
+	// recalculate kinetic energy
 	for(unsigned int i = 0u; i < N; i++) {
 		real v_i[3] = {
 			(real)vel[3u*i+0u],
@@ -423,20 +508,18 @@ int simulation_step(simulation_t* simulation) {
 		kin[i] = (real)0.5 * mas[i] * ((v_i[0]*v_i[0])+(v_i[1]*v_i[1])+(v_i[2]*v_i[2])); // K = (1/2) * m * v^2
 	}
 
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("simulation_step: %.09f ms update kinetic energy\n", 1.0e3*(t1 - t0));
+	TIMING_STOP();
+	TIMING_PRINT("simulation_step()", "calc_kin");
+	#ifdef LOG_TIMINGS_SIM_STEP
+	LOG_TIMING(sim_step_timings);
 	#endif
 
-	// Compute total energy
+	// compute total energy
 	{
-		#ifdef _OPENMP
-		t0 = omp_get_wtime();
-		#endif
-
 		double U_sum = 0.0, U_c = 0.0;
 		double K_sum = 0.0, K_c = 0.0;
+
+		TIMING_START();
 
 		for(unsigned int i = 0u; i < N; i++) {
 			// Naïve summation
@@ -451,6 +534,13 @@ int simulation_step(simulation_t* simulation) {
 			U_sum = t;
 		}
 
+		TIMING_STOP();
+		TIMING_PRINT("simulation_step()", "pot_sum");
+		#ifdef LOG_TIMINGS_SIM_STEP
+		LOG_TIMING(sim_step_timings);
+		#endif
+		TIMING_START();
+
 		for(unsigned int i = 0u; i < N; i++) {
 			// Naïve summation
 			//K_sum += (double)kin[i];
@@ -464,31 +554,31 @@ int simulation_step(simulation_t* simulation) {
 			K_sum = t;
 		}
 
-		#ifdef _OPENMP
-		t1 = omp_get_wtime();
+		TIMING_STOP();
+		TIMING_PRINT("simulation_step()", "kin_sum");
+		#ifdef LOG_TIMINGS_SIM_STEP
+		LOG_TIMING(sim_step_timings);
 		#endif
 
 		printf("E (E_tot) = % .015f\nU (E_pot) = % .015f\nK (E_kin) = % .015f\n", U_sum + K_sum, U_sum, K_sum);
 	}
 
-	#ifdef _OPENMP
-	printf("simulation_step: %.09f ms calculate energy sums\n", 1.0e3*(t1 - t0));
+	TIMING_START();
 
-	t0 = omp_get_wtime();
-	#endif
-
-	// Kick
+	// kick_1
 	for(unsigned int i = 0u; i < 3u * N; i++) {
 		vel[i] += (real)0.5 * dt * acc[i];
 	}
 
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("simulation_step: %.09f ms kick\n", 1.0e3*(t1 - t0));
+	TIMING_STOP();	
+	TIMING_PRINT("simulation_step()", "kick_1");
+	#ifdef LOG_TIMINGS_SIM_STEP
+	LOG_TIMING(sim_step_timings);
+	fprintf(sim_step_timings.file, "\n");
+	fflush(sim_step_timings.file);
 	#endif
 
 	*simulation = sim;
 
-	return EXIT_SUCCESS;
+	return STARFLOOD_SUCCESS;
 }

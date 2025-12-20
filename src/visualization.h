@@ -15,9 +15,9 @@ typedef struct {
 	f32* render_buffer; // render buffer for the post-processed render
 } visualization_t;
 
-int visualization_init(visualization_t* visualization, unsigned int w, unsigned int h);
+int visualization_init(visualization_t* restrict visualization, unsigned int w, unsigned int h);
 
-int visualization_free(visualization_t* visualization);
+int visualization_free(visualization_t* restrict visualization);
 
 int visualization_save(const visualization_t* restrict visualization, const char* restrict filename);
 

@@ -1,3 +1,6 @@
+// needed for clock_getres() and clock_gettime()
+#define _POSIX_C_SOURCE 199309L
+
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -5,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef _OPENMP
 //#pragma message("OpenMP is ENABLED")
@@ -13,9 +17,11 @@
 //#pragma message("OpenMP is NOT ENABLED")
 #endif
 
+#include "common.h"
 #include "config.h"
 #include "simulation.h"
 #include "types.h"
+#include "timing.h"
 #include "visualization.h"
 
 int main(int argc, char** argv) {
@@ -39,7 +45,7 @@ int main(int argc, char** argv) {
 
 	unsigned int num_bodies = (unsigned int)NUM_BODIES, num_timesteps = (unsigned int)NUM_TIMESTEPS;
 
-	unsigned int visualization_dimensions[2] = {1920u, 1080u};
+	unsigned int visualization_dimensions[2] = {640u, 360u};
 
 	visualization_t vis;
 
@@ -134,11 +140,66 @@ int main(int argc, char** argv) {
 	printf("        _OPENMP: %d\n", _OPENMP);
 	printf("        max_threads: %d\n", omp_get_max_threads());
 	printf("        num_devices: %d\n", omp_get_num_devices());
-	printf("        wtick: %.09f ns\n", 1.0e9*omp_get_wtick());
+	printf("        wtick: %.06f ns\n", 1.0e3*omp_get_wtick());
 	#else
 	printf("false\n");
 	#endif
+	printf("    Timing:\n");
+	printf("        Enabled: ");
+	#ifdef ENABLE_TIMING
+		printf("true\n");
+		printf("        POSIX clock enabled: ");
+		#ifdef TIMING_USE_OMP_GET_WTIME
+		printf("false\n");
+		#else
+		printf("true\n");
+		printf("            clockid: ");
+		switch(STARFLOOD_POSIX_CLOCKID) {
+			case CLOCK_REALTIME:
+				printf("CLOCK_REALTIME");
+				break;
+			case CLOCK_PROCESS_CPUTIME_ID:
+				printf("CLOCK_PROCESS_CPUTIME_ID");
+				break;
+			case CLOCK_MONOTONIC_RAW:
+				printf("CLOCK_MONOTONIC_RAW");
+				break;
+			default:
+				printf("Other/Unknown (%d)", STARFLOOD_POSIX_CLOCKID);
+				break;
+		}
+		printf("\n");
+		printf("            res: ");
+		{
+			struct timespec res;
 
+			if( 0 != clock_getres(STARFLOOD_POSIX_CLOCKID, &res) ) {
+				printf("error");
+			} else {
+				printf("%jd nanoseconds", (intmax_t)1000000000l*(intmax_t)res.tv_sec+(intmax_t)res.tv_sec);
+			}
+		}
+		printf("\n");
+		printf("            instantaneously measured difference: ");
+		{
+			struct timespec tp0, tp1;
+
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
+
+			printf("%jd nanoseconds", (intmax_t)1000000000l*((intmax_t)(tp1.tv_sec)-(intmax_t)(tp0.tv_sec))+((intmax_t)(tp1.tv_nsec)-(intmax_t)(tp0.tv_nsec)));
+		}
+		printf("\n");
+		#endif
+	#else
+	printf("false\n");
+	#endif
 	printf("Parameters:\n");
 	printf("    Simulation:\n");
 	printf("        enabled: %d\n", enable_simulation);
@@ -171,16 +232,16 @@ int main(int argc, char** argv) {
 	fflush(stdout);
 
 	if(enable_visualization) {
-		if( EXIT_SUCCESS != visualization_init(&vis, visualization_dimensions[0], visualization_dimensions[1]) ) {
-			fprintf(stderr, "Error starting visualization!\n");
+		if( STARFLOOD_SUCCESS != visualization_init(&vis, visualization_dimensions[0], visualization_dimensions[1]) ) {
+			fprintf(stderr, "Error: %s failed!\n", "visualization_init()");
 
 			return EXIT_FAILURE;
 		}
 	}
 
 	if(enable_simulation || enable_simulation_io) {
-		if( EXIT_SUCCESS != simulation_init(&sim, num_bodies) ) {
-			fprintf(stderr, "Error starting simulation!\n");
+		if( STARFLOOD_SUCCESS != simulation_init(&sim, num_bodies) ) {
+			fprintf(stderr, "Error: %s failed!\n", "simulation_init()");
 
 			if(enable_visualization) {
 				visualization_free(&vis);
@@ -206,31 +267,31 @@ int main(int argc, char** argv) {
 
 		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_simulation_io ) {
 			if(enable_simulation) {
-				if( EXIT_SUCCESS != simulation_save(&sim, sim_filename) ) {
-					fprintf(stderr, "Error: simulation_save() failed!\n");
+				if( STARFLOOD_SUCCESS != simulation_save(&sim, sim_filename) ) {
+					fprintf(stderr, "Error: %s failed!\n", "simulation_save()");
 				}
 			} else {
-				if( EXIT_SUCCESS != simulation_read(&sim, sim_filename) ) {
-					fprintf(stderr, "Error: simulation_read() failed!\n");
+				if( STARFLOOD_SUCCESS != simulation_read(&sim, sim_filename) ) {
+					fprintf(stderr, "Error: %s failed!\n", "simulation_read()");
 				}
 			}
 		}
 
 		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_visualization) {
-			if( EXIT_SUCCESS != visualization_draw(&vis, &sim) ) {
-				fprintf(stderr, "Error: visualization_draw() failed!\n");
+			if( STARFLOOD_SUCCESS != visualization_draw(&vis, &sim) ) {
+				fprintf(stderr, "Error: %s failed!\n", "visualization_draw()");
 			}
 
 			if(enable_visualization_io) {
-				if( EXIT_SUCCESS != visualization_save(&vis, vis_filename) ) {
-					fprintf(stderr, "Error: visualization_save() failed!\n");
+				if( STARFLOOD_SUCCESS != visualization_save(&vis, vis_filename) ) {
+					fprintf(stderr, "Error: %s failed!\n", "visualization_save()");
 				}
 			}
 		}
 
 		if(enable_simulation) {
-			if( EXIT_SUCCESS != simulation_step(&sim)) {
-				fprintf(stderr, "Error: simulation_step() failed!\n");
+			if( STARFLOOD_SUCCESS != simulation_step(&sim)) {
+				fprintf(stderr, "Error: %s failed!\n", "simulation_step()");
 			}
 		}
 
@@ -249,7 +310,7 @@ int main(int argc, char** argv) {
 		visualization_free(&vis);
 	}
 
-	printf("Finished!\n");
+	printf("Finished.\n");
 
 	return EXIT_SUCCESS;
 }

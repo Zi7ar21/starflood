@@ -12,12 +12,16 @@
 #include <omp.h>
 #endif
 
+#include "common.h"
 #include "config.h"
 #include "rng.h"
 #include "simulation.h"
 #include "types.h"
+#include "timing.h"
 
-int visualization_init(visualization_t* visualization, unsigned int w, unsigned int h) {
+int visualization_init(visualization_t* restrict visualization, unsigned int w, unsigned int h) {
+	TIMING_INIT();
+
 	visualization_t vis = *visualization;
 
 	void* mem = NULL;
@@ -26,7 +30,7 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 	f32* render_buffer = (f32*)NULL;
 
 	if( sizeof(i32) != sizeof(f32) ) {
-		return EXIT_FAILURE;
+		return STARFLOOD_FAILURE;
 	}
 
 	printf("Visualization Memory Addresses:\n");
@@ -47,12 +51,12 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 
 	if(NULL == mem) {
 		#ifdef STARFLOOD_ALIGNMENT
-		fprintf(stderr, "error in posix_memalign(&mem, %zu, %zu) while allocating memory for the ", (size_t)STARFLOOD_ALIGNMENT, mem_size);
+		fprintf(stderr, "%s error: mem is NULL after posix_memalign(&mem, %zu, %zu", "visualization_init()", (size_t)STARFLOOD_ALIGNMENT, mem_size);
 		#else
-		fprintf(stderr, "error in malloc(%zu) while allocating memory for the ", mem_size);
+		fprintf(stderr, "%s error: mem is NULL after malloc(%zu", "visualization_init()", mem_size);
 		#endif
 
-		perror("visualization");
+		perror(")");
 
 		return EXIT_FAILURE;
 	}
@@ -87,17 +91,15 @@ int visualization_init(visualization_t* visualization, unsigned int w, unsigned 
 
 	*visualization = vis;
 
-	return EXIT_SUCCESS;
+	return STARFLOOD_SUCCESS;
 }
 
-int visualization_free(visualization_t* visualization) {
+int visualization_free(visualization_t* restrict visualization) {
+	TIMING_INIT();
+
 	visualization_t vis = *visualization;
 
-	{
-		void* mem = vis.mem;
-
-		free(mem);
-	}
+	free(vis.mem);
 
 	vis.mem = NULL;
 
@@ -106,14 +108,11 @@ int visualization_free(visualization_t* visualization) {
 
 	*visualization = vis;
 
-	return EXIT_SUCCESS;
+	return STARFLOOD_SUCCESS;
 }
 
 int visualization_save(const visualization_t* restrict visualization, const char* restrict filename) {
-	#ifdef _OPENMP
-	volatile double t0 = omp_get_wtime();
-	volatile double t1 = omp_get_wtime();
-	#endif
+	TIMING_INIT();
 
 	visualization_t vis = *visualization;
 
@@ -122,27 +121,23 @@ int visualization_save(const visualization_t* restrict visualization, const char
 
 	f32* render_buffer = vis.render_buffer;
 
-	#ifdef _OPENMP
-	t0 = omp_get_wtime();
-	#endif
+	TIMING_START();
 
 	FILE* file = fopen(filename, "wb");
 
-	if(NULL == file) {
-		fprintf(stderr, "Error: fopen(%s, \"wb\") failed: ", filename);
+	TIMING_STOP();
+	TIMING_PRINT("visualization_save()", "fopen()");
+	TIMING_START();
 
-		perror("Error");
+	if(NULL == (void*)file) {
+		fprintf(stderr, "%s error: fopen(%s, \"%s\") ", "visualization_save()", filename, "wb");
 
-		return EXIT_FAILURE;
+		perror("failed");
+
+		return STARFLOOD_FAILURE;
 	}
 
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("visualization_save: %.09f ms fopen()\n", 1.0e3*(t1 - t0));
-
-	t0 = omp_get_wtime();
-	#endif
+	TIMING_START();
 
 	/*
 	// PFM graphic image file format
@@ -195,30 +190,22 @@ int visualization_save(const visualization_t* restrict visualization, const char
 		}
 	}
 
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
+	TIMING_STOP();
+	TIMING_PRINT("visualization_save()", "fwrite()");
+	TIMING_START();
 
-	printf("visualization_save: %.09f ms fwrite() loop\n", 1.0e3*(t1 - t0));
+	if( 0 != fclose(file) ) {
+		return STARFLOOD_FAILURE;
+	}
 
-	t0 = omp_get_wtime();
-	#endif
+	TIMING_STOP();
+	TIMING_PRINT("visualization_save()", "fclose()");
 
-	fclose(file);
-
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("visualization_save: %.09f ms fclose()\n", 1.0e3*(t1 - t0));
-	#endif
-
-	return EXIT_SUCCESS;
+	return STARFLOOD_SUCCESS;
 }
 
 int visualization_draw(const visualization_t* restrict visualization, const simulation_t* restrict simulation) {
-	#ifdef _OPENMP
-	volatile double t0 = omp_get_wtime();
-	volatile double t1 = omp_get_wtime();
-	#endif
+	TIMING_INIT();
 
 	simulation_t sim = *simulation;
 
@@ -244,9 +231,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	double time = TIMESTEP_SIZE * (double)step_number;
 	#endif
 
-	#ifdef _OPENMP
-	t0 = omp_get_wtime();
-	#endif
+	TIMING_START();
 
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		#ifdef _OPENMP
@@ -255,13 +240,9 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		atomic_buffer[i] = (i32)0;
 	}
 
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("visualization_draw: %.09f ms clear atomic_buffer\n", 1.0e3*(t1 - t0));
-
-	t0 = omp_get_wtime();
-	#endif
+	TIMING_STOP();
+	TIMING_PRINT("visualization_draw()", "clear_atomic_buffer");
+	TIMING_START();
 
 	// model matrix
 	double matM[16];
@@ -338,6 +319,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 			B[i] = matM[i];
 		}
 
+		// matrix multiplication
 		for(int i = 0; i < 4; i++) {
 			for(int j = 0; j < 4; j++) {
 				C[4*i+j] =
@@ -365,6 +347,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 			B[i] = matMVP[i];
 		}
 
+		// matrix multiplication
 		for(int i = 0; i < 4; i++) {
 			for(int j = 0; j < 4; j++) {
 				C[4*i+j] =
@@ -548,13 +531,9 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		}
 	}
 
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
-
-	printf("visualization_draw: %.09f ms rasterization\n", 1.0e3*(t1 - t0));
-
-	t0 = omp_get_wtime();
-	#endif
+	TIMING_STOP();
+	TIMING_PRINT("visualization_draw()", "atomic_rasterization");
+	TIMING_START();
 
 	// Since atomic_buffer colors are quantized integers, it needs a floating-point scaling factor
 	double pixel_value_scale = 1.0;
@@ -569,11 +548,9 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	pixel_value_scale *= exp2(EXPOSURE);
 	#endif
 
-	#ifdef _OPENMP
-	t0 = omp_get_wtime();
-	#endif
+	TIMING_START();
 
-	// Read the atomic buffer and finish rendering the visualization
+	// read the atomic buffer and finish rendering the visualization
 	for(unsigned int i = 0u; i < w * h; i++) {
 		double rgba[4] = {
 			(double)0.250,
@@ -593,12 +570,12 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 			rgba[j] = pixel_value_scale * (double)val;
 		}
 
-		// Tonemapping
+		// tonemapping
 		for(unsigned int j = 0u; j < 4u; j++) {
 			rgba[j] = tanh(rgba[j]);
 		}
 
-		// Set alpha channel to 1.000
+		// set alpha channel to 1.000
 		rgba[3u] = (double)1.000;
 
 		for(unsigned int j = 0u; j < 4u; j++) {
@@ -606,11 +583,8 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		}
 	}
 
-	#ifdef _OPENMP
-	t1 = omp_get_wtime();
+	TIMING_STOP();
+	TIMING_PRINT("visualization_draw()", "finalize");
 
-	printf("visualization_draw: %.09f ms post-processing\n", 1.0e3*(t1 - t0));
-	#endif
-
-	return EXIT_SUCCESS;
+	return STARFLOOD_SUCCESS;
 }

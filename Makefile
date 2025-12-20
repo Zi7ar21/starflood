@@ -18,7 +18,7 @@ CC := nvc
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O3 --diag_suppress lossy_conversion
-#CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
+CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
 
 # === More Optimization Flags ===
 # Uncomment any of the following special flags
@@ -51,11 +51,20 @@ CFLAGS := $(DEBUG_CFLAGS) $(CFLAGS)
 # Link the standard math library
 LDFLAGS := -lm
 
+# === Targets ===
+
 .PHONY: all
 all: build/starflood
 
-build/starflood: build/main.o build/simulation.o build/solver.o build/visualization.o
+.PHONY: clean
+clean:
+	rm -fv build/*.o build/starflood
+
+build/starflood: build/log.o build/main.o build/simulation.o build/solver.o build/visualization.o
 	$(CC) $(CFLAGS) build/*.o -o $@ $(LDFLAGS)
+
+build/log.o:
+	$(CC) $(CFLAGS) -c -o $@ src/log.c
 
 build/main.o:
 	$(CC) $(CFLAGS) -c -o $@ src/main.c
@@ -68,7 +77,3 @@ build/solver.o:
 
 build/visualization.o:
 	$(CC) $(CFLAGS) -c -o $@ src/visualization.c
-
-.PHONY: clean
-clean:
-	rm -fv build/*.o build/starflood
