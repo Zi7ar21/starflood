@@ -26,6 +26,10 @@ int log_init(log_t* restrict log, const char* restrict filename) {
 
 int log_free(log_t* restrict log) {
 	if( 0 != fclose(log->file) ) {
+		fprintf(stderr, "%s error: fclose() ", "log_init()");
+
+		perror("failed");
+
 		return STARFLOOD_FAILURE;
 	}
 

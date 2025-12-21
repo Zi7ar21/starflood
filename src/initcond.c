@@ -40,6 +40,7 @@ int initcond_generate(real* volatile mas, real* volatile pos, real* volatile vel
 			INV_PCG32_MAX * (double)s[3]
 		};
 
+		/*
 		// Box-Muller Transform
 		// https://en.wikipedia.org/wiki/Box–Muller_transform
 		double n[3] = {
@@ -51,6 +52,15 @@ int initcond_generate(real* volatile mas, real* volatile pos, real* volatile vel
 		p[0u] = 1.000 * n[0u];
 		p[1u] = 1.000 * n[1u];
 		p[2u] = 1.000 * n[2u];
+		*/
+
+		p[0u] = cos(TAU * r[0u]) * sin(acos(2.0*r[1u]-1.0));
+		p[1u] = sin(TAU * r[0u]) * sin(acos(2.0*r[1u]-1.0));
+		p[2u] = cos(acos(2.0*r[1u]-1.0));
+
+		p[0u] *= pow(r[2u],1.0/3.0);
+		p[1u] *= pow(r[2u],1.0/3.0);
+		p[2u] *= pow(r[2u],1.0/3.0);
 
 		pos[3u*i+0u] = p[0u];
 		pos[3u*i+1u] = p[1u];
@@ -96,16 +106,26 @@ int initcond_generate(real* volatile mas, real* volatile pos, real* volatile vel
 			sqrt( -2.0 * log(r[1u]) ) * cos(TAU * r[3u])
 		};
 
-		/*
 		double r2 = (p[0u]*p[0u])+(p[2u]*p[2u]);
 
-		double inv_r2 = 1.0 / (      r2+0.1  );
-		double inv_r1 = 1.0 / ( sqrt(r2+0.1) );
-		*/
+		double inv_r2 = 1.0 / (      r2+0.001  );
+		double inv_r1 = 1.0 / ( sqrt(r2+0.001) );
 
+		/*
 		v[0u] = 0.250 * sqrt(G * body_mass) *  p[2u] + 0.000001 * n[0u];
 		v[1u] = 0.000 * sqrt(G * body_mass) *  p[1u] + 0.000001 * n[1u];
 		v[2u] = 0.250 * sqrt(G * body_mass) * -p[0u] + 0.000001 * n[2u];
+		*/
+
+		/*
+		v[0u] = 0.250 * sqrt(G * 1.0) *  p[2u] + 0.000001 * n[0u];
+		v[1u] = 0.000 * sqrt(G * 1.0) *  p[1u] + 0.000001 * n[1u];
+		v[2u] = 0.250 * sqrt(G * 1.0) * -p[0u] + 0.000001 * n[2u];
+		*/
+
+		v[0u] = 1.000 * 0.005 * p[0u] + 0.0001 * n[0u];
+		v[1u] = 1.000 * 0.005 * p[1u] + 0.0001 * n[1u];
+		v[2u] = 1.000 * 0.005 * p[2u] + 0.0001 * n[2u];
 
 		vel[3u*i+0u] = v[0u];
 		vel[3u*i+1u] = v[1u];
@@ -144,9 +164,9 @@ int initcond_generate(real* volatile mas, real* volatile pos, real* volatile vel
 		};
 
 		// Thin disk
-		if(0.000 <= r[0u] && r[0u] < 0.850) {
-			p[1u] *= 0.025;
-		}
+		//if(0.000 <= r[0u] && r[0u] < 0.850) {
+		//	p[1u] *= 0.025;
+		//}
 
 		/*
 		p[0u] += r[1u] < 0.500 ?  4.000 : -4.000;

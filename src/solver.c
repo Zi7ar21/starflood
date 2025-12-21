@@ -74,12 +74,22 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 
 			real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
 
-			#ifdef EPSILON
-			real inv_r2 = (real)1.0 / (       r2+(real)(EPSILON*EPSILON)  );
-			real inv_r1 = (real)1.0 / ( sqrtf(r2+(real)(EPSILON*EPSILON)) );
+			#ifdef STARFLOOD_DOUBLE_PRECISION
+				#ifdef EPSILON
+				real inv_r2 = (real)1.0 / (       r2+(real)(EPSILON*EPSILON)  );
+				real inv_r1 = (real)1.0 / ( sqrt(r2+(real)(EPSILON*EPSILON)) );
+				#else
+				real inv_r2 = (real)1.0 / (       r2  );
+				real inv_r1 = (real)1.0 / ( sqrt(r2) );
+				#endif
 			#else
-			real inv_r2 = (real)1.0 / (       r2  );
-			real inv_r1 = (real)1.0 / ( sqrtf(r2) );
+				#ifdef EPSILON
+				real inv_r2 = (real)1.0 / (       r2+(real)(EPSILON*EPSILON)  );
+				real inv_r1 = (real)1.0 / ( sqrtf(r2+(real)(EPSILON*EPSILON)) );
+				#else
+				real inv_r2 = (real)1.0 / (       r2  );
+				real inv_r1 = (real)1.0 / ( sqrtf(r2) );
+				#endif
 			#endif
 
 			// Gravitational potential

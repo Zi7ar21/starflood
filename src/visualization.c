@@ -21,22 +21,20 @@
 #include "timing.h"
 
 #ifdef LOG_TIMINGS_VIS_DRAW
-log_t vis_draw_timings;
+log_t log_timings_vis_draw;
 #endif
 
 int visualization_init(visualization_t* restrict visualization, unsigned int w, unsigned int h) {
 	TIMING_INIT();
 
 	#ifdef LOG_TIMINGS_VIS_DRAW
-	vis_draw_timings.file = fopen("./out/timings_vis_draw.csv", "w");
-
-	if(NULL == (void*)vis_draw_timings.file) {
+	if( STARFLOOD_SUCCESS != log_init(&log_timings_vis_draw, LOG_TIMINGS_VIS_DRAW) ) {
 		return STARFLOOD_FAILURE;
 	}
 
-	fprintf(vis_draw_timings.file, "%s,%s,%s,%s,%s\n", "step_number", "clear_atomic_buffer", "calc_matMVP", "rasterize_atomic", "finalize");
+	fprintf(log_timings_vis_draw.file, "%s,%s,%s,%s,%s\n", "step_number", "clear_atomic_buffer", "calc_matMVP", "rasterize_atomic", "finalize");
 
-	fflush(vis_draw_timings.file);
+	fflush(log_timings_vis_draw.file);
 	#endif
 
 	visualization_t vis = *visualization;
@@ -139,7 +137,9 @@ int visualization_free(visualization_t* restrict visualization) {
 	TIMING_INIT();
 
 	#ifdef LOG_TIMINGS_VIS_DRAW
-	fclose(vis_draw_timings.file);
+	if( STARFLOOD_SUCCESS != log_free(&log_timings_vis_draw) ) {
+		fprintf(stderr, "%s error: %s failed!\n", "visualization_free()", "log_free(&log_timings_vis_draw)");
+	}
 	#endif
 
 	visualization_t vis = *visualization;
@@ -276,7 +276,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	real* vel = sim.vel; // for motion blur
 
 	#ifdef LOG_TIMINGS_VIS_DRAW
-	fprintf(vis_draw_timings.file, "%u", step_number);
+	fprintf(log_timings_vis_draw.file, "%u", step_number);
 	#endif
 
 	#ifdef OUTPUT_INTERVAL
@@ -297,7 +297,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	TIMING_STOP();
 	TIMING_PRINT("visualization_draw()", "clear_atomic_buffer");
 	#ifdef LOG_TIMINGS_VIS_DRAW
-	LOG_TIMING(vis_draw_timings);
+	LOG_TIMING(log_timings_vis_draw);
 	#endif
 	TIMING_START();
 
@@ -314,14 +314,14 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		double gam = 0.0; // yaw
 
 		//bet = 0.0000 * TAU;
-		bet = 0.0625 * TAU;
+		//bet = 0.0625 * TAU;
 		//bet = 0.1250 * TAU;
 		//bet = 0.2500 * TAU;
 		//bet = 0.001 * time * TAU;
 
 		//gam = 0.0000 * TAU;
 		//gam = 0.0625 * TAU;
-		gam = 0.1250 * TAU;
+		//gam = 0.1250 * TAU;
 		//gam = 0.2500 * TAU;
 
 		double cos_alp = cos(alp), sin_alp = sin(alp);
@@ -423,7 +423,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	TIMING_STOP();
 	TIMING_PRINT("visualization_draw()", "calc_matMVP");
 	#ifdef LOG_TIMINGS_VIS_DRAW
-	LOG_TIMING(vis_draw_timings);
+	LOG_TIMING(log_timings_vis_draw);
 	#endif
 	TIMING_START();
 
@@ -602,7 +602,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	TIMING_STOP();
 	TIMING_PRINT("visualization_draw()", "rasterize_atomic");
 	#ifdef LOG_TIMINGS_VIS_DRAW
-	LOG_TIMING(vis_draw_timings);
+	LOG_TIMING(log_timings_vis_draw);
 	#endif
 	TIMING_START();
 
@@ -657,9 +657,9 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	TIMING_STOP();
 	TIMING_PRINT("visualization_draw()", "finalize");
 	#ifdef LOG_TIMINGS_VIS_DRAW
-	LOG_TIMING(vis_draw_timings);
-	fprintf(vis_draw_timings.file, "\n");
-	fflush(vis_draw_timings.file);
+	LOG_TIMING(log_timings_vis_draw);
+	fprintf(log_timings_vis_draw.file, "\n");
+	fflush(log_timings_vis_draw.file);
 	#endif
 
 	return STARFLOOD_SUCCESS;

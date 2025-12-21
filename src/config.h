@@ -24,7 +24,13 @@
 // Uncomment to enable visualization file I/O
 #define VISUALIZATION_FILENAME "./out/vis/step_%04u.ppm"
 
+// Uncomment for PFM, 
+//#define VISUALIZATION_FILE_TYPE
+
 /* === Logging === */
+
+// Uncomment to
+#define LOG_STATISTICS "./out/statistics.csv"
 
 // Uncomment to enable timing
 #define ENABLE_TIMING
@@ -40,10 +46,10 @@
 //#define TIMING_USE_OMP_GET_WTIME
 
 // Uncomment to log simulation_step() timings
-#define LOG_TIMINGS_SIM_STEP
+#define LOG_TIMINGS_SIM_STEP "./out/timings_sim_step.csv"
 
 // Uncomment to log visualization_draw() timings
-#define LOG_TIMINGS_VIS_DRAW
+#define LOG_TIMINGS_VIS_DRAW "./out/timings_vis_draw.csv"
 
 /* === Run Parameters === */
 
@@ -62,16 +68,18 @@
 
 // Uncomment to divide the force calculations across
 // multiple timesteps (faster, but less accurate)
-//#define N_DIV 4
+#define N_DIV 4
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 100
+#define NUM_TIMESTEPS 3000
 
 // Simulation timestep size (dt)
 //#define TIMESTEP_SIZE 0.03333333333333333333333333333333
 //#define TIMESTEP_SIZE 0.06666666666666666666666666666667
-//#define TIMESTEP_SIZE 0.100
-#define TIMESTEP_SIZE 1.000
+//#define TIMESTEP_SIZE 0.1
+//#define TIMESTEP_SIZE 0.33333333333333333333333333333333
+#define TIMESTEP_SIZE 0.66666666666666666666666666666667
+//#define TIMESTEP_SIZE 1.0
 
 // Gravitational potential softening parameter
 #define EPSILON 0.001
@@ -106,15 +114,19 @@
 #define SPATIAL_SAMPLES 256
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
-#define EXPOSURE -1.000
+#define EXPOSURE -3.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE -1.000
+#define ORTHO_SCALE -3.000
 
 // Uncomment to enable motion blur
-#define SHUTTER_SPEED 0.500
+//#define SHUTTER_SPEED 0.500
 
 /* === Miscellaneous === */
+
+// Uncomment to use floating-point double-precision
+// On most platforms, single is IEEE-754 binary32 and double is IEEE-754 binary64
+//#define STARFLOOD_DOUBLE_PRECISION
 
 // Uncomment to enable memory alignment (good practice)
 // 4 KiB (4*1024 = 4096 bytes) is the smallest on many architectures
