@@ -55,7 +55,7 @@ Starflood is an open-source astrophysical simulation code written in C.
 First, clone the Starflood repository:
 
 ```sh
-git clone https://github.com/Zi7ar21/starflood.git
+git clone --recurse-submodules https://github.com/Zi7ar21/starflood.git
 ```
 
 Then, change to the repository root:

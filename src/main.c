@@ -260,17 +260,33 @@ int main(int argc, char** argv) {
 
 		#ifdef SIMULATION_FILENAME
 			#ifdef OUTPUT_INTERVAL
-			snprintf(sim_filename, filename_size, SIMULATION_FILENAME, step_num / (unsigned int)OUTPUT_INTERVAL);
+			unsigned int sim_file_index = step_num / (unsigned int)OUTPUT_INTERVAL;
 			#else
-			snprintf(sim_filename, filename_size, SIMULATION_FILENAME, step_num);
+			unsigned int sim_file_index = step_num;
 			#endif
+
+			// Todo: error handling
+			snprintf(sim_filename, filename_size, "%s/%s_%04u.raw", OUTPUT_DIR, SIMULATION_FILENAME, sim_file_index);
 		#endif
 
 		#ifdef VISUALIZATION_FILENAME
 			#ifdef OUTPUT_INTERVAL
-			snprintf(vis_filename, filename_size, VISUALIZATION_FILENAME, step_num / (unsigned int)OUTPUT_INTERVAL);
+			unsigned int vis_file_index = step_num / (unsigned int)OUTPUT_INTERVAL;
 			#else
-			snprintf(vis_filename, filename_size, VISUALIZATION_FILENAME, step_num);
+			unsigned int vis_file_index = step_num;
+			#endif
+
+			// Todo: error handling
+			snprintf(vis_filename, filename_size, "%s/%s%04u.raw", OUTPUT_DIR, VISUALIZATION_FILENAME, vis_file_index);
+
+			#if (0 == VISUALIZATION_IMAGE_FORMAT)
+			snprintf(vis_filename, filename_size, "%s/%s%04u.pfm", OUTPUT_DIR, VISUALIZATION_FILENAME, vis_file_index);
+			#endif
+			#if (1 == VISUALIZATION_IMAGE_FORMAT)
+			snprintf(vis_filename, filename_size, "%s/%s%04u.ppm", OUTPUT_DIR, VISUALIZATION_FILENAME, vis_file_index);
+			#endif
+			#if (2 == VISUALIZATION_IMAGE_FORMAT)
+			snprintf(vis_filename, filename_size, "%s/%s%04u.png", OUTPUT_DIR, VISUALIZATION_FILENAME, vis_file_index);
 			#endif
 		#endif
 

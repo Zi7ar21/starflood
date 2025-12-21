@@ -32,7 +32,7 @@ CFLAGS := -fopenmp $(CFLAGS)
 #CFLAGS := -ffast-math $(CFLAGS)
 
 # Generate debugging information (regular)
-DEBUG_CFLAGS := -g 
+DEBUG_CFLAGS := -g
 
 # Clang/GCC generate debugging information with extensions for GNU Project Debugger (GDB)
 #DEBUG_CFLAGS := -ggdb

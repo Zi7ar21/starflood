@@ -13,6 +13,13 @@ typedef struct {
 
 	i32* atomic_buffer; // atomic buffer for accumulation rasterization
 	f32* render_buffer; // render buffer for the post-processed render
+
+	// binary image data for file I/O
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	f32* binary_buffer;
+	#else
+	unsigned char* binary_buffer;
+	#endif
 } visualization_t;
 
 int visualization_init(visualization_t* restrict visualization, unsigned int w, unsigned int h);

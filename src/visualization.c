@@ -20,6 +20,11 @@
 #include "types.h"
 #include "timing.h"
 
+#if (2 == VISUALIZATION_IMAGE_FORMAT)
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../stb/stb_image_write.h"
+#endif
+
 #ifdef LOG_TIMINGS_VIS_DRAW
 log_t log_timings_vis_draw;
 #endif
@@ -44,6 +49,12 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 	i32* atomic_buffer = (i32*)NULL;
 	f32* render_buffer = (f32*)NULL;
 
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	f32* binary_buffer = (f32*)NULL;
+	#else
+	unsigned char* binary_buffer = (unsigned char*)NULL;
+	#endif
+
 	if( sizeof(i32) != sizeof(f32) ) {
 		return STARFLOOD_FAILURE;
 	}
@@ -52,11 +63,17 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 
 	size_t atomic_buffer_length = (size_t)4u * (size_t)w * (size_t)h;
 	size_t render_buffer_length = (size_t)4u * (size_t)w * (size_t)h;
+	size_t binary_buffer_length = (size_t)3u * (size_t)w * (size_t)h;
 
 	size_t atomic_buffer_offset = (size_t)0u;
 	size_t render_buffer_offset = atomic_buffer_offset + atomic_buffer_length;
+	size_t binary_buffer_offset = render_buffer_offset + render_buffer_length;
 
-	size_t mem_size = (sizeof(i32)*atomic_buffer_length)+(sizeof(i32)*render_buffer_length);
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	size_t mem_size = (sizeof(i32)*atomic_buffer_length)+(sizeof(i32)*render_buffer_length)+(sizeof(f32)*binary_buffer_length);
+	#else
+	size_t mem_size = (sizeof(i32)*atomic_buffer_length)+(sizeof(i32)*render_buffer_length)+(sizeof(unsigned char)*binary_buffer_length);
+	#endif
 
 	TIMING_START();
 
@@ -98,8 +115,15 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 	atomic_buffer = (i32*)mem + (size_t)atomic_buffer_offset;
 	render_buffer = (f32*)mem + (size_t)render_buffer_offset;
 
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	binary_buffer = (f32*)mem + (size_t)binary_buffer_offset;
+	#else
+	binary_buffer = (unsigned char*)mem + (size_t)binary_buffer_offset;
+	#endif
+
 	printf("  atomic_buffer: %p (+%zu)\n", (void*)atomic_buffer, atomic_buffer_offset);
 	printf("  render_buffer: %p (+%zu)\n", (void*)render_buffer, render_buffer_offset);
+	printf("  binary_buffer: %p (+%zu)\n", (void*)binary_buffer, binary_buffer_offset);
 	printf("\n");
 
 	TIMING_START();
@@ -122,11 +146,28 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 	TIMING_STOP();
 	TIMING_PRINT("visualization_init()", "initialize render_buffer");
 
+	TIMING_START();
+	for(unsigned int i = 0u; i < 3u * w * h; i++) {
+		#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+		binary_buffer[i] = (f32)0.000;
+		#else
+		binary_buffer[i] = (unsigned char)0u;
+		#endif
+	}
+	TIMING_STOP();
+	TIMING_PRINT("visualization_init()", "initialize binary_buffer");
+
+	#if (2 == VISUALIZATION_IMAGE_FORMAT)
+	stbi_flip_vertically_on_write(0);
+	stbi_write_png_compression_level = 14;
+	#endif
+
 	vis.w = w;
 	vis.h = h;
 	vis.mem = mem;
 	vis.atomic_buffer = atomic_buffer;
 	vis.render_buffer = render_buffer;
+	vis.binary_buffer = binary_buffer;
 
 	*visualization = vis;
 
@@ -156,6 +197,12 @@ int visualization_free(visualization_t* restrict visualization) {
 	vis.atomic_buffer = (i32*)NULL;
 	vis.render_buffer = (f32*)NULL;
 
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	vis.binary_buffer = (f32*)NULL;
+	#else
+	vis.binary_buffer = (unsigned char*)NULL;
+	#endif
+
 	*visualization = vis;
 
 	return STARFLOOD_SUCCESS;
@@ -171,13 +218,19 @@ int visualization_save(const visualization_t* restrict visualization, const char
 
 	f32* render_buffer = vis.render_buffer;
 
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	f32* binary_buffer = vis.binary_buffer;
+	#else
+	unsigned char* binary_buffer = vis.binary_buffer;
+	#endif
+
 	TIMING_START();
 
+	#if (1 >= VISUALIZATION_IMAGE_FORMAT)
 	FILE* file = fopen(filename, "wb");
 
 	TIMING_STOP();
 	TIMING_PRINT("visualization_save()", "fopen()");
-	TIMING_START();
 
 	if(NULL == (void*)file) {
 		fprintf(stderr, "%s error: fopen(%s, \"%s\") ", "visualization_save()", filename, "wb");
@@ -188,46 +241,50 @@ int visualization_save(const visualization_t* restrict visualization, const char
 	}
 
 	TIMING_START();
+	#endif
 
-	/*
-	// PFM graphic image file format
-	// https://netpbm.sourceforge.net/doc/pfm.html
-	fprintf(file, "PF\n%zu %zu\n-1.0\n", (size_t)image_w, (size_t)image_h);
-
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
 	for(unsigned int y = 0u; y < image_h; y++) {
 		for(unsigned int x = 0u; x < image_w; x++) {
-			f32 rgb[3] = {
-				render_buffer[4u*(image_w*y+x)+0u],
-				render_buffer[4u*(image_w*y+x)+1u],
-				render_buffer[4u*(image_w*y+x)+2u]
-			};
-
-			fwrite(rgb, sizeof(f32), (size_t)3u, file);
+			binary_buffer[3u*(image_w*y+x)+0u] = render_buffer[4u*(image_w*y+x)+0u];
+			binary_buffer[3u*(image_w*y+x)+1u] = render_buffer[4u*(image_w*y+x)+1u];
+			binary_buffer[3u*(image_w*y+x)+2u] = render_buffer[4u*(image_w*y+x)+2u];
 		}
 	}
-	*/
-
-	// PPM Netpbm color image format
-	// https://netpbm.sourceforge.net/doc/ppm.html
-	fprintf(file, "P6\n%zu %zu %u\n", (size_t)image_w, (size_t)image_h, 255u);
-
+	#else
 	for(unsigned int y = 0u; y < image_h; y++) {
 		for(unsigned int x = 0u; x < image_w; x++) {
 			f32 color[3] = {
-				(f32)render_buffer[4u*(image_w*((image_h-1u)-y)+x)+0u],
-				(f32)render_buffer[4u*(image_w*((image_h-1u)-y)+x)+1u],
-				(f32)render_buffer[4u*(image_w*((image_h-1u)-y)+x)+2u]
+				(f32)render_buffer[4u*(image_w*y+x)+0u],
+				(f32)render_buffer[4u*(image_w*y+x)+1u],
+				(f32)render_buffer[4u*(image_w*y+x)+2u]
 			};
 
 			// Clamp values to range [0, 1]
 			for(int i = 0; i < 3; i++) {
-				color[i] = fminf(fmaxf(color[i], 0.0), 1.0);
+				color[i] = (f32)fminf(fmaxf(color[i], (f32)0.0), (f32)1.0);
 			}
 
-			// BT.709 non-linear encoding
+			/*
+			// Gamma 2.2  non-linear transfer function
 			for(int i = 0; i < 3; i++) {
-				color[i] = (f32)0.018053968510807 <= color[i] ? (f32)1.099296826809442 * powf(color[i], (f32)0.45) - (f32)0.099296826809442 : (f32)4.500 * color[i];
+				color[i] = (f32)powf( color[i], (f32)(1.0/2.2) );
 			}
+			*/
+
+			#if (1 == VISUALIZATION_IMAGE_FORMAT)
+			// BT.709 non-linear transfer function
+			for(int i = 0; i < 3; i++) {
+				color[i] = (f32)0.018053968510807 <= color[i] ? (f32)1.099296826809442 * (f32)powf(color[i], (f32)0.45) - (f32)0.099296826809442 : (f32)4.500 * color[i];
+			}
+			#endif
+
+			#if (2 == VISUALIZATION_IMAGE_FORMAT)
+			// IEC 61966-2-1 sRGB non-linear transfer function
+			for(int i = 0; i < 3; i++) {
+				color[i] = (f32)0.0031308 < color[i] ? (f32)1.055 * (f32)powf( color[i], (f32)(1.0/2.4) ) - (f32)0.055 : (f32)12.92 * color[i];
+			}
+			#endif
 
 			// 8-bit quantization [0, 255]
 			unsigned char rgb[3] = {
@@ -236,12 +293,38 @@ int visualization_save(const visualization_t* restrict visualization, const char
 				(unsigned char)( (f32)255.0 * color[2] )
 			};
 
-			fwrite(rgb, sizeof(unsigned char), (size_t)3u, file);
+			binary_buffer[3u*(image_w*((image_h-1u)-y)+x)+0u] = rgb[0u];
+			binary_buffer[3u*(image_w*((image_h-1u)-y)+x)+1u] = rgb[1u];
+			binary_buffer[3u*(image_w*((image_h-1u)-y)+x)+2u] = rgb[2u];
 		}
 	}
+	#endif
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_save()", "fwrite()");
+	TIMING_PRINT("visualization_save()", "binary_buffer");
+	TIMING_START();
+
+	#if (0 == VISUALIZATION_IMAGE_FORMAT)
+	// PFM graphic image file format
+	// https://netpbm.sourceforge.net/doc/pfm.html
+	fprintf(file, "PF\n%zu %zu\n-1.0\n", (size_t)image_w, (size_t)image_h);
+
+	fwrite(binary_buffer, sizeof(f32), (size_t)3u*(size_t)image_w*(size_t)image_h, file);
+	#endif
+	#if (1 == VISUALIZATION_IMAGE_FORMAT)
+	// PPM Netpbm color image format
+	// https://netpbm.sourceforge.net/doc/ppm.html
+	fprintf(file, "P6\n%zu %zu %u\n", (size_t)image_w, (size_t)image_h, 255u);
+
+	fwrite(binary_buffer, sizeof(unsigned char), (size_t)3u*(size_t)image_w*(size_t)image_h, file);
+	#endif
+	#if (2 == VISUALIZATION_IMAGE_FORMAT)
+	stbi_write_png( filename, (int)image_w, (int)image_h, 3, binary_buffer, (int)(sizeof(unsigned char)*(size_t)3u*(size_t)image_w) );
+	#endif
+
+	TIMING_STOP();
+	TIMING_PRINT("visualization_save()", "file_write");
+	#if (1 >= VISUALIZATION_IMAGE_FORMAT)
 	TIMING_START();
 
 	if( 0 != fclose(file) ) {
@@ -250,6 +333,7 @@ int visualization_save(const visualization_t* restrict visualization, const char
 
 	TIMING_STOP();
 	TIMING_PRINT("visualization_save()", "fclose()");
+	#endif
 
 	return STARFLOOD_SUCCESS;
 }

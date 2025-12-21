@@ -9,6 +9,9 @@
 
 /* === File I/O === */
 
+// Output directory prefix
+#define OUTPUT_DIR "./out"
+
 // Uncomment to only output files every N steps
 #define OUTPUT_INTERVAL 10
 
@@ -16,13 +19,20 @@
 #define ENABLE_SIMULATION
 
 // Uncomment to enable simulation file I/O
-#define SIMULATION_FILENAME "./out/sim/step_%04u.raw"
+// Simulation filename prefix
+#define SIMULATION_FILENAME "sim/step_"
 
 // Uncomment to enable visualization by default
 #define ENABLE_VISUALIZATION
 
 // Uncomment to enable visualization file I/O
-#define VISUALIZATION_FILENAME "./out/vis/step_%04u.ppm"
+// Visualization filename prefix
+#define VISUALIZATION_FILENAME "vis/step_"
+
+// 0: PFM
+// 1: PPM
+// 2: PNG (requires stb_image_write.h)
+#define VISUALIZATION_IMAGE_FORMAT 2
 
 // Uncomment for PFM, 
 //#define VISUALIZATION_FILE_TYPE
@@ -97,6 +107,9 @@
 //#define G 6.6743e-11
 
 /* === Solver === */
+
+// Uncomment to enable smoothed-particle hydrodynamics
+#define ENABLE_SPH
 
 // Uncomment to use Kahan Summation in the solver for higher simulation accuracy
 // Useful for single-precision floating-point calculations
