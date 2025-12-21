@@ -159,7 +159,7 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 
 	#if (2 == VISUALIZATION_IMAGE_FORMAT)
 	stbi_flip_vertically_on_write(0);
-	stbi_write_png_compression_level = 14;
+	stbi_write_png_compression_level = 6;
 	#endif
 
 	vis.w = w;
@@ -401,7 +401,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		//bet = 0.0625 * TAU;
 		//bet = 0.1250 * TAU;
 		//bet = 0.2500 * TAU;
-		//bet = 0.001 * time * TAU;
+		bet = 0.00001 * time * TAU;
 
 		//gam = 0.0000 * TAU;
 		//gam = 0.0625 * TAU;
@@ -536,9 +536,9 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		};
 
 		double color[3] = {
-			0.5 * cos( TAU * ( (-10000.0 * (double)pot[idx])-(0.0/3.0) ) ) + 0.5,
-			0.5 * cos( TAU * ( (-10000.0 * (double)pot[idx])-(1.0/3.0) ) ) + 0.5,
-			0.5 * cos( TAU * ( (-10000.0 * (double)pot[idx])-(2.0/3.0) ) ) + 0.5,
+			0.5 * cos( TAU * ( (-5.0e5 * (double)pot[idx])-(0.0/3.0) ) ) + 0.5,
+			0.5 * cos( TAU * ( (-5.0e5 * (double)pot[idx])-(1.0/3.0) ) ) + 0.5,
+			0.5 * cos( TAU * ( (-5.0e5 * (double)pot[idx])-(2.0/3.0) ) ) + 0.5,
 		};
 
 		// y = A * x

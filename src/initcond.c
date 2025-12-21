@@ -123,9 +123,9 @@ int initcond_generate(real* volatile mas, real* volatile pos, real* volatile vel
 		v[2u] = 0.250 * sqrt(G * 1.0) * -p[0u] + 0.000001 * n[2u];
 		*/
 
-		v[0u] = 1.000 * 0.005 * p[0u] + 0.0001 * n[0u];
-		v[1u] = 1.000 * 0.005 * p[1u] + 0.0001 * n[1u];
-		v[2u] = 1.000 * 0.005 * p[2u] + 0.0001 * n[2u];
+		v[0u] = 1.000 * 0.005 * p[0u] + 0.000001 * n[0u];
+		v[1u] = 1.000 * 0.005 * p[1u] + 0.000001 * n[1u];
+		v[2u] = 1.000 * 0.005 * p[2u] + 0.000001 * n[2u];
 
 		vel[3u*i+0u] = v[0u];
 		vel[3u*i+1u] = v[1u];

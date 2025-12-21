@@ -405,22 +405,22 @@ int simulation_step(simulation_t* restrict simulation) {
 
 	// compute total energy
 	{
-		double U_sum = 0.0, U_c = 0.0;
-		double K_sum = 0.0, K_c = 0.0;
+		double V_sum = 0.0, V_c = 0.0; // Potential Energy
+		double T_sum = 0.0, T_c = 0.0; // Kinetic Energy
 
 		TIMING_START();
 
 		for(unsigned int i = 0u; i < N; i++) {
 			// Naïve summation
-			//U_sum += (double)pot[i];
+			//V_sum += (double)pot[i];
 
 			// Kahan summation
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			double y = (double)pot[i] - U_c;
-			volatile double t = U_sum + y;
-			volatile double z = t - U_sum;
-			U_c = z - y;
-			U_sum = t;
+			double y = (double)pot[i] - V_c;
+			volatile double t = V_sum + y;
+			volatile double z = t - V_sum;
+			V_c = z - y;
+			V_sum = t;
 		}
 
 		TIMING_STOP();
@@ -432,15 +432,15 @@ int simulation_step(simulation_t* restrict simulation) {
 
 		for(unsigned int i = 0u; i < N; i++) {
 			// Naïve summation
-			//K_sum += (double)kin[i];
+			//T_sum += (double)kin[i];
 
 			// Kahan summation
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			double y = (double)kin[i] - K_c;
-			volatile double t = K_sum + y;
-			volatile double z = t - K_sum;
-			K_c = z - y;
-			K_sum = t;
+			double y = (double)kin[i] - T_c;
+			volatile double t = T_sum + y;
+			volatile double z = t - T_sum;
+			T_c = z - y;
+			T_sum = t;
 		}
 
 		TIMING_STOP();
@@ -450,10 +450,10 @@ int simulation_step(simulation_t* restrict simulation) {
 		#endif
 
 		#ifdef LOG_STATISTICS
-		fprintf(log_statistics.file, ",%.015f,%.015f,%.015f", U_sum + K_sum, U_sum, K_sum);
+		fprintf(log_statistics.file, ",%.015f,%.015f,%.015f", V_sum + T_sum, V_sum, T_sum);
 		#endif
 
-		printf("E (E_tot) = % .015f\nU (E_pot) = % .015f\nK (E_kin) = % .015f\n", U_sum + K_sum, U_sum, K_sum);
+		printf("E (tot) = % .015f\nV (pot) = % .015f\nT (kin) = % .015f\n", V_sum + T_sum, V_sum, T_sum);
 	}
 
 	TIMING_START();

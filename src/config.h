@@ -70,18 +70,18 @@
 //#define NUM_BODIES 8192
 //#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-//#define NUM_BODIES 65536
+#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
-#define NUM_BODIES 262144
+//#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
 //#define NUM_BODIES 1048576
 
 // Uncomment to divide the force calculations across
 // multiple timesteps (faster, but less accurate)
-#define N_DIV 4
+//#define N_DIV 4
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 3000
+#define NUM_TIMESTEPS 6000
 
 // Simulation timestep size (dt)
 //#define TIMESTEP_SIZE 0.03333333333333333333333333333333
@@ -124,16 +124,16 @@
 /* === Visualization === */
 
 // Number of samples for spatial anti-aliasing
-#define SPATIAL_SAMPLES 256
+#define SPATIAL_SAMPLES 512
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
-#define EXPOSURE -3.000
+#define EXPOSURE -0.500
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
 #define ORTHO_SCALE -3.000
 
 // Uncomment to enable motion blur
-//#define SHUTTER_SPEED 0.500
+#define SHUTTER_SPEED 0.500
 
 /* === Miscellaneous === */
 

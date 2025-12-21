@@ -20,10 +20,10 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 		#endif
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
-		real U_sum = (real)0.0;
+		real V_sum = (real)0.0;
 
 		#ifdef SOLVER_USE_KAHAN_SUMMATION_ENERGY
-		real U_c = (real)0.0;
+		real V_c = (real)0.0;
 		#endif
 
 		real F_sum[3] = {
@@ -93,28 +93,28 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 			#endif
 
 			// Gravitational potential
-			real U_ij = -(real)G * m_i * m_j * inv_r2;
+			real U_ij = -(real)G * m_i * m_j * inv_r1;
 
 			{
 				#ifdef SOLVER_USE_KAHAN_SUMMATION_ENERGY
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = U_ij - U_c;
-				volatile real t = U_sum + y;
-				volatile real z = t - U_sum;
-				U_c = z - y;
-				U_sum = t;
+				real y = U_ij - V_c;
+				volatile real t = V_sum + y;
+				volatile real z = t - V_sum;
+				V_c = z - y;
+				V_sum = t;
 				#else
 				// Naïve summation
-				U_sum += U_ij;
+				V_sum += V_ij;
 				#endif
 			}
 
 			// Force acting upon body i by body j
 			real F_ij[3] = {
-				U_ij * r_ij[0u] * inv_r1,
-				U_ij * r_ij[1u] * inv_r1,
-				U_ij * r_ij[2u] * inv_r1
+				U_ij * r_ij[0u] * inv_r2,
+				U_ij * r_ij[1u] * inv_r2,
+				U_ij * r_ij[2u] * inv_r2
 			};
 
 			for(unsigned int k = 0u; k < 3u; k++) {
@@ -133,7 +133,7 @@ int solver_run(real* volatile pot, real* volatile acc, const real* volatile mas,
 			}
 		}
 
-		pot[i] = U_sum;
+		pot[i] = V_sum;
 
 		#ifndef N_DIV
 		acc[3u*i+0u] = F_sum[0u];

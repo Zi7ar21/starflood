@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
 	unsigned int num_bodies = (unsigned int)NUM_BODIES, num_timesteps = (unsigned int)NUM_TIMESTEPS;
 
-	unsigned int visualization_dimensions[2] = {1080u, 1080u};
+	unsigned int visualization_dimensions[2] = {1920u, 1080u};
 
 	visualization_t vis;
 
@@ -266,7 +266,7 @@ int main(int argc, char** argv) {
 			#endif
 
 			// Todo: error handling
-			snprintf(sim_filename, filename_size, "%s/%s_%04u.raw", OUTPUT_DIR, SIMULATION_FILENAME, sim_file_index);
+			snprintf(sim_filename, filename_size, "%s/%s%04u.raw", OUTPUT_DIR, SIMULATION_FILENAME, sim_file_index);
 		#endif
 
 		#ifdef VISUALIZATION_FILENAME
