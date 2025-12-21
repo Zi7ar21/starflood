@@ -1,8 +1,8 @@
 # ===== Starflood Makefile =====
 
 #CC := clang
-CC := gcc
-#CC := nvc
+#CC := gcc
+CC := nvc
 
 # === Basic Optimization Flags ===
 # Please ensure only one of the following sets
@@ -12,13 +12,13 @@ CC := gcc
 #CFLAGS := -Og
 
 # Clang/GCC tuned for performance on compiler host machine
-CFLAGS := -flto=auto -march=native -O3
+#CFLAGS := -flto=auto -march=native -O3
 
 # NVIDIA HPC Compilers tuned for performance on compiler host machine with device offloading
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O3 --diag_suppress lossy_conversion
-#CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
+CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
 
 # === More Optimization Flags ===
 # Uncomment any of the following special flags
@@ -29,7 +29,7 @@ CFLAGS := -fopenmp $(CFLAGS)
 # Clang/GCC unsafe floating-point optimizations
 # Note: This makes floating-point math non-deterministic
 # across different compilers/platforms/vendors
-CFLAGS := -ffast-math $(CFLAGS)
+#CFLAGS := -ffast-math $(CFLAGS)
 
 # Generate debugging information (regular)
 DEBUG_CFLAGS := -g 
@@ -66,8 +66,11 @@ all: build/starflood
 clean:
 	rm -fv build/*.o build/starflood
 
-build/starflood: build/log.o build/main.o build/simulation.o build/solver.o build/visualization.o
+build/starflood: build/initcond.o build/log.o build/main.o build/simulation.o build/solver.o build/visualization.o
 	$(CC) $(CFLAGS) build/*.o -o $@ $(LDFLAGS)
+
+build/initcond.o:
+	$(CC) $(CFLAGS) -c -o $@ src/initcond.c
 
 build/log.o:
 	$(CC) $(CFLAGS) -c -o $@ src/log.c

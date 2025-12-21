@@ -5,11 +5,14 @@
 // https://float.exposed/0x2F7FFFFF
 #define INV_PCG32_MAX 2.3283062977608182109179324470460414886474609375e-10
 
+/*
 #ifdef _OPENMP
 	#ifdef ENABLE_OFFLOADING
 	#pragma omp declare target
 	#endif
 #endif
+*/
+
 // https://www.jcgt.org/published/0009/03/02/
 inline void pcg4d(uint32_t* restrict s) {
 	uint32_t v[4] = {s[0], s[1], s[2], s[3]};
@@ -39,8 +42,11 @@ inline void pcg4d(uint32_t* restrict s) {
 	s[2] = v[2];
 	s[3] = v[3];
 }
+
+/*
 #ifdef _OPENMP
 	#ifdef ENABLE_OFFLOADING
 	#pragma omp end declare target
 	#endif
 #endif
+*/

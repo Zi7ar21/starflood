@@ -5,12 +5,12 @@
 /* === Compute === */
 
 // Uncomment to utilize offloading (when using a supported toolchain with OpenMP enabled)
-//#define ENABLE_OFFLOADING
+#define ENABLE_OFFLOADING
 
 /* === File I/O === */
 
 // Uncomment to only output files every N steps
-//#define OUTPUT_INTERVAL 5
+#define OUTPUT_INTERVAL 10
 
 // Comment to load SIMULATION_FILENAME instead of running simulation by default
 #define ENABLE_SIMULATION
@@ -54,15 +54,15 @@
 //#define NUM_BODIES 8192
 //#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-#define NUM_BODIES 65536
+//#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
-//#define NUM_BODIES 262144
+#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
 //#define NUM_BODIES 1048576
 
 // Uncomment to divide the force calculations across
 // multiple timesteps (faster, but less accurate)
-#define N_DIV 4
+//#define N_DIV 4
 
 // Default number of timesteps to run simulation for
 #define NUM_TIMESTEPS 100

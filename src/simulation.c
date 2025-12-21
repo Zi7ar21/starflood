@@ -14,6 +14,7 @@
 
 #include "common.h"
 #include "config.h"
+#include "initcond.h"
 #include "log.h"
 #include "rng.h"
 #include "solver.h"
@@ -121,168 +122,21 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 
 	TIMING_START();
 
-	for(unsigned int i = 0u; i < N; i++) {
-		pot[i] = (real)0.0;
-	}
-
-	for(unsigned int i = 0u; i < N; i++) {
-		kin[i] = (real)0.0;
-	}
+	#ifdef ENABLE_SIMULATION
+	initcond_generate(mas, pos, vel, N);
+	#endif
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_init()", "initialize pot/kin");
-	TIMING_START();
-
-	double body_mass = 1.0 / (double)N;
-
-	for(unsigned int i = 0u; i < N; i++) {
-		mas[i] = (real)body_mass;
-	}
-
-	TIMING_STOP();
-	TIMING_PRINT("simulation_init()", "initialize mas");
-	TIMING_START();
-
-	for(unsigned int i = 0u; i < N; i++) {
-		double p[3] = {0.0, 0.0, 0.0}; // position
-		double v[3] = {0.0, 0.0, 0.0}; // velocity
-
-		#ifdef ENABLE_SIMULATION
-		// Initialize position
-		{
-			uint32_t s[4] = {
-				(uint32_t)i,
-				(uint32_t)0x203F83D3u,
-				(uint32_t)0x710BE493u,
-				(uint32_t)0xA294E7F1u
-			};
-
-			pcg4d(s);
-			pcg4d(s); // second round for better statistical quality
-
-			double r[4] = {
-				INV_PCG32_MAX * (double)s[0],
-				INV_PCG32_MAX * (double)s[1],
-				INV_PCG32_MAX * (double)s[2],
-				INV_PCG32_MAX * (double)s[3]
-			};
-
-			// Box-Muller Transform
-			// https://en.wikipedia.org/wiki/Box–Muller_transform
-			double n[3] = {
-				sqrt( -2.0 * log(r[0u]) ) * cos(TAU * r[2u]),
-				sqrt( -2.0 * log(r[0u]) ) * sin(TAU * r[2u]),
-				sqrt( -2.0 * log(r[1u]) ) * cos(TAU * r[3u])
-			};
-
-			/*
-			p[0u] = 1.000 * n[0u];
-			p[1u] = 0.100 * n[1u];
-			p[2u] = 1.000 * n[2u];
-			*/
-
-			p[0u] = 1.000 * n[0u];
-			p[1u] = 1.000 * n[1u];
-			p[2u] = 1.000 * n[2u];
-		}
-
-		// Initialize velocity
-		{
-			uint32_t s[4] = {
-				(uint32_t)i,
-				(uint32_t)0xAE8D7CF2u,
-				(uint32_t)0xE4827F00u,
-				(uint32_t)0xE44CA389u
-			};
-
-			pcg4d(s);
-			pcg4d(s); // second round for better statistical quality
-
-			double r[4] = {
-				INV_PCG32_MAX * (double)s[0],
-				INV_PCG32_MAX * (double)s[1],
-				INV_PCG32_MAX * (double)s[2],
-				INV_PCG32_MAX * (double)s[3]
-			};
-
-			// Box-Muller Transform
-			// https://en.wikipedia.org/wiki/Box–Muller_transform
-			double n[3] = {
-				sqrt( -2.0 * log(r[0u]) ) * cos(TAU * r[2u]),
-				sqrt( -2.0 * log(r[0u]) ) * sin(TAU * r[2u]),
-				sqrt( -2.0 * log(r[1u]) ) * cos(TAU * r[3u])
-			};
-
-			/*
-			double r2 = (p[0u]*p[0u])+(p[2u]*p[2u]);
-
-			double inv_r2 = 1.0 / (      r2+0.1  );
-			double inv_r1 = 1.0 / ( sqrt(r2+0.1) );
-			*/
-
-			v[0u] = 0.250 * sqrt(G * body_mass) *  p[2u] + 0.000001 * n[0u];
-			v[1u] = 0.000 * sqrt(G * body_mass) *  p[1u] + 0.000001 * n[1u];
-			v[2u] = 0.250 * sqrt(G * body_mass) * -p[0u] + 0.000001 * n[2u];
-		}
-
-		{
-			uint32_t s[4] = {
-				(uint32_t)i,
-				(uint32_t)0xE5C4E174u,
-				(uint32_t)0xCB77B51Eu,
-				(uint32_t)0xA82C87A3u
-			};
-
-			pcg4d(s);
-			pcg4d(s); // second round for better statistical quality
-
-			double r[4] = {
-				INV_PCG32_MAX * (double)s[0],
-				INV_PCG32_MAX * (double)s[1],
-				INV_PCG32_MAX * (double)s[2],
-				INV_PCG32_MAX * (double)s[3]
-			};
-
-			// Thin disk
-			if(0.000 <= r[0u] && r[0u] < 0.850) {
-				p[1u] *= 0.025;
-			}
-
-			/*
-			p[0u] += r[1u] < 0.500 ?  4.000 : -4.000;
-			p[1u] += r[1u] < 0.500 ?  1.000 : -1.000;
-			v[0u] *= r[1u] < 0.500 ?  1.000 : -1.000;
-			v[2u] *= r[1u] < 0.500 ?  1.000 : -1.000;
-			v[0u] += r[1u] < 0.500 ? -0.005 :  0.005;
-			v[1u] += r[1u] < 0.500 ? -0.005 :  0.005;
-			*/
-		}
-		#endif
-
-		pos[3u*i+0u] = (real)p[0u];
-		pos[3u*i+1u] = (real)p[1u];
-		pos[3u*i+2u] = (real)p[2u];
-
-		vel[3u*i+0u] = (real)v[0u];
-		vel[3u*i+1u] = (real)v[1u];
-		vel[3u*i+2u] = (real)v[2u];
-	}
-
-	TIMING_STOP();
-	TIMING_PRINT("simulation_init()", "initialize pos/vel");
-	TIMING_START();
-
-	for(unsigned int i = 0u; i < 3u * N; i++) {
-		acc[i] = (real)0.0;
-	}
-
-	TIMING_STOP();
-	TIMING_PRINT("simulation_init()", "initialize acc");
+	TIMING_PRINT("simulation_init()", "initcond_generate");
 	TIMING_START();
 
 	#ifdef ENABLE_SIMULATION
 	solver_run(pot, acc, mas, pos, N, 0u);
 	#endif
+
+	TIMING_STOP();
+	TIMING_PRINT("simulation_init()", "solver_run");
+	TIMING_START();
 
 	sim.N   = N;
 	sim.step_number = 0u;
