@@ -13,10 +13,10 @@
 #define OUTPUT_DIR "./out"
 
 // Uncomment to only output files every N steps
-#define OUTPUT_INTERVAL 10
+#define OUTPUT_INTERVAL 100
 
 // Comment to load SIMULATION_FILENAME instead of running simulation by default
-#define ENABLE_SIMULATION
+//#define ENABLE_SIMULATION
 
 // Uncomment to enable simulation file I/O by default
 // Simulation filename prefix
@@ -65,9 +65,9 @@
 //#define NUM_BODIES 2048
 //#define NUM_BODIES 4096
 //#define NUM_BODIES 8192
-//#define NUM_BODIES 16384
+#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-#define NUM_BODIES 65536
+//#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
 //#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
@@ -75,18 +75,18 @@
 
 // Uncomment to divide the force calculations across
 // multiple timesteps (faster, but less accurate)
-//#define N_DIV 4
+//#define GRAVITY_SOLVER_DECIMATION 4
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 900
+#define NUM_TIMESTEPS 10000
 
 // Simulation timestep size (dt)
 //#define TIMESTEP_SIZE 0.03333333333333333333333333333333
 //#define TIMESTEP_SIZE 0.06666666666666666666666666666667
 //#define TIMESTEP_SIZE 0.1
 //#define TIMESTEP_SIZE 0.33333333333333333333333333333333
-#define TIMESTEP_SIZE 0.66666666666666666666666666666667
-//#define TIMESTEP_SIZE 1.0
+//#define TIMESTEP_SIZE 0.66666666666666666666666666666667
+#define TIMESTEP_SIZE 0.01
 
 // Gravitational potential softening parameter
 #define EPSILON 0.001
@@ -105,18 +105,13 @@
 
 /* === Solver === */
 
+// TODO: Finish implementing SPH
 // Uncomment to enable smoothed-particle hydrodynamics
-//#define ENABLE_SPH
+#define ENABLE_SPH
 
 // Uncomment to use Kahan Summation in the solver for higher simulation accuracy
 // Useful for single-precision floating-point calculations
-#define SOLVER_USE_KAHAN_SUMMATION
-
-// Uncomment to use Kahan Summation even for potential energy summation
-// Potential energy isn't currently used for the simulation, only the energy
-// statistics, so this can be commented for a slight speedup, say, when using
-// GPU compute.
-#define SOLVER_USE_KAHAN_SUMMATION_ENERGY
+#define ENABLE_KAHAN_SUMMATION
 
 /* === Visualization === */
 

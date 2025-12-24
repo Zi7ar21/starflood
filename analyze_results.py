@@ -2,9 +2,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 #filename = "./log_nvidia-smi_2025-12-20.csv"
-#filename = './out/statistics.csv'
+filename = './out/statistics.csv'
 #filename = './out/timings_sim_step.csv'
-filename = './out/timings_vis_draw.csv'
+#filename = './out/timings_vis_draw.csv'
 
 df = pd.read_csv(filename)
 

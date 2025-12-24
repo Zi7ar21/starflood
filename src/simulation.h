@@ -12,28 +12,33 @@ typedef struct {
 
 	void* mem; // Shared memory for the simulation
 
-	real* mas; //                 Mass (Scalar)
-	real* rad; // SPH Smoothing Radius (Scalar)
+	real* mas; //             Mass (  Scalar)
+	real* rad; // Smoothing Radius (  Scalar)
+	real* pos; //         Position (3-Vector)
+	real* vel; //         Velocity (3-Vector)
 
-	real* pos; //             Position (3-Vector)
-	real* vel; //             Velocity (3-Vector)
-	real* acc; //         Acceleration (3-Vector)
+	real* acc; // Acceleration (3-Vector)
 
-	real* pot; // Potential Energy (Scalar)
-	real* kin; //   Kinetic Energy (Scalar)
+	real* pot; // Gravitational Potential (Scalar)
+
+	real* rho; //  Density (Scalar)
+	real* prs; // Pressure (Scalar)
+
+	real* ken; //   Kinetic Energy (Scalar)
+	real* pen; // Potential Energy (Scalar)
 } simulation_t;
 
-// Initialize the simulation
+// Initialize a simulation
 int simulation_init(simulation_t* restrict simulation, unsigned int N);
 
-// Free the simulation
+// Free a simulation
 int simulation_free(simulation_t* restrict simulation);
 
-// Dump the simulation (write to a file)
+// Read a simulation state from a file
 int simulation_read(simulation_t* restrict simulation, const char* restrict filename);
 
-// Read a simulation (from a file)
+// Save a simulation state to a file
 int simulation_save(simulation_t* restrict simulation, const char* restrict filename);
 
-// Step the simulation
+// Updates a simulation (runs a timestep)
 int simulation_step(simulation_t* restrict simulation);

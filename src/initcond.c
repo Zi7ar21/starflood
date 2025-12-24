@@ -7,7 +7,7 @@
 #include "rng.h"
 #include "types.h"
 
-int initcond_generate(real* volatile mas, real* volatile rad, real* volatile pos, real* volatile vel, unsigned int N) {
+int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos, real* restrict vel, unsigned int N) {
 	const double body_mass = 1.0 / (double)N;
 
 	// Initialize Mass
@@ -18,7 +18,7 @@ int initcond_generate(real* volatile mas, real* volatile rad, real* volatile pos
 	#ifdef ENABLE_SPH
 	// Initialize Smoothing Radius
 	for(unsigned int i = 0u; i < N; i++) {
-		rad[i] = (real)2.01;
+		rad[i] = (real)0.100;
 	}
 	#endif
 

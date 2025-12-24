@@ -43,6 +43,21 @@ inline void pcg4d(uint32_t* restrict s) {
 	s[3] = v[3];
 }
 
+// https://nullprogram.com/blog/2018/07/31/
+inline void triple32(uint32_t* restrict s) {
+	uint32_t x = *s;
+
+	x ^= x >> (uint32_t)17u;
+	x *= (uint32_t)0xED5AD4BBu;
+	x ^= x >> (uint32_t)11u;
+	x *= (uint32_t)0xAC4C1B51u;
+	x ^= x >> (uint32_t)15u;
+	x *= (uint32_t)0x31848BABu;
+	x ^= x >> (uint32_t)14u;
+
+	*s = x;
+}
+
 /*
 #ifdef _OPENMP
 	#ifdef ENABLE_OFFLOADING

@@ -59,12 +59,20 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	real* rad = (real*)NULL;
 	real* pos = (real*)NULL;
 	real* vel = (real*)NULL;
+
 	real* acc = (real*)NULL;
+
 	real* pot = (real*)NULL;
-	real* kin = (real*)NULL;
+
+	real* rho = (real*)NULL;
+	real* prs = (real*)NULL;
+
+	real* ken = (real*)NULL;
+	real* pen = (real*)NULL;
 
 	printf("Simulation Memory Addresses:\n");
 
+	// calculate buffer lengths
 	size_t mas_length = (size_t)1u * (size_t)N;
 	#ifdef ENABLE_SPH
 	size_t rad_length = (size_t)1u * (size_t)N;
@@ -73,21 +81,51 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	size_t vel_length = (size_t)3u * (size_t)N;
 	size_t acc_length = (size_t)3u * (size_t)N;
 	size_t pot_length = (size_t)1u * (size_t)N;
-	size_t kin_length = (size_t)1u * (size_t)N;
-
-	size_t mas_offset = (size_t)0u;
 	#ifdef ENABLE_SPH
-	size_t rad_offset = mas_offset + mas_length;
-	size_t pos_offset = rad_offset + rad_length;
-	#else
-	size_t pos_offset = mas_offset + mas_length;
+	size_t rho_length = (size_t)1u * (size_t)N;
+	size_t prs_length = (size_t)1u * (size_t)N;
 	#endif
-	size_t vel_offset = pos_offset + pos_length;
-	size_t acc_offset = vel_offset + vel_length;
-	size_t pot_offset = acc_offset + acc_length;
-	size_t kin_offset = pot_offset + pot_length;
+	size_t ken_length = (size_t)1u * (size_t)N;
+	size_t pen_length = (size_t)1u * (size_t)N;
 
-	size_t mem_size = sizeof(real) * (kin_offset + kin_length);
+	// calculate buffer offsets
+	size_t mem_length = (size_t)0u;
+
+	size_t mas_offset = mem_length;
+	mem_length += mas_length;
+
+	#ifdef ENABLE_SPH
+	size_t rad_offset = mem_length;
+	mem_length += rad_length;
+	#endif
+
+	size_t pos_offset = mem_length;
+	mem_length += pos_length;
+
+	size_t vel_offset = mem_length;
+	mem_length += vel_length;
+
+	size_t acc_offset = mem_length;
+	mem_length += acc_length;
+
+	size_t pot_offset = mem_length;
+	mem_length += pot_length;
+
+	#ifdef ENABLE_SPH
+	size_t rho_offset = mem_length;
+	mem_length += rho_length;
+
+	size_t prs_offset = mem_length;
+	mem_length += prs_length;
+	#endif
+
+	size_t ken_offset = mem_length;
+	mem_length += ken_length;
+
+	size_t pen_offset = mem_length;
+	mem_length += pen_length;
+
+	size_t mem_size = sizeof(real) * mem_length;
 
 	TIMING_START();
 
@@ -126,15 +164,26 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	TIMING_STOP();
 	TIMING_PRINT("simulation_init()", "memset()");
 
-	mas = (real*)mem + (size_t)mas_offset;
-	#ifdef ENABLE_SPH
-	rad = (real*)mem + (size_t)rad_offset;
-	#endif
-	pos = (real*)mem + (size_t)pos_offset;
-	vel = (real*)mem + (size_t)vel_offset;
-	acc = (real*)mem + (size_t)acc_offset;
-	pot = (real*)mem + (size_t)pot_offset;
-	kin = (real*)mem + (size_t)kin_offset;
+	{
+		mas = (real*)mem + (size_t)mas_offset;
+		#ifdef ENABLE_SPH
+		rad = (real*)mem + (size_t)rad_offset;
+		#endif
+		pos = (real*)mem + (size_t)pos_offset;
+		vel = (real*)mem + (size_t)vel_offset;
+
+		acc = (real*)mem + (size_t)acc_offset;
+
+		pot = (real*)mem + (size_t)pot_offset;
+
+		#ifdef ENABLE_SPH
+		rho = (real*)mem + (size_t)rho_offset;
+		prs = (real*)mem + (size_t)prs_offset;
+		#endif
+
+		ken = (real*)mem + (size_t)ken_offset;
+		pen = (real*)mem + (size_t)pen_offset;
+	}
 
 	printf("  mas: %p (+%zu)\n", (void*)mas, mas_offset);
 	#ifdef ENABLE_SPH
@@ -144,7 +193,12 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	printf("  vel: %p (+%zu)\n", (void*)vel, vel_offset);
 	printf("  acc: %p (+%zu)\n", (void*)acc, acc_offset);
 	printf("  pot: %p (+%zu)\n", (void*)pot, pot_offset);
-	printf("  kin: %p (+%zu)\n", (void*)kin, kin_offset);
+	#ifdef ENABLE_SPH
+	printf("  rho: %p (+%zu)\n", (void*)rho, rho_offset);
+	printf("  prs: %p (+%zu)\n", (void*)prs, prs_offset);
+	#endif
+	printf("  ken: %p (+%zu)\n", (void*)ken, ken_offset);
+	printf("  pen: %p (+%zu)\n", (void*)pen, pen_offset);
 	printf("\n");
 
 	TIMING_START();
@@ -158,23 +212,35 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	TIMING_START();
 
 	#ifdef ENABLE_SIMULATION
-	solver_run(acc, pot, mas, rad, pos, N, 0u);
+	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, N, 0u);
 	#endif
 
 	TIMING_STOP();
 	TIMING_PRINT("simulation_init()", "solver_run");
 	TIMING_START();
 
-	sim.step_number = 0u;
-	sim.N   = N;
-	sim.mem = mem;
-	sim.mas = mas;
-	sim.rad = rad;
-	sim.pos = pos;
-	sim.vel = vel;
-	sim.acc = acc;
-	sim.pot = pot;
-	sim.kin = kin;
+	{
+		sim.step_number = 0u;
+
+		sim.N   = N;
+
+		sim.mem = mem;
+
+		sim.mas = mas;
+		sim.rad = rad;
+		sim.pos = pos;
+		sim.vel = vel;
+
+		sim.acc = acc;
+
+		sim.pot = pot;
+
+		sim.rho = rho;
+		sim.prs = prs;
+
+		sim.ken = ken;
+		sim.pen = pen;
+	}
 
 	*simulation = sim;
 
@@ -205,14 +271,28 @@ int simulation_free(simulation_t* restrict simulation) {
 	TIMING_STOP();
 	TIMING_PRINT("simulation_free()", "free()");
 
-	sim.mem = NULL;
-	sim.mas = (real*)NULL;
-	sim.rad = (real*)NULL;
-	sim.pos = (real*)NULL;
-	sim.vel = (real*)NULL;
-	sim.acc = (real*)NULL;
-	sim.pot = (real*)NULL;
-	sim.kin = (real*)NULL;
+	{
+		sim.step_number = 0u;
+
+		sim.N = 0u;
+
+		sim.mem = NULL;
+
+		sim.mas = (real*)NULL;
+		sim.rad = (real*)NULL;
+		sim.pos = (real*)NULL;
+		sim.vel = (real*)NULL;
+
+		sim.acc = (real*)NULL;
+
+		sim.pot = (real*)NULL;
+
+		sim.rho = (real*)NULL;
+		sim.prs = (real*)NULL;
+
+		sim.ken = (real*)NULL;
+		sim.pen = (real*)NULL;
+	}
 
 	*simulation = sim;
 
@@ -260,9 +340,9 @@ int simulation_read(simulation_t* restrict simulation, const char* restrict file
 	TIMING_START();
 
 	#ifdef ENABLE_SPH
-	fread(sim.mem, sizeof(real), (size_t)N * (size_t)(2u*1u+3u*3u+2u*1u), file);
+	fread(sim.mem, sizeof(real), (size_t)N * (size_t)(1u+1u+3u+3u+3u+1u+1u+1u+1u+1u), file);
 	#else
-	fread(sim.mem, sizeof(real), (size_t)N * (size_t)(2u*1u+3u*3u+2u*1u), file);
+	fread(sim.mem, sizeof(real), (size_t)N * (size_t)(1u+3u+3u+3u+1u+1u+1u), file);
 	#endif
 
 	/*
@@ -329,9 +409,9 @@ int simulation_save(simulation_t* restrict simulation, const char* restrict file
 	*/
 
 	#ifdef ENABLE_SPH
-	fwrite(sim.mem, sizeof(real), (size_t)N * (size_t)(2u*1u+3u*3u+2u*1u), file);
+	fwrite(sim.mem, sizeof(real), (size_t)N * (size_t)(1u+1u+3u+3u+3u+1u+1u+1u+1u+1u), file);
 	#else
-	fwrite(sim.mem, sizeof(real), (size_t)N * (size_t)(1u*1u+3u*3u+2u*1u), file);
+	fwrite(sim.mem, sizeof(real), (size_t)N * (size_t)(1u+3u+3u+3u+1u+1u+1u), file);
 	#endif
 
 	TIMING_STOP();
@@ -357,14 +437,23 @@ int simulation_step(simulation_t* restrict simulation) {
 	const real dt = (real)TIMESTEP_SIZE;
 
 	unsigned int step_number = sim.step_number;
+
 	unsigned int N = sim.N;
+
 	real* mas = sim.mas;
 	real* rad = sim.rad;
 	real* pos = sim.pos;
 	real* vel = sim.vel;
+
 	real* acc = sim.acc;
+
 	real* pot = sim.pot;
-	real* kin = sim.kin;
+
+	real* rho = sim.rho;
+	real* prs = sim.prs;
+
+	real* ken = sim.ken;
+	real* pen = sim.pen;
 
 	// for the very first leapfrog kick
 	//if(0u >= step_number) {
@@ -406,16 +495,15 @@ int simulation_step(simulation_t* restrict simulation) {
 	TIMING_START();
 
 	// run the solver
-	solver_run(acc, pot, mas, rad, pos, N, step_number);
+	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, N, step_number);
 
 	TIMING_STOP();
 	TIMING_PRINT("simulation_step()", "solver_run");
 	#ifdef LOG_TIMINGS_SIM_STEP
 	LOG_TIMING(log_timings_sim_step);
 	#endif
-	TIMING_START();
 
-	// recalculate kinetic energy
+	// update kinetic energy
 	for(unsigned int i = 0u; i < N; i++) {
 		real m_i = mas[i];
 
@@ -425,49 +513,32 @@ int simulation_step(simulation_t* restrict simulation) {
 			vel[3u*i+2u]
 		};
 
-		kin[i] = (real)0.5 * m_i * ((v_i[0]*v_i[0])+(v_i[1]*v_i[1])+(v_i[2]*v_i[2])); // K = (1/2) * m * v^2
+		real v2 = (v_i[0]*v_i[0])+(v_i[1]*v_i[1])+(v_i[2]*v_i[2]);
+
+		ken[i] = (real)0.5 * m_i * v2; // K = (1/2) * m * v^2
 	}
 
-	TIMING_STOP();
-	TIMING_PRINT("simulation_step()", "calc_kin");
-	#ifdef LOG_TIMINGS_SIM_STEP
-	LOG_TIMING(log_timings_sim_step);
-	#endif
+	// update potential energy
+	for(unsigned int i = 0u; i < N; i++) {
+		real pot_i = pot[i];
+
+		pen[i] = pot_i;
+	}
 
 	// compute total energy
 	{
-		double V_sum = 0.0, V_c = 0.0; // Potential Energy
 		double T_sum = 0.0, T_c = 0.0; // Kinetic Energy
+		double V_sum = 0.0, V_c = 0.0; // Potential Energy
 
 		TIMING_START();
 
 		for(unsigned int i = 0u; i < N; i++) {
 			// Naïve summation
-			//V_sum += (double)pot[i];
+			//V_sum += (double)ken[i];
 
 			// Kahan summation
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			double y = (double)pot[i] - V_c;
-			volatile double t = V_sum + y;
-			volatile double z = t - V_sum;
-			V_c = z - y;
-			V_sum = t;
-		}
-
-		TIMING_STOP();
-		TIMING_PRINT("simulation_step()", "pot_sum");
-		#ifdef LOG_TIMINGS_SIM_STEP
-		LOG_TIMING(log_timings_sim_step);
-		#endif
-		TIMING_START();
-
-		for(unsigned int i = 0u; i < N; i++) {
-			// Naïve summation
-			//T_sum += (double)kin[i];
-
-			// Kahan summation
-			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			double y = (double)kin[i] - T_c;
+			double y = (double)ken[i] - T_c;
 			volatile double t = T_sum + y;
 			volatile double z = t - T_sum;
 			T_c = z - y;
@@ -475,7 +546,27 @@ int simulation_step(simulation_t* restrict simulation) {
 		}
 
 		TIMING_STOP();
-		TIMING_PRINT("simulation_step()", "kin_sum");
+		TIMING_PRINT("simulation_step()", "ken_sum");
+		#ifdef LOG_TIMINGS_SIM_STEP
+		LOG_TIMING(log_timings_sim_step);
+		#endif
+		TIMING_START();
+
+		for(unsigned int i = 0u; i < N; i++) {
+			// Naïve summation
+			//V_sum += (double)pen[i];
+
+			// Kahan summation
+			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+			double y = (double)pen[i] - V_c;
+			volatile double t = V_sum + y;
+			volatile double z = t - V_sum;
+			V_c = z - y;
+			V_sum = t;
+		}
+
+		TIMING_STOP();
+		TIMING_PRINT("simulation_step()", "pen_sum");
 		#ifdef LOG_TIMINGS_SIM_STEP
 		LOG_TIMING(log_timings_sim_step);
 		#endif

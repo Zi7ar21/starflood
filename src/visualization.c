@@ -358,9 +358,18 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 
 	unsigned int N = sim.N;
 
-	real* pot = sim.pot; // for color
 	real* pos = sim.pos;
 	real* vel = sim.vel; // for motion blur
+
+	real* pot = sim.pot; // for color
+
+	double pot_min = (double)pot[0u];
+	double pot_max = (double)pot[0u];
+
+	for(unsigned int i = 1u; i < N; i++) {
+		pot_min = fmin(pot_min, (double)pot[i]);
+		pot_max = fmax(pot_max, (double)pot[i]);
+	}
 
 	#ifdef LOG_TIMINGS_VIS_DRAW
 	fprintf(log_timings_vis_draw.file, "%u", step_number);
@@ -516,7 +525,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOADING
-		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pot[:N], pos[:3u*N], vel[:3u*N])
+		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pos[:3u*N], vel[:3u*N], pot[:N])
 		#else
 		#pragma omp parallel for schedule(dynamic, 1024)
 		#endif
@@ -539,9 +548,9 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		};
 
 		double color[3] = {
-			0.5 * cos( TAU * ( (-5.0e5 * (double)pot[idx])-(0.0/3.0) ) ) + 0.5,
-			0.5 * cos( TAU * ( (-5.0e5 * (double)pot[idx])-(1.0/3.0) ) ) + 0.5,
-			0.5 * cos( TAU * ( (-5.0e5 * (double)pot[idx])-(2.0/3.0) ) ) + 0.5,
+			0.5 * cos( TAU * ( ( (double)pot[idx] / pot_max )-(0.0/3.0) ) ) + 0.5,
+			0.5 * cos( TAU * ( ( (double)pot[idx] / pot_max )-(1.0/3.0) ) ) + 0.5,
+			0.5 * cos( TAU * ( ( (double)pot[idx] / pot_max )-(2.0/3.0) ) ) + 0.5,
 		};
 
 		// y = A * x

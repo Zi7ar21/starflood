@@ -47,9 +47,8 @@ int main(int argc, char** argv) {
 
 	unsigned int visualization_dimensions[2] = {1920u, 1080u};
 
-	visualization_t vis;
-
 	simulation_t sim;
+	visualization_t vis;
 
 	const size_t filename_size = 256;
 
