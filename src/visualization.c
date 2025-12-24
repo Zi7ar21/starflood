@@ -262,7 +262,10 @@ int visualization_save(const visualization_t* restrict visualization, const char
 
 			// Clamp values to range [0, 1]
 			for(int i = 0; i < 3; i++) {
-				color[i] = (f32)fminf(fmaxf(color[i], (f32)0.0), (f32)1.0);
+				//color[i] = (f32)fminf(fmaxf(color[i], (f32)0.0), (f32)1.0);
+
+				color[i] = (f32)0.0 < color[i] ? color[i] : 0.0;
+				color[i] = (f32)1.0 > color[i] ? color[i] : 1.0;
 			}
 
 			/*

@@ -55,30 +55,39 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 
 	void* mem = NULL;
 
-	real* pot = (real*)NULL;
-	real* kin = (real*)NULL;
 	real* mas = (real*)NULL;
+	real* rad = (real*)NULL;
 	real* pos = (real*)NULL;
 	real* vel = (real*)NULL;
 	real* acc = (real*)NULL;
+	real* pot = (real*)NULL;
+	real* kin = (real*)NULL;
 
 	printf("Simulation Memory Addresses:\n");
 
-	size_t pot_length = (size_t)1u * (size_t)N;
-	size_t kin_length = (size_t)1u * (size_t)N;
 	size_t mas_length = (size_t)1u * (size_t)N;
+	#ifdef ENABLE_SPH
+	size_t rad_length = (size_t)1u * (size_t)N;
+	#endif
 	size_t pos_length = (size_t)3u * (size_t)N;
 	size_t vel_length = (size_t)3u * (size_t)N;
 	size_t acc_length = (size_t)3u * (size_t)N;
+	size_t pot_length = (size_t)1u * (size_t)N;
+	size_t kin_length = (size_t)1u * (size_t)N;
 
-	size_t pot_offset = (size_t)0u;
-	size_t kin_offset = pot_offset + pot_length;
-	size_t mas_offset = kin_offset + kin_length;
+	size_t mas_offset = (size_t)0u;
+	#ifdef ENABLE_SPH
+	size_t rad_offset = mas_offset + mas_length;
+	size_t pos_offset = rad_offset + rad_length;
+	#else
 	size_t pos_offset = mas_offset + mas_length;
+	#endif
 	size_t vel_offset = pos_offset + pos_length;
 	size_t acc_offset = vel_offset + vel_length;
+	size_t pot_offset = acc_offset + acc_length;
+	size_t kin_offset = pot_offset + pot_length;
 
-	size_t mem_size = sizeof(real) * (acc_offset + acc_length);
+	size_t mem_size = sizeof(real) * (kin_offset + kin_length);
 
 	TIMING_START();
 
@@ -117,25 +126,31 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	TIMING_STOP();
 	TIMING_PRINT("simulation_init()", "memset()");
 
-	pot = (real*)mem + (size_t)pot_offset;
-	kin = (real*)mem + (size_t)kin_offset;
 	mas = (real*)mem + (size_t)mas_offset;
+	#ifdef ENABLE_SPH
+	rad = (real*)mem + (size_t)rad_offset;
+	#endif
 	pos = (real*)mem + (size_t)pos_offset;
 	vel = (real*)mem + (size_t)vel_offset;
 	acc = (real*)mem + (size_t)acc_offset;
+	pot = (real*)mem + (size_t)pot_offset;
+	kin = (real*)mem + (size_t)kin_offset;
 
-	printf("  pot: %p (+%zu)\n", (void*)pot, pot_offset);
-	printf("  kin: %p (+%zu)\n", (void*)kin, kin_offset);
 	printf("  mas: %p (+%zu)\n", (void*)mas, mas_offset);
+	#ifdef ENABLE_SPH
+	printf("  rad: %p (+&zu)\n", (void*)rad, rad_offset);
+	#endif
 	printf("  pos: %p (+%zu)\n", (void*)pos, pos_offset);
 	printf("  vel: %p (+%zu)\n", (void*)vel, vel_offset);
 	printf("  acc: %p (+%zu)\n", (void*)acc, acc_offset);
+	printf("  pot: %p (+%zu)\n", (void*)pot, pot_offset);
+	printf("  kin: %p (+%zu)\n", (void*)kin, kin_offset);
 	printf("\n");
 
 	TIMING_START();
 
 	#ifdef ENABLE_SIMULATION
-	initcond_generate(mas, pos, vel, N);
+	initcond_generate(mas, rad, pos, vel, N);
 	#endif
 
 	TIMING_STOP();
@@ -143,22 +158,23 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	TIMING_START();
 
 	#ifdef ENABLE_SIMULATION
-	solver_run(pot, acc, mas, pos, N, 0u);
+	solver_run(acc, pot, mas, rad, pos, N, 0u);
 	#endif
 
 	TIMING_STOP();
 	TIMING_PRINT("simulation_init()", "solver_run");
 	TIMING_START();
 
-	sim.N   = N;
 	sim.step_number = 0u;
+	sim.N   = N;
 	sim.mem = mem;
-	sim.pot = pot;
-	sim.kin = kin;
 	sim.mas = mas;
+	sim.rad = rad;
 	sim.pos = pos;
 	sim.vel = vel;
 	sim.acc = acc;
+	sim.pot = pot;
+	sim.kin = kin;
 
 	*simulation = sim;
 
@@ -190,12 +206,13 @@ int simulation_free(simulation_t* restrict simulation) {
 	TIMING_PRINT("simulation_free()", "free()");
 
 	sim.mem = NULL;
-	sim.pot = (real*)NULL;
-	sim.kin = (real*)NULL;
 	sim.mas = (real*)NULL;
+	sim.rad = (real*)NULL;
 	sim.pos = (real*)NULL;
 	sim.vel = (real*)NULL;
 	sim.acc = (real*)NULL;
+	sim.pot = (real*)NULL;
+	sim.kin = (real*)NULL;
 
 	*simulation = sim;
 
@@ -242,13 +259,22 @@ int simulation_read(simulation_t* restrict simulation, const char* restrict file
 
 	TIMING_START();
 
-	fread(sim.mem, sizeof(real), (size_t)N * (size_t)(3u*1u+3u*3u), file);
+	#ifdef ENABLE_SPH
+	fread(sim.mem, sizeof(real), (size_t)N * (size_t)(2u*1u+3u*3u+2u*1u), file);
+	#else
+	fread(sim.mem, sizeof(real), (size_t)N * (size_t)(2u*1u+3u*3u+2u*1u), file);
+	#endif
 
 	/*
 	fread(sim.mas, sizeof(float), (size_t)N * (size_t)(1u), file);
+	#ifdef ENABLE_SPH
+	fread(sim.rad, sizeof(float), (size_t)N * (size_t)(1u), file);
+	#endif
 	fread(sim.pos, sizeof(float), (size_t)N * (size_t)(3u), file);
 	fread(sim.vel, sizeof(float), (size_t)N * (size_t)(3u), file);
 	fread(sim.acc, sizeof(float), (size_t)N * (size_t)(3u), file);
+	//fread(sim.pot, sizeof(float), (size_t)N * (size_t)(1u), file);
+	//fread(sim.kin, sizeof(float), (size_t)N * (size_t)(1u), file);
 	*/
 
 	TIMING_STOP();
@@ -302,7 +328,11 @@ int simulation_save(simulation_t* restrict simulation, const char* restrict file
 	fwrite(&N, sizeof(uint32_t), (size_t)1u, file);
 	*/
 
-	fwrite(sim.mem, sizeof(real), (size_t)N * (size_t)(3u*1u+3u*3u), file);
+	#ifdef ENABLE_SPH
+	fwrite(sim.mem, sizeof(real), (size_t)N * (size_t)(2u*1u+3u*3u+2u*1u), file);
+	#else
+	fwrite(sim.mem, sizeof(real), (size_t)N * (size_t)(1u*1u+3u*3u+2u*1u), file);
+	#endif
 
 	TIMING_STOP();
 	TIMING_PRINT("simulation_save()", "fwrite()");
@@ -326,18 +356,19 @@ int simulation_step(simulation_t* restrict simulation) {
 
 	const real dt = (real)TIMESTEP_SIZE;
 
-	unsigned int N = sim.N;
 	unsigned int step_number = sim.step_number;
-	real* pot = sim.pot;
-	real* kin = sim.kin;
+	unsigned int N = sim.N;
 	real* mas = sim.mas;
+	real* rad = sim.rad;
 	real* pos = sim.pos;
 	real* vel = sim.vel;
 	real* acc = sim.acc;
+	real* pot = sim.pot;
+	real* kin = sim.kin;
 
 	// for the very first leapfrog kick
 	//if(0u >= step_number) {
-	//	solver_run(pot, acc, mas, pos, N, step_number);
+	//	solver_run(acc, pot, mas, rad, pos, N, step_number);
 	//}
 
 	#ifdef LOG_STATISTICS
@@ -374,8 +405,8 @@ int simulation_step(simulation_t* restrict simulation) {
 	#endif
 	TIMING_START();
 
-	// run solver
-	solver_run(pot, acc, mas, pos, N, step_number);
+	// run the solver
+	solver_run(acc, pot, mas, rad, pos, N, step_number);
 
 	TIMING_STOP();
 	TIMING_PRINT("simulation_step()", "solver_run");

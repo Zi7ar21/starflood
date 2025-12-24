@@ -15,10 +15,10 @@ CC := nvc
 #CFLAGS := -flto=auto -march=native -O3
 
 # NVIDIA HPC Compilers tuned for performance on compiler host machine with device offloading
-#CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
+CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O3 --diag_suppress lossy_conversion
-CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
+#CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
 
 # === More Optimization Flags ===
 # Uncomment any of the following special flags

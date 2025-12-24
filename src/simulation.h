@@ -12,13 +12,15 @@ typedef struct {
 
 	void* mem; // Shared memory for the simulation
 
-	real* pot; //  Potential Energy (Scalar)
-	real* kin; //    Kinetic Energy (Scalar)
-	real* mas; //              Mass (Scalar)
-	real* rad; // SPH Kernel Radius (Scalar)
-	real* pos; //       Position (3-Vector)
-	real* vel; //       Velocity (3-Vector)
-	real* acc; //   Acceleration (3-Vector)
+	real* mas; //                 Mass (Scalar)
+	real* rad; // SPH Smoothing Radius (Scalar)
+
+	real* pos; //             Position (3-Vector)
+	real* vel; //             Velocity (3-Vector)
+	real* acc; //         Acceleration (3-Vector)
+
+	real* pot; // Potential Energy (Scalar)
+	real* kin; //   Kinetic Energy (Scalar)
 } simulation_t;
 
 // Initialize the simulation

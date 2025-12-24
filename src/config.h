@@ -18,24 +18,21 @@
 // Comment to load SIMULATION_FILENAME instead of running simulation by default
 #define ENABLE_SIMULATION
 
-// Uncomment to enable simulation file I/O
+// Uncomment to enable simulation file I/O by default
 // Simulation filename prefix
 #define SIMULATION_FILENAME "sim/step_"
 
 // Uncomment to enable visualization by default
 #define ENABLE_VISUALIZATION
 
-// Uncomment to enable visualization file I/O
+// Uncomment to enable visualization file I/O by default
 // Visualization filename prefix
 #define VISUALIZATION_FILENAME "vis/step_"
 
-// 0: PFM
-// 1: PPM
-// 2: PNG (requires stb_image_write.h)
+// 0: PFM (RGB, 32-bit floating-point,     linear       )
+// 1: PPM (RGB,  8-bit        integer, non-linear BT.709)
+// 2: PNG (RGB,  8-bit        integer, non-linear   sRGB) (requires stb_image_write.h)
 #define VISUALIZATION_IMAGE_FORMAT 2
-
-// Uncomment for PFM, 
-//#define VISUALIZATION_FILE_TYPE
 
 /* === Logging === */
 
@@ -81,7 +78,7 @@
 //#define N_DIV 4
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 6000
+#define NUM_TIMESTEPS 900
 
 // Simulation timestep size (dt)
 //#define TIMESTEP_SIZE 0.03333333333333333333333333333333
@@ -109,7 +106,7 @@
 /* === Solver === */
 
 // Uncomment to enable smoothed-particle hydrodynamics
-#define ENABLE_SPH
+//#define ENABLE_SPH
 
 // Uncomment to use Kahan Summation in the solver for higher simulation accuracy
 // Useful for single-precision floating-point calculations
@@ -124,7 +121,7 @@
 /* === Visualization === */
 
 // Number of samples for spatial anti-aliasing
-#define SPATIAL_SAMPLES 512
+#define SPATIAL_SAMPLES 128
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
 #define EXPOSURE -0.500
@@ -133,7 +130,7 @@
 #define ORTHO_SCALE -3.000
 
 // Uncomment to enable motion blur
-#define SHUTTER_SPEED 0.500
+//#define SHUTTER_SPEED 0.500
 
 /* === Miscellaneous === */
 
