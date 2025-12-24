@@ -6,7 +6,7 @@
 #include "config.h"
 #include "types.h"
 
-int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real* restrict prs, const real* restrict mas, const real* restrict rad, const real* restrict pos, const real* restrict vel, unsigned int N, unsigned int step_number) {
+int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real* restrict prs, const real* restrict mas, const real* restrict rad, const real* restrict pos, const real* restrict vel, real scale_factor, unsigned int N, unsigned int step_number) {
 	#ifdef N_DIV
 	unsigned int j_length = N / (unsigned int)N_DIV;
 	unsigned int j_offset = (step_number % (unsigned int)N_DIV) * j_length;
@@ -75,6 +75,10 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 				r_i[1u] - r_j[1u],
 				r_i[2u] - r_j[2u]
 			};
+
+			for(unsigned int k = 0u; k < 3u; k++) {
+				r_ij[k] *= scale_factor;
+			}
 
 			// squared distance to body j
 			real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);

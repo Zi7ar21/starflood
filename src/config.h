@@ -13,14 +13,14 @@
 #define OUTPUT_DIR "./out"
 
 // Uncomment to only output files every N steps
-#define OUTPUT_INTERVAL 100
+#define OUTPUT_INTERVAL 10
 
 // Comment to load SIMULATION_FILENAME instead of running simulation by default
-//#define ENABLE_SIMULATION
+#define ENABLE_SIMULATION
 
 // Uncomment to enable simulation file I/O by default
 // Simulation filename prefix
-#define SIMULATION_FILENAME "sim/step_"
+//#define SIMULATION_FILENAME "sim/step_"
 
 // Uncomment to enable visualization by default
 #define ENABLE_VISUALIZATION
@@ -83,10 +83,10 @@
 // Simulation timestep size (dt)
 //#define TIMESTEP_SIZE 0.03333333333333333333333333333333
 //#define TIMESTEP_SIZE 0.06666666666666666666666666666667
-//#define TIMESTEP_SIZE 0.1
+#define TIMESTEP_SIZE 0.1
 //#define TIMESTEP_SIZE 0.33333333333333333333333333333333
 //#define TIMESTEP_SIZE 0.66666666666666666666666666666667
-#define TIMESTEP_SIZE 0.01
+//#define TIMESTEP_SIZE 1.0
 
 // Gravitational potential softening parameter
 #define EPSILON 0.001
@@ -107,7 +107,7 @@
 
 // TODO: Finish implementing SPH
 // Uncomment to enable smoothed-particle hydrodynamics
-#define ENABLE_SPH
+//#define ENABLE_SPH
 
 // Uncomment to use Kahan Summation in the solver for higher simulation accuracy
 // Useful for single-precision floating-point calculations
@@ -119,15 +119,18 @@
 #define SPATIAL_SAMPLES 128
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
-#define EXPOSURE -0.500
+#define EXPOSURE 0.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE -3.000
+#define ORTHO_SCALE 0.000
 
 // Uncomment to enable motion blur
 //#define SHUTTER_SPEED 0.500
 
 /* === Miscellaneous === */
+
+// Requires pthreads
+#define VISUALIZATION_THREADED_IO
 
 // Uncomment to use floating-point double-precision
 // On most platforms, single is IEEE-754 binary32 and double is IEEE-754 binary64

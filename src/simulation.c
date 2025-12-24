@@ -47,7 +47,7 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 		return STARFLOOD_FAILURE;
 	}
 
-	fprintf(log_timings_sim_step.file, "%s,%s,%s,%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "solver_run", "calc_kin", "pot_sum", "kin_sum", "kick_1");
+	fprintf(log_timings_sim_step.file, "%s,%s,%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "solver_run", "ken_sum", "pen_sum", "kick_1");
 	fflush(log_timings_sim_step.file);
 	#endif
 
@@ -212,7 +212,7 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	TIMING_START();
 
 	#ifdef ENABLE_SIMULATION
-	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, N, 0u);
+	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, (real)1.0, N, 0u);
 	#endif
 
 	TIMING_STOP();
@@ -221,6 +221,8 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 
 	{
 		sim.step_number = 0u;
+
+		sim.scale_factor = (real)1.0;
 
 		sim.N   = N;
 
@@ -273,6 +275,8 @@ int simulation_free(simulation_t* restrict simulation) {
 
 	{
 		sim.step_number = 0u;
+
+		sim.scale_factor = (real)0.0;
 
 		sim.N = 0u;
 
@@ -438,6 +442,9 @@ int simulation_step(simulation_t* restrict simulation) {
 
 	unsigned int step_number = sim.step_number;
 
+	real scale_factor = (real)sim.scale_factor;
+	real inv_scale_factor = (real)(1.0 / scale_factor);
+
 	unsigned int N = sim.N;
 
 	real* mas = sim.mas;
@@ -484,7 +491,7 @@ int simulation_step(simulation_t* restrict simulation) {
 
 	// drift
 	for(unsigned int i = 0u; i < 3u * N; i++) {
-		pos[i] += dt * vel[i];
+		pos[i] += dt * inv_scale_factor * vel[i];
 	}
 
 	TIMING_STOP();
@@ -495,7 +502,7 @@ int simulation_step(simulation_t* restrict simulation) {
 	TIMING_START();
 
 	// run the solver
-	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, N, step_number);
+	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, scale_factor, N, step_number);
 
 	TIMING_STOP();
 	TIMING_PRINT("simulation_step()", "solver_run");
@@ -520,9 +527,7 @@ int simulation_step(simulation_t* restrict simulation) {
 
 	// update potential energy
 	for(unsigned int i = 0u; i < N; i++) {
-		real pot_i = pot[i];
-
-		pen[i] = pot_i;
+		pen[i] = mas[i] * pot[i];
 	}
 
 	// compute total energy

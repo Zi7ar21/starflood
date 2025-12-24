@@ -24,7 +24,7 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 
 	// Initialize Position
 	for(unsigned int i = 0u; i < N; i++) {
-		real p[3] = {
+		double p[3] = {
 			pos[3u*i+0u],
 			pos[3u*i+1u],
 			pos[3u*i+2u]
@@ -61,28 +61,28 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		p[2u] = 1.000 * n[2u];
 		*/
 
-		p[0u] = cos(TAU * r[0u]) * sin(acos(2.0*r[1u]-1.0));
-		p[1u] = sin(TAU * r[0u]) * sin(acos(2.0*r[1u]-1.0));
-		p[2u] = cos(acos(2.0*r[1u]-1.0));
+		p[0u] = cos(TAU * r[0u]) * sin(acos(2.0 * r[1u] - 1.0));
+		p[1u] = sin(TAU * r[0u]) * sin(acos(2.0 * r[1u] - 1.0));
+		p[2u] = cos(acos(2.0 * r[1u] - 1.0));
 
-		p[0u] *= pow(r[2u],1.0/3.0);
-		p[1u] *= pow(r[2u],1.0/3.0);
-		p[2u] *= pow(r[2u],1.0/3.0);
+		p[0u] *= pow(r[2u], 1.0 / 3.0);
+		p[1u] *= pow(r[2u], 1.0 / 3.0);
+		p[2u] *= pow(r[2u], 1.0 / 3.0);
 
-		pos[3u*i+0u] = p[0u];
-		pos[3u*i+1u] = p[1u];
-		pos[3u*i+2u] = p[2u];
+		pos[3u*i+0u] = (real)(1.000 * p[0u]);
+		pos[3u*i+1u] = (real)(1.000 * p[1u]);
+		pos[3u*i+2u] = (real)(1.000 * p[2u]);
 	}
 
 	// Initialize Velocity
 	for(unsigned int i = 0u; i < N; i++) {
-		real p[3] = {
+		double p[3] = {
 			pos[3u*i+0u],
 			pos[3u*i+1u],
 			pos[3u*i+2u]
 		};
 
-		real v[3] = {
+		double v[3] = {
 			vel[3u*i+0u],
 			vel[3u*i+1u],
 			vel[3u*i+2u]
@@ -113,12 +113,13 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 			sqrt( -2.0 * log(r[1u]) ) * cos(TAU * r[3u])
 		};
 
+		/*
 		double r2 = (p[0u]*p[0u])+(p[2u]*p[2u]);
 
 		double inv_r2 = 1.0 / (      r2+0.001  );
 		double inv_r1 = 1.0 / ( sqrt(r2+0.001) );
 
-		/*
+		
 		v[0u] = 0.250 * sqrt(G * body_mass) *  p[2u] + 0.000001 * n[0u];
 		v[1u] = 0.000 * sqrt(G * body_mass) *  p[1u] + 0.000001 * n[1u];
 		v[2u] = 0.250 * sqrt(G * body_mass) * -p[0u] + 0.000001 * n[2u];
@@ -130,24 +131,30 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		v[2u] = 0.250 * sqrt(G * 1.0) * -p[0u] + 0.000001 * n[2u];
 		*/
 
-		v[0u] = 1.000 * 0.005 * p[0u] + 0.000001 * n[0u];
-		v[1u] = 1.000 * 0.005 * p[1u] + 0.000001 * n[1u];
-		v[2u] = 1.000 * 0.005 * p[2u] + 0.000001 * n[2u];
+		v[0u] = 1.000e-2 * p[0u] + 1.000e-6 * n[0u];
+		v[1u] = 1.000e-2 * p[1u] + 1.000e-6 * n[1u];
+		v[2u] = 1.000e-2 * p[2u] + 1.000e-6 * n[2u];
 
-		vel[3u*i+0u] = v[0u];
-		vel[3u*i+1u] = v[1u];
-		vel[3u*i+2u] = v[2u];
+		/*
+		v[0u] = 1.0e-6 * n[0u];
+		v[1u] = 1.0e-6 * n[1u];
+		v[2u] = 1.0e-6 * n[2u];
+		*/
+
+		vel[3u*i+0u] = (real)v[0u];
+		vel[3u*i+1u] = (real)v[1u];
+		vel[3u*i+2u] = (real)v[2u];
 	}
 
 	// Transform Position/Velocity
 	for(unsigned int i = 0u; i < N; i++) {
-		real p[3] = {
+		double p[3] = {
 			pos[3u*i+0u],
 			pos[3u*i+1u],
 			pos[3u*i+2u]
 		};
 
-		real v[3] = {
+		double v[3] = {
 			vel[3u*i+0u],
 			vel[3u*i+1u],
 			vel[3u*i+2u]
@@ -175,22 +182,22 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		//	p[1u] *= 0.025;
 		//}
 
+		//p[0u] += r[1u] < 0.500 ?  4.000 : -4.000;
 		/*
-		p[0u] += r[1u] < 0.500 ?  4.000 : -4.000;
 		p[1u] += r[1u] < 0.500 ?  1.000 : -1.000;
 		v[0u] *= r[1u] < 0.500 ?  1.000 : -1.000;
 		v[2u] *= r[1u] < 0.500 ?  1.000 : -1.000;
 		v[0u] += r[1u] < 0.500 ? -0.005 :  0.005;
-		v[1u] += r[1u] < 0.500 ? -0.005 :  0.005;
 		*/
+		//v[1u] += r[1u] < 0.500 ? -0.005 :  0.005;
 
-		pos[3u*i+0u] = p[0u];
-		pos[3u*i+1u] = p[1u];
-		pos[3u*i+2u] = p[2u];
+		pos[3u*i+0u] = (real)p[0u];
+		pos[3u*i+1u] = (real)p[1u];
+		pos[3u*i+2u] = (real)p[2u];
 
-		vel[3u*i+0u] = v[0u];
-		vel[3u*i+1u] = v[1u];
-		vel[3u*i+2u] = v[2u];
+		vel[3u*i+0u] = (real)v[0u];
+		vel[3u*i+1u] = (real)v[1u];
+		vel[3u*i+2u] = (real)v[2u];
 	}
 
 	return STARFLOOD_SUCCESS;

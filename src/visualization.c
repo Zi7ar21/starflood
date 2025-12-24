@@ -20,6 +20,11 @@
 #include "types.h"
 #include "timing.h"
 
+#ifdef VISUALIZATION_THREADED_IO
+#include <pthread.h>
+pthread_t vis_io_thread;
+#endif
+
 #if (2 == VISUALIZATION_IMAGE_FORMAT)
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../stb/stb_image_write.h"
@@ -29,7 +34,15 @@
 log_t log_timings_vis_draw;
 #endif
 
+void* dummy_function(void* args) {
+	return NULL;
+}
+
 int visualization_init(visualization_t* restrict visualization, unsigned int w, unsigned int h) {
+	#ifdef VISUALIZATION_THREADED_IO
+	pthread_create(&vis_io_thread, NULL, dummy_function, NULL);
+	#endif
+
 	TIMING_INIT();
 
 	#ifdef LOG_TIMINGS_VIS_DRAW
@@ -175,6 +188,10 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 }
 
 int visualization_free(visualization_t* restrict visualization) {
+	#ifdef VISUALIZATION_THREADED_IO
+	pthread_join(vis_io_thread, NULL);
+	#endif
+
 	TIMING_INIT();
 
 	#ifdef LOG_TIMINGS_VIS_DRAW
@@ -208,7 +225,80 @@ int visualization_free(visualization_t* restrict visualization) {
 	return STARFLOOD_SUCCESS;
 }
 
+struct write_image_arg {
+	unsigned int image_w;
+	unsigned int image_h;
+
+	void* binary_buffer;
+
+	char filename[256];
+};
+
+void* write_image(void* arg) {
+	struct write_image_arg* args = (struct write_image_arg*)arg;
+
+	unsigned int image_w = args->image_w;
+	unsigned int image_h = args->image_h;
+
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	f32* binary_buffer = (f32*)args->binary_buffer;
+	#else
+	unsigned char* binary_buffer = (unsigned char*)args->binary_buffer;
+	#endif
+
+	char* filename = args->filename;
+
+	#if (1 >= VISUALIZATION_IMAGE_FORMAT)
+	FILE* file = fopen(filename, "wb");
+
+	if(NULL == (void*)file) {
+		fprintf(stderr, "%s error: fopen(%s, \"%s\") ", "visualization_save()", filename, "wb");
+
+		perror("failed");
+
+		return NULL;
+		//return STARFLOOD_FAILURE;
+	}
+
+	#endif
+
+	#if (0 == VISUALIZATION_IMAGE_FORMAT)
+	// PFM graphic image file format
+	// https://netpbm.sourceforge.net/doc/pfm.html
+	fprintf(file, "PF\n%zu %zu\n-1.0\n", (size_t)image_w, (size_t)image_h);
+
+	fwrite(binary_buffer, sizeof(f32), (size_t)3u*(size_t)image_w*(size_t)image_h, file);
+	#endif
+
+	#if (1 == VISUALIZATION_IMAGE_FORMAT)
+	// PPM Netpbm color image format
+	// https://netpbm.sourceforge.net/doc/ppm.html
+	fprintf(file, "P6\n%zu %zu %u\n", (size_t)image_w, (size_t)image_h, 255u);
+
+	fwrite(binary_buffer, sizeof(unsigned char), (size_t)3u*(size_t)image_w*(size_t)image_h, file);
+	#endif
+
+	#if (2 == VISUALIZATION_IMAGE_FORMAT)
+	stbi_write_png( filename, (int)image_w, (int)image_h, 3, binary_buffer, (int)(sizeof(unsigned char)*(size_t)3u*(size_t)image_w) );
+	#endif
+
+	#if (1 >= VISUALIZATION_IMAGE_FORMAT)
+	if( 0 != fclose(file) ) {
+		return NULL;
+		//return STARFLOOD_FAILURE;
+	}
+	#endif
+
+	free(args);
+
+	return NULL;
+}
+
 int visualization_save(const visualization_t* restrict visualization, const char* restrict filename) {
+	#ifdef VISUALIZATION_THREADED_IO
+	pthread_join(vis_io_thread, NULL);
+	#endif
+
 	TIMING_INIT();
 
 	visualization_t vis = *visualization;
@@ -225,23 +315,6 @@ int visualization_save(const visualization_t* restrict visualization, const char
 	#endif
 
 	TIMING_START();
-
-	#if (1 >= VISUALIZATION_IMAGE_FORMAT)
-	FILE* file = fopen(filename, "wb");
-
-	TIMING_STOP();
-	TIMING_PRINT("visualization_save()", "fopen()");
-
-	if(NULL == (void*)file) {
-		fprintf(stderr, "%s error: fopen(%s, \"%s\") ", "visualization_save()", filename, "wb");
-
-		perror("failed");
-
-		return STARFLOOD_FAILURE;
-	}
-
-	TIMING_START();
-	#endif
 
 	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
 	for(unsigned int y = 0u; y < image_h; y++) {
@@ -264,8 +337,8 @@ int visualization_save(const visualization_t* restrict visualization, const char
 			for(int i = 0; i < 3; i++) {
 				//color[i] = (f32)fminf(fmaxf(color[i], (f32)0.0), (f32)1.0);
 
-				color[i] = (f32)0.0 < color[i] ? color[i] : 0.0;
-				color[i] = (f32)1.0 > color[i] ? color[i] : 1.0;
+				color[i] = (f32)0.0 < color[i] ? color[i] : (f32)0.0;
+				color[i] = (f32)1.0 > color[i] ? color[i] : (f32)1.0;
 			}
 
 			/*
@@ -307,36 +380,27 @@ int visualization_save(const visualization_t* restrict visualization, const char
 	TIMING_PRINT("visualization_save()", "binary_buffer");
 	TIMING_START();
 
-	#if (0 == VISUALIZATION_IMAGE_FORMAT)
-	// PFM graphic image file format
-	// https://netpbm.sourceforge.net/doc/pfm.html
-	fprintf(file, "PF\n%zu %zu\n-1.0\n", (size_t)image_w, (size_t)image_h);
+	struct write_image_arg* arg = (struct write_image_arg*)malloc( sizeof(struct write_image_arg) );
 
-	fwrite(binary_buffer, sizeof(f32), (size_t)3u*(size_t)image_w*(size_t)image_h, file);
-	#endif
-	#if (1 == VISUALIZATION_IMAGE_FORMAT)
-	// PPM Netpbm color image format
-	// https://netpbm.sourceforge.net/doc/ppm.html
-	fprintf(file, "P6\n%zu %zu %u\n", (size_t)image_w, (size_t)image_h, 255u);
-
-	fwrite(binary_buffer, sizeof(unsigned char), (size_t)3u*(size_t)image_w*(size_t)image_h, file);
-	#endif
-	#if (2 == VISUALIZATION_IMAGE_FORMAT)
-	stbi_write_png( filename, (int)image_w, (int)image_h, 3, binary_buffer, (int)(sizeof(unsigned char)*(size_t)3u*(size_t)image_w) );
-	#endif
-
-	TIMING_STOP();
-	TIMING_PRINT("visualization_save()", "file_write");
-	#if (1 >= VISUALIZATION_IMAGE_FORMAT)
-	TIMING_START();
-
-	if( 0 != fclose(file) ) {
+	if(NULL == (void*)arg) {
 		return STARFLOOD_FAILURE;
 	}
 
-	TIMING_STOP();
-	TIMING_PRINT("visualization_save()", "fclose()");
+	arg->image_w = image_w;
+	arg->image_h = image_h;
+
+	arg->binary_buffer = (void*)binary_buffer;
+
+	strcpy(arg->filename, filename);
+
+	#ifdef VISUALIZATION_THREADED_IO
+	pthread_create(&vis_io_thread, NULL, write_image, (void*)arg);
+	#else
+	write_image((void*)arg);
 	#endif
+
+	TIMING_STOP();
+	TIMING_PRINT("visualization_save()", "write_image()");
 
 	return STARFLOOD_SUCCESS;
 }
@@ -547,10 +611,17 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 			(double)(vel[3u*idx+2u])
 		};
 
+		/*
 		double color[3] = {
 			0.5 * cos( TAU * ( ( (double)pot[idx] / pot_max )-(0.0/3.0) ) ) + 0.5,
 			0.5 * cos( TAU * ( ( (double)pot[idx] / pot_max )-(1.0/3.0) ) ) + 0.5,
 			0.5 * cos( TAU * ( ( (double)pot[idx] / pot_max )-(2.0/3.0) ) ) + 0.5,
+		};
+		*/
+		double color[3] = {
+			0.5 * cos( TAU * ( (1.000 * (double)pot[idx])-(0.0/3.0) ) ) + 0.5,
+			0.5 * cos( TAU * ( (1.000 * (double)pot[idx])-(1.0/3.0) ) ) + 0.5,
+			0.5 * cos( TAU * ( (1.000 * (double)pot[idx])-(2.0/3.0) ) ) + 0.5,
 		};
 
 		// y = A * x

@@ -14,7 +14,7 @@
 */
 
 // https://www.jcgt.org/published/0009/03/02/
-inline void pcg4d(uint32_t* restrict s) {
+static inline void pcg4d(uint32_t* restrict s) {
 	uint32_t v[4] = {s[0], s[1], s[2], s[3]};
 
 	v[0] = v[0] * (uint32_t)0x0019660Du + (uint32_t)0x3C6EF35Fu;
@@ -44,7 +44,7 @@ inline void pcg4d(uint32_t* restrict s) {
 }
 
 // https://nullprogram.com/blog/2018/07/31/
-inline void triple32(uint32_t* restrict s) {
+static inline void triple32(uint32_t* restrict s) {
 	uint32_t x = *s;
 
 	x ^= x >> (uint32_t)17u;

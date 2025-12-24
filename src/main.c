@@ -255,7 +255,28 @@ int main(int argc, char** argv) {
 		printf("Step #%3u\n", step_num);
 		fflush(stdout);
 
+		FILE* stopfile = fopen(OUTPUT_DIR "/stop", "r");
+
+		if(NULL != (void*)stopfile) {
+			fprintf(stderr, "Stopfile found! Stopping run...\n");
+
+			if( 0 != fclose(stopfile) ) {
+				fprintf(stderr, "Error: %s failed!\n", "fclose(stopfile)");
+			}
+			
+
+			if( 0 != remove(OUTPUT_DIR "/stop") ) {
+				fprintf(stderr, "Error: failed to remove stopfile!\n");
+			}
+
+			break;
+		}
+
 		sim.step_number = step_num;
+
+		sim.scale_factor = exp(3.000e-3 * (double)TIMESTEP_SIZE * (double)step_num);
+
+		printf("scale_factor: %.09f\n", sim.scale_factor);
 
 		#ifdef SIMULATION_FILENAME
 			#ifdef OUTPUT_INTERVAL

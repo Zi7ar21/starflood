@@ -8,6 +8,8 @@
 typedef struct {
 	unsigned int step_number; // Number of steps elapsed
 
+	double scale_factor; // cosmic scale factor
+
 	unsigned int N; // Number of bodies in the simulation
 
 	void* mem; // Shared memory for the simulation
