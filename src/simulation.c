@@ -28,7 +28,7 @@ log_t log_statistics;
 log_t log_timings_sim_step;
 #endif
 
-int simulation_init(simulation_t* restrict simulation, unsigned int N) {
+int simulation_init(sim_t* restrict simulation, unsigned int N) {
 	TIMING_INIT();
 
 	#ifdef LOG_STATISTICS
@@ -51,7 +51,7 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	fflush(log_timings_sim_step.file);
 	#endif
 
-	simulation_t sim = *simulation;
+	sim_t sim = *simulation;
 
 	void* mem = NULL;
 
@@ -203,7 +203,7 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 
 	TIMING_START();
 
-	#ifdef ENABLE_SIMULATION
+	#ifdef ENABLE_SIM
 	initcond_generate(mas, rad, pos, vel, N);
 	#endif
 
@@ -211,8 +211,8 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	TIMING_PRINT("simulation_init()", "initcond_generate");
 	TIMING_START();
 
-	#ifdef ENABLE_SIMULATION
-	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, (real)1.0, N, 0u);
+	#ifdef ENABLE_SIM
+	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, N, 0u);
 	#endif
 
 	TIMING_STOP();
@@ -221,8 +221,6 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 
 	{
 		sim.step_number = 0u;
-
-		sim.scale_factor = (real)1.0;
 
 		sim.N   = N;
 
@@ -249,7 +247,7 @@ int simulation_init(simulation_t* restrict simulation, unsigned int N) {
 	return STARFLOOD_SUCCESS;
 }
 
-int simulation_free(simulation_t* restrict simulation) {
+int simulation_free(sim_t* restrict simulation) {
 	TIMING_INIT();
 
 	#ifdef LOG_STATISTICS
@@ -264,7 +262,7 @@ int simulation_free(simulation_t* restrict simulation) {
 	}
 	#endif
 
-	simulation_t sim = *simulation;
+	sim_t sim = *simulation;
 
 	TIMING_START();
 
@@ -275,8 +273,6 @@ int simulation_free(simulation_t* restrict simulation) {
 
 	{
 		sim.step_number = 0u;
-
-		sim.scale_factor = (real)0.0;
 
 		sim.N = 0u;
 
@@ -303,10 +299,10 @@ int simulation_free(simulation_t* restrict simulation) {
 	return STARFLOOD_SUCCESS;
 }
 
-int simulation_read(simulation_t* restrict simulation, const char* restrict filename) {
+int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
 	TIMING_INIT();
 
-	simulation_t sim = *simulation;
+	sim_t sim = *simulation;
 
 	if( sizeof(real) != sizeof(float) ) {
 		return STARFLOOD_FAILURE;
@@ -375,10 +371,10 @@ int simulation_read(simulation_t* restrict simulation, const char* restrict file
 	return STARFLOOD_SUCCESS;
 }
 
-int simulation_save(simulation_t* restrict simulation, const char* restrict filename) {
+int simulation_save(const sim_t* restrict simulation, const char* restrict filename) {
 	TIMING_INIT();
 
-	simulation_t sim = *simulation;
+	sim_t sim = *simulation;
 
 	uint32_t N = (uint32_t)sim.N;
 
@@ -433,17 +429,14 @@ int simulation_save(simulation_t* restrict simulation, const char* restrict file
 	return STARFLOOD_SUCCESS;
 }
 
-int simulation_step(simulation_t* restrict simulation) {
+int simulation_step(sim_t* restrict simulation) {
 	TIMING_INIT();
 
-	simulation_t sim = *simulation;
+	sim_t sim = *simulation;
 
 	const real dt = (real)TIMESTEP_SIZE;
 
 	unsigned int step_number = sim.step_number;
-
-	real scale_factor = (real)sim.scale_factor;
-	real inv_scale_factor = (real)(1.0 / scale_factor);
 
 	unsigned int N = sim.N;
 
@@ -491,7 +484,7 @@ int simulation_step(simulation_t* restrict simulation) {
 
 	// drift
 	for(unsigned int i = 0u; i < 3u * N; i++) {
-		pos[i] += dt * inv_scale_factor * vel[i];
+		pos[i] += dt * vel[i];
 	}
 
 	TIMING_STOP();
@@ -502,7 +495,7 @@ int simulation_step(simulation_t* restrict simulation) {
 	TIMING_START();
 
 	// run the solver
-	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, scale_factor, N, step_number);
+	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, N, step_number);
 
 	TIMING_STOP();
 	TIMING_PRINT("simulation_step()", "solver_run");

@@ -12,22 +12,21 @@
 // Output directory prefix
 #define OUTPUT_DIR "./out"
 
-// Uncomment to only output files every N steps
-#define OUTPUT_INTERVAL 10
+// Uncomment to only output files every OUTPUT_INTERVAL steps
+#define OUTPUT_INTERVAL 100
 
-// Comment to load SIMULATION_FILENAME instead of running simulation by default
-#define ENABLE_SIMULATION
+// Uncomment to run a simulation (will otherwise load snapshots from SIM_FILENAME)
+#define ENABLE_SIM
 
 // Uncomment to enable simulation file I/O by default
-// Simulation filename prefix
-//#define SIMULATION_FILENAME "sim/step_"
+#define SIM_FILENAME "sim/step_%04u"
+//#define SIM_FILENAME "sim/step_0100"
 
 // Uncomment to enable visualization by default
-#define ENABLE_VISUALIZATION
+#define ENABLE_VIS
 
 // Uncomment to enable visualization file I/O by default
-// Visualization filename prefix
-#define VISUALIZATION_FILENAME "vis/step_"
+#define VIS_FILENAME "vis/step_%04u"
 
 // 0: PFM (RGB, 32-bit floating-point,     linear       )
 // 1: PPM (RGB,  8-bit        integer, non-linear BT.709)
@@ -45,8 +44,8 @@
 // Uncomment to override the POSIX clockid (used by clock_getres(), clock_gettime(), etc.)
 // When commented, it defaults to CLOCK_REALTIME
 // Note: This has no effect when using #define TIMING_USE_OMP_GET_WTIME
-#define STARFLOOD_POSIX_CLOCKID CLOCK_REALTIME
-//#define STARFLOOD_POSIX_CLOCKID CLOCK_PROCESS_CPUTIME_ID
+//#define STARFLOOD_POSIX_CLOCKID CLOCK_REALTIME
+#define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC
 //#define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC_RAW
 
 // Uncomment to use omp_get_wtime() instead of POSIX functions, requires OpenMP to be enabled
@@ -65,28 +64,23 @@
 //#define NUM_BODIES 2048
 //#define NUM_BODIES 4096
 //#define NUM_BODIES 8192
-#define NUM_BODIES 16384
+//#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
 //#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
-//#define NUM_BODIES 262144
+#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
 //#define NUM_BODIES 1048576
 
-// Uncomment to divide the force calculations across
+// Uncomment to divide the solver calculations across
 // multiple timesteps (faster, but less accurate)
-//#define GRAVITY_SOLVER_DECIMATION 4
+#define PAIRWISE_SOLVER_DECIMATION 16
 
 // Default number of timesteps to run simulation for
 #define NUM_TIMESTEPS 10000
 
 // Simulation timestep size (dt)
-//#define TIMESTEP_SIZE 0.03333333333333333333333333333333
-//#define TIMESTEP_SIZE 0.06666666666666666666666666666667
-#define TIMESTEP_SIZE 0.1
-//#define TIMESTEP_SIZE 0.33333333333333333333333333333333
-//#define TIMESTEP_SIZE 0.66666666666666666666666666666667
-//#define TIMESTEP_SIZE 1.0
+#define TIMESTEP_SIZE 0.5
 
 // Gravitational potential softening parameter
 #define EPSILON 0.001
@@ -122,7 +116,7 @@
 #define EXPOSURE 0.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE 0.000
+#define ORTHO_SCALE -3.000
 
 // Uncomment to enable motion blur
 //#define SHUTTER_SPEED 0.500
@@ -130,7 +124,7 @@
 /* === Miscellaneous === */
 
 // Requires pthreads
-#define VISUALIZATION_THREADED_IO
+//#define VISUALIZATION_THREADED_IO
 
 // Uncomment to use floating-point double-precision
 // On most platforms, single is IEEE-754 binary32 and double is IEEE-754 binary64
@@ -144,3 +138,7 @@
 // There is really no point increasing this
 // much before you are just wasting memory
 #define STARFLOOD_ALIGNMENT 4194304
+
+// Maximum length for filename arrays
+// (FILENAME_MAX is usually 4096 which is a bit absurd)
+#define STARFLOOD_FILENAME_MAX 256

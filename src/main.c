@@ -24,47 +24,128 @@
 #include "timing.h"
 #include "visualization.h"
 
+
+#define SIM_FILE_EXTENSION ".raw"
+
+#if (0 == VISUALIZATION_IMAGE_FORMAT)
+#define VIS_FILE_EXTENSION ".pfm"
+#endif
+
+#if (1 == VISUALIZATION_IMAGE_FORMAT)
+#define VIS_FILE_EXTENSION ".ppm"
+#endif
+
+#if (2 == VISUALIZATION_IMAGE_FORMAT)
+#define VIS_FILE_EXTENSION ".png"
+#endif
+
 int main(int argc, char** argv) {
-	int enable_simulation = 1, enable_simulation_io = 0, enable_visualization = 0, enable_visualization_io = 0;
+	int enable_sim = 1, enable_sim_io = 0, enable_vis = 0, enable_vis_io = 0;
 
-	#ifndef ENABLE_SIMULATION
-	enable_simulation = 0;
+	#ifndef ENABLE_SIM
+	enable_sim = 0;
 	#endif
 
-	#ifdef SIMULATION_FILENAME
-	enable_simulation_io = 1;
+	#ifdef SIM_FILENAME
+	enable_sim_io = 1;
 	#endif
 
-	#ifdef ENABLE_VISUALIZATION
-	enable_visualization= 1;
+	#ifdef ENABLE_VIS
+	enable_vis= 1;
 	#endif
 
-	#ifdef VISUALIZATION_FILENAME
-	enable_visualization_io = 1;
+	#ifdef VIS_FILENAME
+	enable_vis_io = 1;
 	#endif
 
 	unsigned int num_bodies = (unsigned int)NUM_BODIES, num_timesteps = (unsigned int)NUM_TIMESTEPS;
 
-	unsigned int visualization_dimensions[2] = {1920u, 1080u};
+	unsigned int visualization_dimensions[2] = {1080u, 1080u};
 
-	simulation_t sim;
-	visualization_t vis;
+	sim_t sim;
+	vis_t vis;
 
-	const size_t filename_size = 256;
+	const size_t filename_max = (size_t)STARFLOOD_FILENAME_MAX;
 
-	char sim_filename[256] = "", vis_filename[256] = "";
+	/*
+	char* output_dir = (char*)malloc(sizeof(char) * filename_max);
 
-	#ifdef SIMULATION_FILENAME
-	if( (filename_size - 1) > strlen(SIMULATION_FILENAME) ) {
-		strcpy(sim_filename, SIMULATION_FILENAME);
+	if(NULL == (void*)output_dir) {
+		fprintf(stderr, "fatal error: output_dir is (char*)NULL after malloc(%zu", sizeof(char) * filename_max);
+		perror(")");
+		return EXIT_FAILURE;
 	}
+	*/
+
+	char* sim_filename_pattern = (char*)malloc(sizeof(char) * filename_max);
+
+	if(NULL == (void*)sim_filename_pattern) {
+		fprintf(stderr, "fatal error: sim_filename_pattern is (char*)NULL after malloc(%zu", sizeof(char) * filename_max);
+		perror(")");
+		return EXIT_FAILURE;
+	}
+
+	char* vis_filename_pattern = (char*)malloc(sizeof(char) * filename_max);
+
+	if(NULL == (void*)vis_filename_pattern) {
+		fprintf(stderr, "fatal error: vis_filename_pattern is (char*)NULL after malloc(%zu", sizeof(char) * filename_max);
+		perror(")");
+		free(sim_filename_pattern);
+		return EXIT_FAILURE;
+	}
+
+	char* sim_filename = (char*)malloc(sizeof(char) * filename_max);
+
+	if(NULL == (void*)sim_filename) {
+		fprintf(stderr, "fatal error: sim_filename is (char*)NULL after malloc(%zu", sizeof(char) * filename_max);
+		perror(")");
+		free(sim_filename_pattern);
+		free(vis_filename_pattern);
+		return EXIT_FAILURE;
+	}
+
+	char* vis_filename = (char*)malloc(sizeof(char) * filename_max);
+
+	if(NULL == (void*)vis_filename) {
+		fprintf(stderr, "fatal error: vis_filename is (char*)NULL after malloc(%zu", sizeof(char) * filename_max);
+		perror(")");
+		free(sim_filename_pattern);
+		free(vis_filename_pattern);
+		free(sim_filename);
+		return EXIT_FAILURE;
+	}
+
+	#ifdef SIM_FILENAME
+	strcpy(sim_filename_pattern, OUTPUT_DIR "/" SIM_FILENAME SIM_FILE_EXTENSION);
+	#else
+	strcpy(sim_filename_pattern, OUTPUT_DIR "/sim/step_%04u" SIM_FILE_EXTENSION);
 	#endif
 
-	#ifdef VISUALIZATION_FILENAME
-	if( (filename_size - 1) > strlen(VISUALIZATION_FILENAME) ) {
-		strcpy(vis_filename, VISUALIZATION_FILENAME);
-	}
+	#ifdef VIS_FILENAME
+	strcpy(vis_filename_pattern, OUTPUT_DIR "/" VIS_FILENAME VIS_FILE_EXTENSION);
+	#else
+	strcpy(vis_filename_pattern, OUTPUT_DIR "/vis/step_%04u" VIS_FILE_EXTENSION);
 	#endif
+
+	if( 0 >= snprintf(sim_filename, filename_max, sim_filename_pattern, 0u) ) {
+		fprintf(stderr, "fatal error: snprintf(sim_filename, filename_max, \"%s\", %u) ", sim_filename_pattern, 0u);
+		perror("failed");
+		free(sim_filename);
+		free(vis_filename);
+		free(sim_filename_pattern);
+		free(vis_filename_pattern);
+		return EXIT_FAILURE;
+	}
+
+	if( 0 >= snprintf(vis_filename, filename_max, vis_filename_pattern, 0u) ) {
+		fprintf(stderr, "fatal error: snprintf(vis_filename, filename_max, \"%s\", %u) ", vis_filename_pattern, 0u);
+		perror("failed");
+		free(sim_filename);
+		free(vis_filename);
+		free(sim_filename_pattern);
+		free(vis_filename_pattern);
+		return EXIT_FAILURE;
+	}
 
 	for(int i = 0; i < argc; i++) {
 		if(0 >= i) {
@@ -126,39 +207,39 @@ int main(int argc, char** argv) {
 
 	printf("=== Starflood ===\n");
 
-	printf("  Version %d.%d.%d\n", STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH);
+	printf("\n  Version %d.%d.%d\n", STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH);
 
 	fflush(stdout);
 
-	printf("\n");
-	printf("Configuration:\n");
-	printf("    OpenMP Support:\n");
-	printf("        Enabled: ");
+	printf("\nConfiguration:");
+	printf("\n    OpenMP Support:");
+	printf("\n        Enabled: ");
 	#ifdef _OPENMP
-	printf("true\n");
-	printf("        _OPENMP: %d\n", _OPENMP);
-	printf("        max_threads: %d\n", omp_get_max_threads());
-	printf("        num_devices: %d\n", omp_get_num_devices());
-	printf("        wtick: %.03f ns\n", 1.0e9*omp_get_wtick());
+	printf("true");
+	printf("\n        _OPENMP: %d", _OPENMP);
+	printf("\n        max_threads: %d", omp_get_max_threads());
+	printf("\n        num_devices: %d", omp_get_num_devices());
+	printf("\n        wtick: %.03f nanosecond(s)", 1.0e9*omp_get_wtick());
 	#else
-	printf("false\n");
+	printf("false");
 	#endif
-	printf("    Timing:\n");
-	printf("        Enabled: ");
+	printf("\n    Timing:");
+	printf("\n        Enabled: ");
 	#ifdef ENABLE_TIMING
-		printf("true\n");
-		printf("        POSIX clock enabled: ");
+		printf("true");
+		printf("\n        POSIX clock enabled: ");
 		#ifdef TIMING_USE_OMP_GET_WTIME
-		printf("false\n");
+		printf("false");
 		#else
-		printf("true\n");
-		printf("            clockid: ");
+		printf("true");
+		printf("\n            clockid: ");
+
 		switch(STARFLOOD_POSIX_CLOCKID) {
 			case CLOCK_REALTIME:
 				printf("CLOCK_REALTIME");
 				break;
-			case CLOCK_PROCESS_CPUTIME_ID:
-				printf("CLOCK_PROCESS_CPUTIME_ID");
+			case CLOCK_MONOTONIC:
+				printf("CLOCK_MONOTONIC");
 				break;
 			case CLOCK_MONOTONIC_RAW:
 				printf("CLOCK_MONOTONIC_RAW");
@@ -167,22 +248,20 @@ int main(int argc, char** argv) {
 				printf("Other/Unknown (%d)", STARFLOOD_POSIX_CLOCKID);
 				break;
 		}
-		printf("\n");
-		printf("            res: ");
-		{
-			struct timespec res;
 
-			if( 0 != clock_getres(STARFLOOD_POSIX_CLOCKID, &res) ) {
-				printf("error");
-			} else {
-				printf("%jd nanoseconds", (intmax_t)1000000000l*(intmax_t)res.tv_sec+(intmax_t)res.tv_sec);
-			}
-		}
-		printf("\n");
-		printf("            instantaneously measured difference: ");
 		{
 			struct timespec tp0, tp1;
 
+			printf("\n            res: ");
+
+			if( 0 != clock_getres(STARFLOOD_POSIX_CLOCKID, &tp0) ) {
+				printf("N/A\n");
+			} else {
+				printf("%jd nanosecond(s)", (intmax_t)1000000000l*(intmax_t)tp0.tv_sec+(intmax_t)tp0.tv_sec);
+			}
+
+			printf("\n            instantaneously measured difference: ");
+
 			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
 			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
 			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
@@ -192,57 +271,56 @@ int main(int argc, char** argv) {
 			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
 			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
 
-			printf("%jd nanoseconds", (intmax_t)1000000000l*((intmax_t)(tp1.tv_sec)-(intmax_t)(tp0.tv_sec))+((intmax_t)(tp1.tv_nsec)-(intmax_t)(tp0.tv_nsec)));
+			printf("%jd nanosecond(s)", (intmax_t)1000000000l*((intmax_t)(tp1.tv_sec)-(intmax_t)(tp0.tv_sec))+((intmax_t)(tp1.tv_nsec)-(intmax_t)(tp0.tv_nsec)));
+
+			printf("\n            current time: %jd.%09jd seconds", (intmax_t)tp0.tv_sec, (intmax_t)tp0.tv_nsec);
 		}
-		printf("\n");
 		#endif
 	#else
-	printf("false\n");
+	printf("false");
 	#endif
-	printf("Parameters:\n");
-	printf("    Simulation:\n");
-	printf("        enabled: %d\n", enable_simulation);
-	printf("        I/O enabled: %d\n", enable_simulation_io);
+	printf("\nParameters:");
+	printf("\n    num_timesteps: %u", num_timesteps);
+	printf("\n    Simulation:");
+	printf("\n        enabled: %s", enable_sim ? "true" : "false");
+	printf("\n        I/O enabled: %s", enable_sim_io ? "true" : "false");
 
-	if(enable_simulation_io) {
-		printf("        sim_filename: %s\n", sim_filename);
+	if(enable_sim_io) {
+		printf("\n        sim_filename_pattern: \"%s\"", sim_filename_pattern);
 	}
 
-	printf("        N: %u\n", num_bodies);
+	printf("\n        N: %u", num_bodies);
 
-	#ifdef N_DIV
-	printf("        N_DIV: %u\n", (unsigned int)N_DIV);
-	#else
-	printf("        N_DIV: %u\n", 0u);
+	#ifdef PAIRWISE_SOLVER_DECIMATION
+	printf("\n        PAIRWISE_SOLVER_DECIMATION: %u", (unsigned int)PAIRWISE_SOLVER_DECIMATION);
 	#endif
 
-	printf("        num_timesteps: %u\n", num_timesteps);
-	printf("    Visualization:\n");
-	printf("        enabled: %d\n", enable_visualization);
-	printf("        I/O enabled: %d\n", enable_visualization_io);
+	printf("\n    Visualization:");
+	printf("\n        enabled: %s", enable_vis ? "true" : "false");
+	printf("\n        I/O enabled: %s", enable_vis_io ? "true" : "false");
 
-	if(enable_visualization_io) {
-		printf("        vis_filename: %s\n", vis_filename);
+	if(enable_vis_io) {
+		printf("\n        vis_filename_pattern: \"%s\"", vis_filename);
 	}
 
-	printf("        dimensions: %ux%u\n", visualization_dimensions[0], visualization_dimensions[1]);
-	printf("\n");
+	printf("\n        dimensions: %ux%u", visualization_dimensions[0], visualization_dimensions[1]);
+	printf("\n\n");
 
 	fflush(stdout);
 
-	if(enable_visualization) {
+	if(enable_vis) {
 		if( STARFLOOD_SUCCESS != visualization_init(&vis, visualization_dimensions[0], visualization_dimensions[1]) ) {
-			fprintf(stderr, "Error: %s failed!\n", "visualization_init()");
+			fprintf(stderr, "fatal error: %s failed.\n", "visualization_init()");
 
 			return EXIT_FAILURE;
 		}
 	}
 
-	if(enable_simulation || enable_simulation_io) {
+	if(enable_sim || enable_sim_io) {
 		if( STARFLOOD_SUCCESS != simulation_init(&sim, num_bodies) ) {
-			fprintf(stderr, "Error: %s failed!\n", "simulation_init()");
+			fprintf(stderr, "fatal error: %s failed.\n", "simulation_init()");
 
-			if(enable_visualization) {
+			if(enable_vis) {
 				visualization_free(&vis);
 			}
 
@@ -250,120 +328,126 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	#ifdef ENABLE_SIM
 	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num++) {
-	//for(unsigned int step_num = 400u; step_num <= 400u; step_num++) {
-		printf("Step #%3u\n", step_num);
-		fflush(stdout);
-
-		FILE* stopfile = fopen(OUTPUT_DIR "/stop", "r");
-
-		if(NULL != (void*)stopfile) {
-			fprintf(stderr, "Stopfile found! Stopping run...\n");
-
-			if( 0 != fclose(stopfile) ) {
-				fprintf(stderr, "Error: %s failed!\n", "fclose(stopfile)");
-			}
-			
-
-			if( 0 != remove(OUTPUT_DIR "/stop") ) {
-				fprintf(stderr, "Error: failed to remove stopfile!\n");
-			}
-
-			break;
-		}
+	#else
+	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num += (unsigned int)OUTPUT_INTERVAL) {
+	#endif
+		printf("Step #%u (run is %6.03f%% complete)\n", step_num, 100.0 * ( (double)step_num / (double)num_timesteps ) );
+		printf("t = %.06f\n", (double)TIMESTEP_SIZE * (double)step_num);
+		//fflush(stdout);
 
 		sim.step_number = step_num;
 
-		sim.scale_factor = exp(3.000e-3 * (double)TIMESTEP_SIZE * (double)step_num);
+		// check stop condition (a file named "stop" in OUTPUT_DIR)
+		{
+			FILE* stopfile = fopen(OUTPUT_DIR "/" "stop", "r");
 
-		printf("scale_factor: %.09f\n", sim.scale_factor);
+			if(NULL != (void*)stopfile) {
+				fprintf(stderr, "Stopfile found! Stopping run...\n");
 
-		#ifdef SIMULATION_FILENAME
-			#ifdef OUTPUT_INTERVAL
-			unsigned int sim_file_index = step_num / (unsigned int)OUTPUT_INTERVAL;
-			#else
-			unsigned int sim_file_index = step_num;
-			#endif
+				if( 0 != fclose(stopfile) ) {
+					fprintf(stderr, "error: fclose(stopfile) ");
+					perror("failed");
+				}
 
-			// Todo: error handling
-			snprintf(sim_filename, filename_size, "%s/%s%04u.raw", OUTPUT_DIR, SIMULATION_FILENAME, sim_file_index);
+				if( 0 != remove(OUTPUT_DIR "/stop") ) {
+					fprintf(stderr, "error: remove(\"%s\") ", OUTPUT_DIR "/stop");
+					perror("failed");
+				}
+
+				break;
+			}
+		}
+
+		#ifdef SIM_FILENAME
+		unsigned int sim_file_num = step_num;
+
+		#ifdef OUTPUT_INTERVAL
+		sim_file_num /= (unsigned int)OUTPUT_INTERVAL;
 		#endif
 
-		#ifdef VISUALIZATION_FILENAME
-			#ifdef OUTPUT_INTERVAL
-			unsigned int vis_file_index = step_num / (unsigned int)OUTPUT_INTERVAL;
-			#else
-			unsigned int vis_file_index = step_num;
-			#endif
+		if( 0 >= snprintf(sim_filename, filename_max, sim_filename_pattern, sim_file_num) ) {
+			fprintf(stderr, "fatal error: snprintf(sim_filename, filename_max, \"%s\", %u) ", sim_filename_pattern, step_num);
+			perror("failed");
+			break;
+		}
+		#endif
 
-			// Todo: error handling
-			snprintf(vis_filename, filename_size, "%s/%s%04u.raw", OUTPUT_DIR, VISUALIZATION_FILENAME, vis_file_index);
+		#ifdef VIS_FILENAME
+		unsigned int vis_file_num = step_num;
 
-			#if (0 == VISUALIZATION_IMAGE_FORMAT)
-			snprintf(vis_filename, filename_size, "%s/%s%04u.pfm", OUTPUT_DIR, VISUALIZATION_FILENAME, vis_file_index);
-			#endif
-			#if (1 == VISUALIZATION_IMAGE_FORMAT)
-			snprintf(vis_filename, filename_size, "%s/%s%04u.ppm", OUTPUT_DIR, VISUALIZATION_FILENAME, vis_file_index);
-			#endif
-			#if (2 == VISUALIZATION_IMAGE_FORMAT)
-			snprintf(vis_filename, filename_size, "%s/%s%04u.png", OUTPUT_DIR, VISUALIZATION_FILENAME, vis_file_index);
-			#endif
+		#ifdef OUTPUT_INTERVAL
+		vis_file_num /= (unsigned int)OUTPUT_INTERVAL;
+		#endif
+
+		if( 0 >= snprintf(vis_filename, filename_max, vis_filename_pattern, vis_file_num) ) {
+			fprintf(stderr, "fatal error: snprintf(vis_filename, filename_max, \"%s\", %u) ", vis_filename_pattern, step_num);
+			perror("failed");
+			break;
+		}
 		#endif
 
 		#ifdef OUTPUT_INTERVAL
-		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_simulation_io ) {
+		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_sim_io ) {
 		#else
-		if(enable_simulation_io) {
+		if(enable_sim_io) {
 		#endif
-			if(enable_simulation) {
+			if(enable_sim) {
 				if( STARFLOOD_SUCCESS != simulation_save(&sim, sim_filename) ) {
-					fprintf(stderr, "Error: %s failed!\n", "simulation_save()");
+					fprintf(stderr, "error: simulation_save(&sim, \"%s\") failed.\n", sim_filename);
 				}
 			} else {
 				if( STARFLOOD_SUCCESS != simulation_read(&sim, sim_filename) ) {
-					fprintf(stderr, "Error: %s failed!\n", "simulation_read()");
+					fprintf(stderr, "fatal error: simulation_read(&sim, \"%s\") failed.\n", sim_filename);
+					break;
 				}
 			}
 		}
 
 		#ifdef OUTPUT_INTERVAL
-		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_visualization) {
+		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_vis) {
 		#else
-		if(enable_visualization) {
+		if(enable_vis) {
 		#endif
 			if( STARFLOOD_SUCCESS != visualization_draw(&vis, &sim) ) {
-				fprintf(stderr, "Error: %s failed!\n", "visualization_draw()");
+				fprintf(stderr, "error: visualization_draw(&vis, &sim) failed.\n");
 			}
 
-			if(enable_visualization_io) {
+			if(enable_vis_io) {
 				if( STARFLOOD_SUCCESS != visualization_save(&vis, vis_filename) ) {
-					fprintf(stderr, "Error: %s failed!\n", "visualization_save()");
+					fprintf(stderr, "error: visualization_save(&vis, \"%s\") failed.\n", vis_filename);
 				}
 			}
 		}
 
-		if(enable_simulation) {
-			if( STARFLOOD_SUCCESS != simulation_step(&sim)) {
-				fprintf(stderr, "Error: %s failed!\n", "simulation_step()");
+		if(enable_sim) {
+			if( STARFLOOD_SUCCESS != simulation_step(&sim) ) {
+				fprintf(stderr, "error: simulation_step(&sim) failed.\n");
 			}
 		}
 
 		printf("\n");
 	}
 
-	printf("Cleaning up...\n");
+	printf("Finished! Cleaning up...\n");
 
 	fflush(stdout);
 
-	if(enable_simulation || enable_simulation_io) {
+	if(enable_sim || enable_sim_io) {
 		simulation_free(&sim);
 	}
 
-	if(enable_visualization) {
+	if(enable_vis) {
 		visualization_free(&vis);
 	}
 
-	printf("Finished.\n");
+	free(sim_filename);
+	free(vis_filename);
+	free(sim_filename_pattern);
+	free(vis_filename_pattern);
+
+	printf("Done. Goodbye!\n");
 
 	return EXIT_SUCCESS;
 }

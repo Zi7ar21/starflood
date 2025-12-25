@@ -20,12 +20,12 @@ typedef struct {
 	#else
 	unsigned char* binary_buffer;
 	#endif
-} visualization_t;
+} vis_t;
 
-int visualization_init(visualization_t* restrict visualization, unsigned int w, unsigned int h);
+int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned int h);
 
-int visualization_free(visualization_t* restrict visualization);
+int visualization_free(vis_t* restrict visualization);
 
-int visualization_save(const visualization_t* restrict visualization, const char* restrict filename);
+int visualization_save(const vis_t* restrict visualization, const char* restrict filename);
 
-int visualization_draw(const visualization_t* restrict visualization, const simulation_t* restrict simulation);
+int visualization_draw(const vis_t* restrict visualization, const sim_t* restrict simulation);

@@ -50,10 +50,11 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		/*
 		// Box-Muller Transform
 		// https://en.wikipedia.org/wiki/Box–Muller_transform
-		double n[3] = {
-			sqrt( -2.0 * log(r[0u]) ) * cos(TAU * r[2u]),
-			sqrt( -2.0 * log(r[0u]) ) * sin(TAU * r[2u]),
-			sqrt( -2.0 * log(r[1u]) ) * cos(TAU * r[3u])
+		double n[4] = {
+			sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[1]),
+			sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[1]),
+			sqrt( -2.0 * log(r[2]) ) * cos(TAU * r[3]),
+			sqrt( -2.0 * log(r[2]) ) * sin(TAU * r[3])
 		};
 
 		p[0u] = 1.000 * n[0u];
@@ -107,38 +108,39 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 
 		// Box-Muller Transform
 		// https://en.wikipedia.org/wiki/Box–Muller_transform
-		double n[3] = {
-			sqrt( -2.0 * log(r[0u]) ) * cos(TAU * r[2u]),
-			sqrt( -2.0 * log(r[0u]) ) * sin(TAU * r[2u]),
-			sqrt( -2.0 * log(r[1u]) ) * cos(TAU * r[3u])
+		double n[4] = {
+			sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[1]),
+			sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[1]),
+			sqrt( -2.0 * log(r[2]) ) * cos(TAU * r[3]),
+			sqrt( -2.0 * log(r[2]) ) * sin(TAU * r[3])
 		};
 
 		/*
-		double r2 = (p[0u]*p[0u])+(p[2u]*p[2u]);
+		double r2 = (p[0]*p[0])+(p[2]*p[2]);
 
 		double inv_r2 = 1.0 / (      r2+0.001  );
 		double inv_r1 = 1.0 / ( sqrt(r2+0.001) );
 
 		
-		v[0u] = 0.250 * sqrt(G * body_mass) *  p[2u] + 0.000001 * n[0u];
-		v[1u] = 0.000 * sqrt(G * body_mass) *  p[1u] + 0.000001 * n[1u];
-		v[2u] = 0.250 * sqrt(G * body_mass) * -p[0u] + 0.000001 * n[2u];
+		v[0] = 0.250 * sqrt(G * body_mass) *  p[2] + 0.000001 * n[0];
+		v[1] = 0.000 * sqrt(G * body_mass) *  p[1] + 0.000001 * n[1];
+		v[2] = 0.250 * sqrt(G * body_mass) * -p[0] + 0.000001 * n[2];
 		*/
 
 		/*
-		v[0u] = 0.250 * sqrt(G * 1.0) *  p[2u] + 0.000001 * n[0u];
-		v[1u] = 0.000 * sqrt(G * 1.0) *  p[1u] + 0.000001 * n[1u];
-		v[2u] = 0.250 * sqrt(G * 1.0) * -p[0u] + 0.000001 * n[2u];
+		v[0] = 0.250 * sqrt(G * 1.0) *  p[2] + 0.000001 * n[0];
+		v[1] = 0.000 * sqrt(G * 1.0) *  p[1] + 0.000001 * n[1];
+		v[2] = 0.250 * sqrt(G * 1.0) * -p[0] + 0.000001 * n[2];
 		*/
 
-		v[0u] = 1.000e-2 * p[0u] + 1.000e-6 * n[0u];
-		v[1u] = 1.000e-2 * p[1u] + 1.000e-6 * n[1u];
-		v[2u] = 1.000e-2 * p[2u] + 1.000e-6 * n[2u];
+		v[0] = 5.000e-3 * p[0] + 1.000e-6 * n[0];
+		v[1] = 5.000e-3 * p[1] + 1.000e-6 * n[1];
+		v[2] = 5.000e-3 * p[2] + 1.000e-6 * n[2];
 
 		/*
-		v[0u] = 1.0e-6 * n[0u];
-		v[1u] = 1.0e-6 * n[1u];
-		v[2u] = 1.0e-6 * n[2u];
+		v[0] = 1.0e-6 * n[0];
+		v[1] = 1.0e-6 * n[1];
+		v[2] = 1.0e-6 * n[2];
 		*/
 
 		vel[3u*i+0u] = (real)v[0u];
@@ -178,18 +180,18 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		};
 
 		// Thin disk
-		//if(0.000 <= r[0u] && r[0u] < 0.850) {
-		//	p[1u] *= 0.025;
+		//if(0.000 <= r[0] && r[0] < 0.850) {
+		//	p[1] *= 0.025;
 		//}
 
-		//p[0u] += r[1u] < 0.500 ?  4.000 : -4.000;
+		//p[0] += r[1] < 0.500 ?  4.000 : -4.000;
 		/*
-		p[1u] += r[1u] < 0.500 ?  1.000 : -1.000;
-		v[0u] *= r[1u] < 0.500 ?  1.000 : -1.000;
-		v[2u] *= r[1u] < 0.500 ?  1.000 : -1.000;
-		v[0u] += r[1u] < 0.500 ? -0.005 :  0.005;
+		p[1] += r[1] < 0.500 ?  1.000 : -1.000;
+		v[0] *= r[1] < 0.500 ?  1.000 : -1.000;
+		v[2] *= r[1] < 0.500 ?  1.000 : -1.000;
+		v[0] += r[1] < 0.500 ? -0.005 :  0.005;
 		*/
-		//v[1u] += r[1u] < 0.500 ? -0.005 :  0.005;
+		//v[1] += r[1] < 0.500 ? -0.005 :  0.005;
 
 		pos[3u*i+0u] = (real)p[0u];
 		pos[3u*i+1u] = (real)p[1u];

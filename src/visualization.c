@@ -23,24 +23,51 @@
 #ifdef VISUALIZATION_THREADED_IO
 #include <pthread.h>
 pthread_t vis_io_thread;
+pthread_mutex_t vis_io_mutex;
 #endif
 
 #if (2 == VISUALIZATION_IMAGE_FORMAT)
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../stb/stb_image_write.h"
+
+void* dummy_function(void* arg) {
+	return NULL;
+}
 #endif
+
+struct image_write_param {
+	unsigned int image_w;
+	unsigned int image_h;
+
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	volatile f32* binary_buffer;
+	#else
+	volatile unsigned char* binary_buffer;
+	#endif
+
+	char filename[STARFLOOD_FILENAME_MAX];
+};
+
+struct image_write_param image_write_params;
 
 #ifdef LOG_TIMINGS_VIS_DRAW
 log_t log_timings_vis_draw;
 #endif
 
-void* dummy_function(void* args) {
-	return NULL;
-}
-
-int visualization_init(visualization_t* restrict visualization, unsigned int w, unsigned int h) {
+int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned int h) {
 	#ifdef VISUALIZATION_THREADED_IO
-	pthread_create(&vis_io_thread, NULL, dummy_function, NULL);
+	if( 0 != pthread_create(&vis_io_thread, NULL, dummy_function, NULL) ) {
+		fprintf(stderr, "%s error: pthread_create(&vis_io_thread, NULL, dummy_function, NULL) ", "visualization_init()");
+		perror("failed");
+		return STARFLOOD_FAILURE;
+	}
+
+	if( 0 != pthread_mutex_init(&vis_io_mutex, NULL) ) {
+		fprintf(stderr, "%s error: pthread_create(&vis_io_thread, NULL, dummy_function, NULL) ", "visualization_init()");
+		perror("failed");
+		pthread_join(vis_io_thread, NULL);
+		return STARFLOOD_FAILURE;
+	}
 	#endif
 
 	TIMING_INIT();
@@ -55,7 +82,7 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 	fflush(log_timings_vis_draw.file);
 	#endif
 
-	visualization_t vis = *visualization;
+	vis_t vis = *visualization;
 
 	void* mem = NULL;
 
@@ -187,9 +214,10 @@ int visualization_init(visualization_t* restrict visualization, unsigned int w, 
 	return STARFLOOD_SUCCESS;
 }
 
-int visualization_free(visualization_t* restrict visualization) {
+int visualization_free(vis_t* restrict visualization) {
 	#ifdef VISUALIZATION_THREADED_IO
 	pthread_join(vis_io_thread, NULL);
+	pthread_mutex_destroy(&vis_io_mutex);
 	#endif
 
 	TIMING_INIT();
@@ -200,7 +228,7 @@ int visualization_free(visualization_t* restrict visualization) {
 	}
 	#endif
 
-	visualization_t vis = *visualization;
+	vis_t vis = *visualization;
 
 	TIMING_START();
 
@@ -225,49 +253,47 @@ int visualization_free(visualization_t* restrict visualization) {
 	return STARFLOOD_SUCCESS;
 }
 
-struct write_image_arg {
-	unsigned int image_w;
-	unsigned int image_h;
-
-	void* binary_buffer;
-
-	char filename[256];
-};
-
-void* write_image(void* arg) {
-	struct write_image_arg* args = (struct write_image_arg*)arg;
-
-	unsigned int image_w = args->image_w;
-	unsigned int image_h = args->image_h;
-
-	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
-	f32* binary_buffer = (f32*)args->binary_buffer;
-	#else
-	unsigned char* binary_buffer = (unsigned char*)args->binary_buffer;
+void* image_write(void* arg) {
+	#ifdef VISUALIZATION_THREADED_IO
+	pthread_mutex_lock(&vis_io_mutex);
 	#endif
 
-	char* filename = args->filename;
+	unsigned int image_w = image_write_params.image_w;
+	unsigned int image_h = image_write_params.image_h;
+
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	f32* binary_buffer = (f32*)image_write_params.binary_buffer;
+	#else
+	unsigned char* binary_buffer = (unsigned char*)image_write_params.binary_buffer;
+	#endif
+
+	char* filename = image_write_params.filename;
+
+	#if (2 == VISUALIZATION_IMAGE_FORMAT)
+	int stride = (int)(sizeof(unsigned char) * (size_t)3u * (size_t)image_w);
+
+	if( 0 == stbi_write_png(filename, (int)image_w, (int)image_h, 3, binary_buffer, stride) ) {
+	}
+	#endif
 
 	#if (1 >= VISUALIZATION_IMAGE_FORMAT)
 	FILE* file = fopen(filename, "wb");
 
 	if(NULL == (void*)file) {
-		fprintf(stderr, "%s error: fopen(%s, \"%s\") ", "visualization_save()", filename, "wb");
-
+		fprintf(stderr, "%s error: fopen(\"%s\", \"%s\") ", "image_write()", filename, "wb");
 		perror("failed");
-
+		#ifdef VISUALIZATION_THREADED_IO
+		pthread_mutex_unlock(&vis_io_mutex);
+		#endif
 		return NULL;
-		//return STARFLOOD_FAILURE;
 	}
-
-	#endif
 
 	#if (0 == VISUALIZATION_IMAGE_FORMAT)
 	// PFM graphic image file format
 	// https://netpbm.sourceforge.net/doc/pfm.html
 	fprintf(file, "PF\n%zu %zu\n-1.0\n", (size_t)image_w, (size_t)image_h);
 
-	fwrite(binary_buffer, sizeof(f32), (size_t)3u*(size_t)image_w*(size_t)image_h, file);
+	fwrite(binary_buffer, sizeof(f32), (size_t)3u * (size_t)image_w * (size_t)image_h, file);
 	#endif
 
 	#if (1 == VISUALIZATION_IMAGE_FORMAT)
@@ -275,33 +301,34 @@ void* write_image(void* arg) {
 	// https://netpbm.sourceforge.net/doc/ppm.html
 	fprintf(file, "P6\n%zu %zu %u\n", (size_t)image_w, (size_t)image_h, 255u);
 
-	fwrite(binary_buffer, sizeof(unsigned char), (size_t)3u*(size_t)image_w*(size_t)image_h, file);
+	fwrite(binary_buffer, sizeof(unsigned char), (size_t)3u * (size_t)image_w * (size_t)image_h, file);
 	#endif
 
-	#if (2 == VISUALIZATION_IMAGE_FORMAT)
-	stbi_write_png( filename, (int)image_w, (int)image_h, 3, binary_buffer, (int)(sizeof(unsigned char)*(size_t)3u*(size_t)image_w) );
-	#endif
-
-	#if (1 >= VISUALIZATION_IMAGE_FORMAT)
 	if( 0 != fclose(file) ) {
+		#ifdef VISUALIZATION_THREADED_IO
+		pthread_mutex_unlock(&vis_io_mutex);
+		#endif
 		return NULL;
 		//return STARFLOOD_FAILURE;
 	}
 	#endif
 
-	free(args);
+	#ifdef VISUALIZATION_THREADED_IO
+	pthread_mutex_unlock(&vis_io_mutex);
+	#endif
 
 	return NULL;
 }
 
-int visualization_save(const visualization_t* restrict visualization, const char* restrict filename) {
+int visualization_save(const vis_t* restrict visualization, const char* restrict filename) {
 	#ifdef VISUALIZATION_THREADED_IO
+	pthread_mutex_lock(&vis_io_mutex);
 	pthread_join(vis_io_thread, NULL);
 	#endif
 
 	TIMING_INIT();
 
-	visualization_t vis = *visualization;
+	vis_t vis = *visualization;
 
 	unsigned int image_w = vis.w;
 	unsigned int image_h = vis.h;
@@ -380,37 +407,35 @@ int visualization_save(const visualization_t* restrict visualization, const char
 	TIMING_PRINT("visualization_save()", "binary_buffer");
 	TIMING_START();
 
-	struct write_image_arg* arg = (struct write_image_arg*)malloc( sizeof(struct write_image_arg) );
+	image_write_params.image_w = image_w;
+	image_write_params.image_h = image_h;
 
-	if(NULL == (void*)arg) {
-		return STARFLOOD_FAILURE;
-	}
+	image_write_params.binary_buffer = (void*)binary_buffer;
 
-	arg->image_w = image_w;
-	arg->image_h = image_h;
-
-	arg->binary_buffer = (void*)binary_buffer;
-
-	strcpy(arg->filename, filename);
+	strcpy(image_write_params.filename, filename);
 
 	#ifdef VISUALIZATION_THREADED_IO
-	pthread_create(&vis_io_thread, NULL, write_image, (void*)arg);
+	pthread_create(&vis_io_thread, NULL, image_write, NULL);
 	#else
-	write_image((void*)arg);
+	image_write(NULL);
 	#endif
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_save()", "write_image()");
+	TIMING_PRINT("visualization_save()", "image_write()");
+
+	#ifdef VISUALIZATION_THREADED_IO
+	pthread_mutex_unlock(&vis_io_mutex);
+	#endif
 
 	return STARFLOOD_SUCCESS;
 }
 
-int visualization_draw(const visualization_t* restrict visualization, const simulation_t* restrict simulation) {
+int visualization_draw(const vis_t* restrict visualization, const sim_t* restrict simulation) {
 	TIMING_INIT();
 
-	simulation_t sim = *simulation;
+	sim_t sim = *simulation;
 
-	visualization_t vis = *visualization;
+	vis_t vis = *visualization;
 
 	unsigned int w = vis.w;
 	unsigned int h = vis.h;
@@ -440,9 +465,9 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	#endif
 
 	#ifdef OUTPUT_INTERVAL
-	double time = TIMESTEP_SIZE * (double)step_number;
+	real time = (real)( (double)TIMESTEP_SIZE * (double)step_number );
 	#else
-	double time = TIMESTEP_SIZE * (double)step_number;
+	real time = (real)( (double)TIMESTEP_SIZE * (double)step_number );
 	#endif
 
 	TIMING_START();
@@ -462,37 +487,43 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	TIMING_START();
 
 	// model matrix
-	double matM[16];
+	real matM[16];
 
 	// model matrix = rotation matrix
 	{
 		// I feel genuinely sorry for the compiler
 		// that has to optimize all of this lol
 
-		double alp = 0.0; // roll
-		double bet = 0.0; // pitch
-		double gam = 0.0; // yaw
+		real alp = (real)0.0; // roll
+		real bet = (real)0.0; // pitch
+		real gam = (real)0.0; // yaw
 
-		//bet = 0.0000 * TAU;
-		//bet = 0.0625 * TAU;
-		//bet = 0.1250 * TAU;
-		//bet = 0.2500 * TAU;
-		bet = 0.00001 * time * TAU;
+		//bet = (real)0.0000 * (real)TAU;
+		//bet = (real)0.0625 * (real)TAU;
+		//bet = (real)0.1250 * (real)TAU;
+		//bet = (real)0.2500 * (real)TAU;
+		bet = (real)1.000e-4 * time * (real)TAU;
 
-		//gam = 0.0000 * TAU;
-		//gam = 0.0625 * TAU;
-		//gam = 0.1250 * TAU;
-		//gam = 0.2500 * TAU;
+		//gam = (real)0.0000 * (real)TAU;
+		//gam = (real)0.0625 * (real)TAU;
+		//gam = (real)0.1250 * (real)TAU;
+		//gam = (real)0.2500 * (real)TAU;
 
-		double cos_alp = cos(alp), sin_alp = sin(alp);
-		double cos_bet = cos(bet), sin_bet = sin(bet);
-		double cos_gam = cos(gam), sin_gam = sin(gam);
+		#ifdef STARFLOOD_DOUBLE_PRECISION
+		real cos_alp = (real)cos(alp), sin_alp = (real)sin(alp);
+		real cos_bet = (real)cos(bet), sin_bet = (real)sin(bet);
+		real cos_gam = (real)cos(gam), sin_gam = (real)sin(gam);
+		#else
+		real cos_alp = (real)cosf(alp), sin_alp = (real)sinf(alp);
+		real cos_bet = (real)cosf(bet), sin_bet = (real)sinf(bet);
+		real cos_gam = (real)cosf(gam), sin_gam = (real)sinf(gam);
+		#endif
 
-		double rot_mat[16] = {
-			(cos_alp*cos_bet), (cos_alp*sin_bet*sin_gam-sin_alp*cos_gam), (cos_alp*sin_bet*cos_gam+sin_alp*sin_gam), (0.0),
-			(sin_alp*cos_bet), (sin_alp*sin_bet*sin_gam+cos_alp*cos_gam), (sin_alp*sin_bet*cos_gam-cos_alp*sin_gam), (0.0),
-			(       -sin_bet), (                        cos_bet*sin_gam), (                        cos_bet*cos_gam), (0.0),
-			(            0.0), (                                    0.0), (                                    0.0), (1.0)
+		real rot_mat[16] = {
+			(real)(cos_alp*cos_bet), (real)(cos_alp*sin_bet*sin_gam-sin_alp*cos_gam), (real)(cos_alp*sin_bet*cos_gam+sin_alp*sin_gam), (real)(0.0),
+			(real)(sin_alp*cos_bet), (real)(sin_alp*sin_bet*sin_gam+cos_alp*cos_gam), (real)(sin_alp*sin_bet*cos_gam-cos_alp*sin_gam), (real)(0.0),
+			(real)(       -sin_bet), (real)(                        cos_bet*sin_gam), (real)(                        cos_bet*cos_gam), (real)(0.0),
+			(real)(            0.0), (real)(                                    0.0), (real)(                                    0.0), (real)(1.0)
 		};
 
 		for(int i = 0; i < 16; i++) {
@@ -501,11 +532,11 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	}
 
 	// view matrix
-	double matV[16] = {
-		( 1.000), ( 0.000), ( 0.000), ( 0.000),
-		( 0.000), ( 1.000), ( 0.000), ( 0.000),
-		( 0.000), ( 0.000), ( 1.000), ( 0.000),
-		( 0.000), ( 0.000), ( 0.000), ( 1.000)
+	real matV[16] = {
+		(real)( 1.000), (real)( 0.000), (real)( 0.000), (real)( 0.000),
+		(real)( 0.000), (real)( 1.000), (real)( 0.000), (real)( 0.000),
+		(real)( 0.000), (real)( 0.000), (real)( 1.000), (real)( 0.000),
+		(real)( 0.000), (real)( 0.000), (real)( 0.000), (real)( 1.000)
 	};
 
 	#ifdef ORTHO_SCALE
@@ -515,18 +546,18 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	#endif
 
 	// projection matrix
-	double matP[16] = {
-		(ortho_scale), (        0.0), (        0.0), (        0.0),
-		(        0.0), (ortho_scale), (        0.0), (        0.0),
-		(        0.0), (        0.0), (ortho_scale), (        0.0),
-		(        0.0), (        0.0), (        0.0), (        1.0)
+	real matP[16] = {
+		(real)(ortho_scale), (real)(        0.0), (real)(        0.0), (real)(        0.0),
+		(real)(        0.0), (real)(ortho_scale), (real)(        0.0), (real)(        0.0),
+		(real)(        0.0), (real)(        0.0), (real)(ortho_scale), (real)(        0.0),
+		(real)(        0.0), (real)(        0.0), (real)(        0.0), (real)(        1.0)
 	};
 
-	double matMVP[16];
+	real matMVP[16];
 
 	// C = A * B
 	{
-		double A[16], B[16], C[16];
+		real A[16], B[16], C[16];
 
 		for(int i = 0; i < 16; i++) {
 			A[i] = matV[i];
@@ -554,7 +585,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 
 	// C = A * B
 	{
-		double A[16], B[16], C[16];
+		real A[16], B[16], C[16];
 
 		for(int i = 0; i < 16; i++) {
 			A[i] = matP[i];
@@ -598,35 +629,36 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		// https://cs418.cs.illinois.edu/website/text/math2.html
 
 		// homogenous coordinates
-		double p[4] = {
-			(double)(pos[3u*idx+0u]),
-			(double)(pos[3u*idx+1u]),
-			(double)(pos[3u*idx+2u]),
-			(double)(           1.0)
+		real p[4] = {
+			(real)(pos[3u*idx+0u]),
+			(real)(pos[3u*idx+1u]),
+			(real)(pos[3u*idx+2u]),
+			(real)(           1.0)
 		};
 
-		double v[3] = {
-			(double)(vel[3u*idx+0u]),
-			(double)(vel[3u*idx+1u]),
-			(double)(vel[3u*idx+2u])
+		real v[3] = {
+			vel[3u*idx+0u],
+			vel[3u*idx+1u],
+			vel[3u*idx+2u]
 		};
 
-		/*
-		double color[3] = {
-			0.5 * cos( TAU * ( ( (double)pot[idx] / pot_max )-(0.0/3.0) ) ) + 0.5,
-			0.5 * cos( TAU * ( ( (double)pot[idx] / pot_max )-(1.0/3.0) ) ) + 0.5,
-			0.5 * cos( TAU * ( ( (double)pot[idx] / pot_max )-(2.0/3.0) ) ) + 0.5,
-		};
-		*/
-		double color[3] = {
-			0.5 * cos( TAU * ( (1.000 * (double)pot[idx])-(0.0/3.0) ) ) + 0.5,
-			0.5 * cos( TAU * ( (1.000 * (double)pot[idx])-(1.0/3.0) ) ) + 0.5,
-			0.5 * cos( TAU * ( (1.000 * (double)pot[idx])-(2.0/3.0) ) ) + 0.5,
+		real color_phase = (real)3.000e0 * pot[idx];
+
+		real color[3] = {
+			#ifdef STARFLOOD_DOUBLE_PRECISION
+			(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
+			(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
+			(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
+			#else
+			(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
+			(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
+			(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
+			#endif
 		};
 
 		// y = A * x
 		{
-			double A[16], x[4], y[4];
+			real A[16], x[4], y[4];
 
 			for(int i = 0; i < 16; i++) {
 				A[i] = matMVP[i];
@@ -646,7 +678,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 		}
 
 		for(unsigned int samp_number = 0u; samp_number < (unsigned int)SPATIAL_SAMPLES; samp_number++) {
-			double p_i[3] = {
+			real p_i[3] = {
 				p[0],
 				p[1],
 				p[2]
@@ -657,43 +689,56 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 			pcg4d(s);
 			//pcg4d(s); // second round for better statistical quality
 
-			double time_offset = 0.0;
+			real time_offset = (real)0.0;
 
-			double sample_offset[2] = {0.0, 0.0};
+			real sample_offset[2] = {(real)0.0, (real)0.0};
 
 			i32 accumulation_color[4] = {
-				(i32)(100.0 * color[0]),
-				(i32)(100.0 * color[1]),
-				(i32)(100.0 * color[2]),
+				(i32)( (real)1.000e2 * color[0] ),
+				(i32)( (real)1.000e2 * color[1] ),
+				(i32)( (real)1.000e2 * color[2] ),
 				(i32)1
 			};
 
 			{
 				pcg4d(s);
 
-				double r[4] = {
-					INV_PCG32_MAX * (double)s[0],
-					INV_PCG32_MAX * (double)s[1],
-					INV_PCG32_MAX * (double)s[2],
-					INV_PCG32_MAX * (double)s[3]
+				real r[4] = {
+					(real)INV_PCG32_MAX * (real)s[0],
+					(real)INV_PCG32_MAX * (real)s[1],
+					(real)INV_PCG32_MAX * (real)s[2],
+					(real)INV_PCG32_MAX * (real)s[3]
+				};
+
+				// Box-Muller Transform
+				// https://en.wikipedia.org/wiki/Box–Muller_transform
+				real n[2] = {
+					#ifdef STARFLOOD_DOUBLE_PRECISION
+					(real)sqrt( (real)(-2.0) * (real)log(r[2]) ) * (real)cos( (real)TAU * r[3] ),
+					(real)sqrt( (real)(-2.0) * (real)log(r[2]) ) * (real)sin( (real)TAU * r[3] )
+					#else
+					(real)sqrtf( (real)(-2.0) * (real)logf(r[2]) ) * (real)cosf( (real)TAU * r[3] ),
+					(real)sqrtf( (real)(-2.0) * (real)logf(r[2]) ) * (real)sinf( (real)TAU * r[3] )
+					#endif
 				};
 
 				// spatial anti-aliasing (gaussian)
-				// https://en.wikipedia.org/wiki/Box–Muller_transform
 				{
-					sample_offset[0] = 0.750 * sqrt( -2.0 * log(r[2]) ) * cos(TAU * r[3]);
-					sample_offset[1] = 0.750 * sqrt( -2.0 * log(r[2]) ) * sin(TAU * r[3]);
+					const real filter_sigma = (real)0.800;
+
+					sample_offset[0] = filter_sigma * n[0];
+					sample_offset[1] = filter_sigma * n[1];
 				}
 
 				{
 					#ifdef SHUTTER_SPEED
-					time_offset += SHUTTER_SPEED * (r[1] - 0.5); // motion blur
+					time_offset += (real)SHUTTER_SPEED * (r[1] - (real)0.5); // motion blur
 					#endif
 
 					#ifdef OUTPUT_INTERVAL
-					time_offset *= (double)OUTPUT_INTERVAL * TIMESTEP_SIZE;
+					time_offset *= (real)OUTPUT_INTERVAL * (real)TIMESTEP_SIZE;
 					#else
-					time_offset *= TIMESTEP_SIZE;
+					time_offset *= (real)TIMESTEP_SIZE;
 					#endif
 
 					// predicted position using velocity vector
@@ -749,14 +794,14 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 			*/
 
 			int coord[2] = {
-				(int)( ( (double)h * (0.500 * p_i[0]) ) + (0.5 * (double)w) + sample_offset[0] - 0.5),
-				(int)( ( (double)h * (0.500 * p_i[1]) ) + (0.5 * (double)h) + sample_offset[1] - 0.5)
+				(int)( ( (real)h * ( (real)0.5 * p_i[0] ) ) + ( (real)0.5 * (real)w ) + sample_offset[0] - (real)0.5),
+				(int)( ( (real)h * ( (real)0.5 * p_i[1] ) ) + ( (real)0.5 * (real)h ) + sample_offset[1] - (real)0.5)
 			};
 
-			if((int)0 <= coord[0] && coord[0] < (int)w && (int)0 <= coord[1] && coord[1] < (int)h) {
-				size_t pixel_index = (size_t)w*(size_t)coord[1]+(size_t)coord[0];
+			if( (int)0 <= coord[0] && coord[0] < (int)w && (int)0 <= coord[1] && coord[1] < (int)h ) {
+				unsigned int pixel_index = w * (unsigned int)coord[1] + (unsigned int)coord[0];
 
-				for(size_t i = (size_t)0u; i < (size_t)4u; i++) {
+				for(unsigned int i = 0u; i < 4u; i++) {
 					#ifdef _OPENMP
 					#pragma omp atomic update
 					#endif
@@ -776,7 +821,7 @@ int visualization_draw(const visualization_t* restrict visualization, const simu
 	// Since atomic_buffer colors are quantized integers, it needs a floating-point scaling factor
 	double pixel_value_scale = 1.0;
 
-	pixel_value_scale *= 0.01;
+	pixel_value_scale *= 1.000e-2;
 
 	#ifdef SPATIAL_SAMPLES
 	pixel_value_scale *= 1.0 / (double)SPATIAL_SAMPLES;

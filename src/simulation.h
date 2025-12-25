@@ -8,8 +8,6 @@
 typedef struct {
 	unsigned int step_number; // Number of steps elapsed
 
-	double scale_factor; // cosmic scale factor
-
 	unsigned int N; // Number of bodies in the simulation
 
 	void* mem; // Shared memory for the simulation
@@ -28,19 +26,19 @@ typedef struct {
 
 	real* ken; //   Kinetic Energy (Scalar)
 	real* pen; // Potential Energy (Scalar)
-} simulation_t;
+} sim_t;
 
 // Initialize a simulation
-int simulation_init(simulation_t* restrict simulation, unsigned int N);
+int simulation_init(sim_t* restrict simulation, unsigned int N);
 
 // Free a simulation
-int simulation_free(simulation_t* restrict simulation);
+int simulation_free(sim_t* restrict simulation);
 
 // Read a simulation state from a file
-int simulation_read(simulation_t* restrict simulation, const char* restrict filename);
+int simulation_read(sim_t* restrict simulation, const char* restrict filename);
 
 // Save a simulation state to a file
-int simulation_save(simulation_t* restrict simulation, const char* restrict filename);
+int simulation_save(const sim_t* restrict simulation, const char* restrict filename);
 
 // Updates a simulation (runs a timestep)
-int simulation_step(simulation_t* restrict simulation);
+int simulation_step(sim_t* restrict simulation);

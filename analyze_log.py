@@ -1,12 +1,11 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-#filename = './out/statistics.csv'
-#filename = './out/timings_sim_step.csv'
-filename = './out/timings_vis_draw.csv'
+filename = './log_nvidia-smi_2025-12-20.csv'
 
-df = pd.read_csv(filename)
+df = pd.read_csv(filename, parse_dates=['timestamp'])
 
+'''
 for col in df.columns:
 	if "step_number" == col:
 		continue
@@ -16,14 +15,13 @@ for col in df.columns:
 	print("  max: " + str(df[col].max()))
 	print("  avg: " + str(df[col].mean()))
 	print("  std: " + str(df[col].std()))
+'''
 
 plt.style.use(['dark_background'])
 
-df.plot(x="step_number")
+df.plot(x="timestamp")
 
 #fig, ax = plt.subplots()
-
-#ax.plot(df["step_number"], df["potential_energy"])
 
 #ax.plot(df["step_number"], df["kick_0"])
 #ax.plot(df["step_number"], df["drift"])

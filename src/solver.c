@@ -6,10 +6,10 @@
 #include "config.h"
 #include "types.h"
 
-int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real* restrict prs, const real* restrict mas, const real* restrict rad, const real* restrict pos, const real* restrict vel, real scale_factor, unsigned int N, unsigned int step_number) {
-	#ifdef N_DIV
-	unsigned int j_length = N / (unsigned int)N_DIV;
-	unsigned int j_offset = (step_number % (unsigned int)N_DIV) * j_length;
+int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real* restrict prs, const real* restrict mas, const real* restrict rad, const real* restrict pos, const real* restrict vel, unsigned int N, unsigned int step_number) {
+	#ifdef PAIRWISE_SOLVER_DECIMATION
+	unsigned int j_length = N / (unsigned int)PAIRWISE_SOLVER_DECIMATION;
+	unsigned int j_offset = (step_number % (unsigned int)PAIRWISE_SOLVER_DECIMATION) * j_length;
 	#endif
 
 	#ifdef _OPENMP
@@ -47,7 +47,7 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			pos[3u*i+2u]
 		};
 
-		#ifndef N_DIV
+		#ifndef PAIRWISE_SOLVER_DECIMATION
 		for(unsigned int j = 0u; j < N; j++) {
 		#else
 		for(unsigned int j = j_offset; j < (j_offset+j_length); j++) {
@@ -76,19 +76,8 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 				r_i[2u] - r_j[2u]
 			};
 
-			for(unsigned int k = 0u; k < 3u; k++) {
-				r_ij[k] *= scale_factor;
-			}
-
 			// squared distance to body j
 			real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
-
-			// distance to body j
-			#ifdef STARFLOOD_DOUBLE_PRECISION
-			real r1 = (real)sqrt(r2);
-			#else
-			real r1 = (real)sqrtf(r2);
-			#endif
 
 			#ifdef EPSILON
 			real inv_r2 = (real)1.0 / ( r2 + (real)(EPSILON*EPSILON) );
@@ -98,12 +87,17 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 				real inv_r1 = (real)1.0 / sqrtf( r2 + (real)(EPSILON*EPSILON) );
 				#endif
 			#else
-			real inv_r2 = (real)1.0 / r2;
-			real inv_r1 = (real)1.0 / r1;
+			real inv_r2 = (real)0.0 < r2 ? (real)1.0 / r2 : (real)0.0;
+				#ifdef STARFLOOD_DOUBLE_PRECISION
+				real inv_r1 = (real)0.0 < r1 ? (real)1.0 / sqrt(r1) : (real)0.0;
+				#else
+				real inv_r1 = (real)0.0 < r1 ? (real)1.0 / sqrtf(r1) : (real)0.0;
+				#endif
 			#endif
 
 			// gravitational potential of body j
-			real pot_j = (real)(-G) * m_j * inv_r1;
+			// (G and m_i are taken into account later)
+			real pot_j = m_j * inv_r1;
 
 			#ifdef ENABLE_SPH
 			real a = (real)1.0 / (h_j * (real)SQRT_PI);
@@ -171,17 +165,19 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			#endif
 		}
 
-		#ifndef N_DIV
-		acc[3u*i+0u] = m_i * acc_sum[0u];
-		acc[3u*i+1u] = m_i * acc_sum[1u];
-		acc[3u*i+2u] = m_i * acc_sum[2u];
-		#else
-		acc[3u*i+0u] = (real)N_DIV * m_i * acc_sum[0u];
-		acc[3u*i+1u] = (real)N_DIV * m_i * acc_sum[1u];
-		acc[3u*i+2u] = (real)N_DIV * m_i * acc_sum[2u];
-		#endif
+		#ifdef PAIRWISE_SOLVER_DECIMATION
+		acc[3u*i+0u] = (real)PAIRWISE_SOLVER_DECIMATION * (real)(-G) * m_i * acc_sum[0u];
+		acc[3u*i+1u] = (real)PAIRWISE_SOLVER_DECIMATION * (real)(-G) * m_i * acc_sum[1u];
+		acc[3u*i+2u] = (real)PAIRWISE_SOLVER_DECIMATION * (real)(-G) * m_i * acc_sum[2u];
 
-		pot[i] = pot_sum;
+		pot[i] = (real)PAIRWISE_SOLVER_DECIMATION * (real)(-G) * pot_sum;
+		#else
+		acc[3u*i+0u] = (real)(-G) * m_i * acc_sum[0u];
+		acc[3u*i+1u] = (real)(-G) * m_i * acc_sum[1u];
+		acc[3u*i+2u] = (real)(-G) * m_i * acc_sum[2u];
+
+		pot[i] = (real)(-G) * pot_sum;
+		#endif
 
 		#ifdef ENABLE_SPH
 		rho[i] = rho_sum;
