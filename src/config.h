@@ -13,14 +13,14 @@
 #define OUTPUT_DIR "./out"
 
 // Uncomment to only output files every OUTPUT_INTERVAL steps
-#define OUTPUT_INTERVAL 100
+#define OUTPUT_INTERVAL 10
 
 // Uncomment to run a simulation (will otherwise load snapshots from SIM_FILENAME)
-#define ENABLE_SIM
+//#define ENABLE_SIM
 
 // Uncomment to enable simulation file I/O by default
 #define SIM_FILENAME "sim/step_%04u"
-//#define SIM_FILENAME "sim/step_0100"
+//#define SIM_FILENAME "sim/step_0062"
 
 // Uncomment to enable visualization by default
 #define ENABLE_VIS
@@ -64,26 +64,26 @@
 //#define NUM_BODIES 2048
 //#define NUM_BODIES 4096
 //#define NUM_BODIES 8192
-//#define NUM_BODIES 16384
+#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
 //#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
-#define NUM_BODIES 262144
+//#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
 //#define NUM_BODIES 1048576
 
 // Uncomment to divide the solver calculations across
 // multiple timesteps (faster, but less accurate)
-#define PAIRWISE_SOLVER_DECIMATION 16
+//#define PAIRWISE_SOLVER_DECIMATION 4
 
 // Default number of timesteps to run simulation for
 #define NUM_TIMESTEPS 10000
 
 // Simulation timestep size (dt)
-#define TIMESTEP_SIZE 0.5
+#define TIMESTEP_SIZE 0.1
 
 // Gravitational potential softening parameter
-#define EPSILON 0.001
+//#define EPSILON 0.001
 
 /* === Physical Constants === */
 
@@ -109,21 +109,34 @@
 
 /* === Visualization === */
 
+// Uncomment to visualize the simulation using accumulation rasterization
+// Otherwise, the gravitational potential across space is probed and plotted
+//#define VISUALIZATION_RASTERIZATION
+
+// Decimate the number of bodies used for probe calculation
+//#define PROBE_DECIMATION 16
+
 // Number of samples for spatial anti-aliasing
-#define SPATIAL_SAMPLES 128
+#define SPATIAL_SAMPLES 4
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
-#define EXPOSURE 0.000
+#define EXPOSURE -1.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE -3.000
+#define ORTHO_SCALE -0.500
 
 // Uncomment to enable motion blur
-//#define SHUTTER_SPEED 0.500
+//#define SHUTTER_SPEED 1.000
 
 /* === Miscellaneous === */
 
 // Requires pthreads
+// Note: currently broken, when rendering too fast
+// the lower portion of the image may be missing
+// (even when using mutexes, perhaps there are some
+// pending memory writes to the buffers allocated
+// on the heap? mutexes should wait for memory to be
+// synchronized though so idk)
 //#define VISUALIZATION_THREADED_IO
 
 // Uncomment to use floating-point double-precision

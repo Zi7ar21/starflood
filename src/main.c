@@ -60,7 +60,11 @@ int main(int argc, char** argv) {
 
 	unsigned int num_bodies = (unsigned int)NUM_BODIES, num_timesteps = (unsigned int)NUM_TIMESTEPS;
 
-	unsigned int visualization_dimensions[2] = {1080u, 1080u};
+	unsigned int visualization_dimensions[2] = {360u, 360u};
+	//unsigned int visualization_dimensions[2] = {1080u, 1080u};
+
+	//unsigned int visualization_dimensions[2] = {960u, 540u};
+	//unsigned int visualization_dimensions[2] = {1920u, 1080u};
 
 	sim_t sim;
 	vis_t vis;

@@ -1,9 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-#filename = './out/statistics.csv'
+filename = './out/statistics.csv'
 #filename = './out/timings_sim_step.csv'
-filename = './out/timings_vis_draw.csv'
+#filename = './out/timings_vis_draw.csv'
 
 df = pd.read_csv(filename)
 
@@ -32,6 +32,6 @@ df.plot(x="step_number")
 
 plt.title(filename)
 
-plt.savefig('./statistics.png', dpi=300)
+plt.savefig('./timings.png', dpi=300)
 
 plt.show()

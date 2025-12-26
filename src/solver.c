@@ -6,6 +6,112 @@
 #include "config.h"
 #include "types.h"
 
+real probe_potential(const real* restrict mas, const real* restrict pos, const real* probe_pos, unsigned int N, unsigned int step_number) {
+	#ifdef PROBE_DECIMATION
+	unsigned int i_length = N / (unsigned int)PROBE_DECIMATION;
+	unsigned int i_offset = (step_number % (unsigned int)PROBE_DECIMATION) * i_length;
+	#endif
+
+	real acc_sum[3] = {(real)0.0, (real)0.0, (real)0.0};
+	real pot_sum = (real)0.0;
+	#ifdef ENABLE_KAHAN_SUMMATION
+	real acc_c[3] = {(real)0.0, (real)0.0, (real)0.0};
+	real pot_c = (real)0.0;
+	#endif
+
+	#ifdef PROBE_DECIMATION
+	for(unsigned int i = i_offset; i < (i_offset+i_length); i++) {
+	#else
+	for(unsigned int i = 0u; i < N; i++) {
+	#endif
+		real m_i = mas[i];
+
+		real r_i[3] = {
+			pos[3u*i+0u],
+			pos[3u*i+1u],
+			pos[3u*i+2u]
+		};
+
+		real r_ij[3] = {
+			probe_pos[0] - r_i[0],
+			probe_pos[1] - r_i[1],
+			probe_pos[2] - r_i[2]
+		};
+
+		real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
+
+		#ifdef EPSILON
+		real inv_r2 = (real)1.0 / ( r2 + (real)(EPSILON*EPSILON) );
+			#ifdef STARFLOOD_DOUBLE_PRECISION
+			real inv_r1 = (real)1.0 / sqrt( r2 + (real)(EPSILON*EPSILON) );
+			#else
+			real inv_r1 = (real)1.0 / sqrtf( r2 + (real)(EPSILON*EPSILON) );
+			#endif
+		#else
+		real inv_r2 = (real)0.0 < r2 ? (real)1.0 / r2 : (real)0.0;
+			#ifdef STARFLOOD_DOUBLE_PRECISION
+			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrt(r2) : (real)0.0;
+			#else
+			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrtf(r2) : (real)0.0;
+			#endif
+		#endif
+
+		// gravitational potential of body j
+		// (G and m_i are taken into account later)
+		real pot_i = m_i * inv_r1;
+
+		real F[3] = {
+			pot_i * r_ij[0u] * inv_r2,
+			pot_i * r_ij[1u] * inv_r2,
+			pot_i * r_ij[2u] * inv_r2
+		};
+
+		for(unsigned int k = 0u; k < 3u; k++) {
+			#ifdef ENABLE_KAHAN_SUMMATION
+			// Kahan summation
+			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+			real y = F[k] - acc_c[k];
+			volatile real t = acc_sum[k] + y;
+			volatile real z = t - acc_sum[k];
+			acc_c[k] = z - y;
+			acc_sum[k] = t;
+			#else
+			// Naïve summation
+			acc_sum[k] += F[k];
+			#endif
+		}
+
+		{
+			#ifdef ENABLE_KAHAN_SUMMATION
+			// Kahan summation
+			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+			real y = pot_i - pot_c;
+			volatile real t = pot_sum + y;
+			volatile real z = t - pot_sum;
+			pot_c = z - y;
+			pot_sum = t;
+			#else
+			// Naïve summation
+			pot_sum += pot_j;
+			#endif
+		}
+	}
+
+	#ifdef PROBE_DECIMATION
+	//acc[3u*i+0u] = (real)PROBE_DECIMATION * (real)(-G) * m_i * acc_sum[0u];
+	//acc[3u*i+1u] = (real)PROBE_DECIMATION * (real)(-G) * m_i * acc_sum[1u];
+	//acc[3u*i+2u] = (real)PROBE_DECIMATION * (real)(-G) * m_i * acc_sum[2u];
+
+	return (real)PROBE_DECIMATION * (real)(-G) * pot_sum;
+	#else
+	//acc[3u*i+0u] = (real)(-G) * m_i * acc_sum[0u];
+	//acc[3u*i+1u] = (real)(-G) * m_i * acc_sum[1u];
+	//acc[3u*i+2u] = (real)(-G) * m_i * acc_sum[2u];
+
+	return (real)(-G) * pot_sum;
+	#endif
+}
+
 int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real* restrict prs, const real* restrict mas, const real* restrict rad, const real* restrict pos, const real* restrict vel, unsigned int N, unsigned int step_number) {
 	#ifdef PAIRWISE_SOLVER_DECIMATION
 	unsigned int j_length = N / (unsigned int)PAIRWISE_SOLVER_DECIMATION;
@@ -47,10 +153,10 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			pos[3u*i+2u]
 		};
 
-		#ifndef PAIRWISE_SOLVER_DECIMATION
-		for(unsigned int j = 0u; j < N; j++) {
-		#else
+		#ifdef PAIRWISE_SOLVER_DECIMATION
 		for(unsigned int j = j_offset; j < (j_offset+j_length); j++) {
+		#else
+		for(unsigned int j = 0u; j < N; j++) {
 		#endif
 			if(i == j) {
 				continue;
@@ -89,9 +195,9 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			#else
 			real inv_r2 = (real)0.0 < r2 ? (real)1.0 / r2 : (real)0.0;
 				#ifdef STARFLOOD_DOUBLE_PRECISION
-				real inv_r1 = (real)0.0 < r1 ? (real)1.0 / sqrt(r1) : (real)0.0;
+				real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrt(r2) : (real)0.0;
 				#else
-				real inv_r1 = (real)0.0 < r1 ? (real)1.0 / sqrtf(r1) : (real)0.0;
+				real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrtf(r2) : (real)0.0;
 				#endif
 			#endif
 

@@ -147,29 +147,37 @@ man tmpfs
 
 ### Running Starflood
 
-This section is still a work-in-progress!
+If file I/O is enabled, please ensure the appropriate output directories exist. The default directories are `out` for statistics/timings, `out/sim` for simulation snapshots, and `out/vis` for visualizations.
 
 ```sh
 mkdir -p out/sim out/vis
 ```
 
-#### Running with Niceness
+#### Running with Nice
 
-`nice` is a tool that can be used to run a program with a higher/lower niceness value. The following command will run `./build/starflood` with a niceness value 9 higher than the shell `nice` was called from:
+[`nice`](https://en.wikipedia.org/wiki/Nice_(Unix)) is a \*NIX command that can be used to run a program with a higher/lower niceness (userspace priority).
 
-```sh
-nice -9 ./build/starflood
-```
-
-A higher niceness means the scheduler will deprioritize the process, meaning any other programs on your system will keep running smoothly.
-
-### Encoding an Image Frame Sequence with `ffmpeg`
-
-#### NVIDIA NVENC H.264
+The following command will run `./build/starflood` with a niceness value 1 higher than the shell `nice` was called from:
 
 ```sh
-ffmpeg -y -r 30 -framerate 30 -i ./out/vis/step_%04d.pfm -c:v h264_nvenc -vf "scale=in_transfer=linear:out_transfer=bt709" -b:v 8M -pix_fmt yuv420p -an -sn -dn -g 15 -bf 2 -preset slow -tune hq -profile:v main -rc-lookahead 16383 -spatial_aq 1 -temporal_aq 1 -coder cabac -b_ref_mode middle starflood_out.mp4 && mpv --loop starflood_out.mp4
+nice -n 1 ./build/starflood
 ```
+
+A higher niceness value tells the scheduler to select a lower priority, which ensures that other processes running on your system (terminal emulators, window managers, etc.) don't get starved of resources.
+
+There shouldn't be any problems just running `starflood` by itself, but if parallelization is enabled (using all available processors) it helps ensure you can still control the system (or do other tasks) during runs.
+
+For the most accurate profiling however, you shouldn't use too high of a niceness value (or else you run the risk of overly frequent [context switching](https://en.wikipedia.org/wiki/Context_switch) causing high variability in execution timing).
+
+#### Viewing the Visualization
+
+##### Encoding an Image Frame Sequence with `ffmpeg`
+
+Look at [`encode_ffmpeg.sh`](encode_ffmpeg.sh) for examples.
+
+##### Playing an Image Frame Sequence with `ffplay`
+
+Look at [`ffplay.sh`](ffplay.sh) for examples.
 
 ### Profiling Starflood
 

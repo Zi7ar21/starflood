@@ -17,6 +17,7 @@
 #include "log.h"
 #include "rng.h"
 #include "simulation.h"
+#include "solver.h"
 #include "types.h"
 #include "timing.h"
 
@@ -200,6 +201,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	#if (2 == VISUALIZATION_IMAGE_FORMAT)
 	stbi_flip_vertically_on_write(0);
 	stbi_write_png_compression_level = 6;
+	//stbi_write_png_compression_level = 14;
 	#endif
 
 	vis.w = w;
@@ -447,6 +449,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 	unsigned int N = sim.N;
 
+	real* mas = sim.mas;
 	real* pos = sim.pos;
 	real* vel = sim.vel; // for motion blur
 
@@ -472,12 +475,14 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 	TIMING_START();
 
+	#ifdef VISUALIZATION_RASTERIZATION
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
 		#ifdef _OPENMP
 		#pragma omp atomic write
 		#endif
 		atomic_buffer[i] = (i32)0;
 	}
+	#endif
 
 	TIMING_STOP();
 	TIMING_PRINT("visualization_draw()", "clear_atomic_buffer");
@@ -502,12 +507,15 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		//bet = (real)0.0625 * (real)TAU;
 		//bet = (real)0.1250 * (real)TAU;
 		//bet = (real)0.2500 * (real)TAU;
-		bet = (real)1.000e-4 * time * (real)TAU;
+		//bet = (real)1.000e-5 * time * (real)TAU;
 
 		//gam = (real)0.0000 * (real)TAU;
-		//gam = (real)0.0625 * (real)TAU;
+		//gam = (real)0.0025 * (real)TAU;
+		gam = (real)0.0625 * (real)TAU;
 		//gam = (real)0.1250 * (real)TAU;
 		//gam = (real)0.2500 * (real)TAU;
+		//gam = (real)0.0625 * (real)TAU * cos( (real)1.000e-2 * time * (real)TAU );
+		gam = (real)1.000e-3 * time * (real)TAU;
 
 		#ifdef STARFLOOD_DOUBLE_PRECISION
 		real cos_alp = (real)cos(alp), sin_alp = (real)sin(alp);
@@ -618,6 +626,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	#endif
 	TIMING_START();
 
+	#ifdef VISUALIZATION_RASTERIZATION
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOADING
 		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pos[:3u*N], vel[:3u*N], pot[:N])
@@ -642,7 +651,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			vel[3u*idx+2u]
 		};
 
-		real color_phase = (real)3.000e0 * pot[idx];
+		real color_phase = (real)2.000e-1 * pot[idx];
 
 		real color[3] = {
 			#ifdef STARFLOOD_DOUBLE_PRECISION
@@ -684,7 +693,12 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 				p[2]
 			};
 
-			u32 s[4] = {(u32)samp_number, (u32)idx, (u32)step_number, (u32)0xCF52CA01u};
+			u32 s[4] = {
+				(u32)0xB79ABC95u + (u32)samp_number,
+				(u32)0xE0DA3F84u + (u32)idx,
+				(u32)0xAB75F07Bu + (u32)step_number,
+				(u32)0xCF52CA01u
+			};
 
 			pcg4d(s);
 			//pcg4d(s); // second round for better statistical quality
@@ -701,7 +715,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			};
 
 			{
-				pcg4d(s);
+				//pcg4d(s);
 
 				real r[4] = {
 					(real)INV_PCG32_MAX * (real)s[0],
@@ -724,7 +738,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 				// spatial anti-aliasing (gaussian)
 				{
-					const real filter_sigma = (real)0.800;
+					const real filter_sigma = (real)0.750;
 
 					sample_offset[0] = filter_sigma * n[0];
 					sample_offset[1] = filter_sigma * n[1];
@@ -810,6 +824,247 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			}
 		}
 	}
+	#else
+	#ifdef _OPENMP
+		#ifdef ENABLE_OFFLOADING
+		#pragma omp target teams distribute parallel for collapse(2) map(tofrom: render_buffer[:4u*w*h]) map(to: mas[:N], pos[:3u*N])
+		#else
+		#pragma omp parallel for schedule(dynamic, 256) collapse(2)
+		#endif
+		//#pragma omp tile sizes(16,16)
+	#endif
+	for(unsigned int idx = 0u; idx < w; idx++) {
+		for(unsigned int idy = 0u; idy < h; idy++) {
+			real inv_screen_height = (real)(1.0 / (double)h);
+
+			real pixel_color[3] = {(real)0.0, (real)0.0, (real)0.0};
+
+			for(unsigned int samp_number = 0u; samp_number < (unsigned int)SPATIAL_SAMPLES; samp_number++) {
+				u32 s[4] = {
+					(u32)0xB79ABC95u+(u32)samp_number,
+					(u32)0xE0DA3F84u+(u32)(w*idy+idx),
+					(u32)0xAB75F07Bu+(u32)step_number,
+					(u32)0xCF52CA01u
+				};
+
+				pcg4d(s);
+				//pcg4d(s); // second round for better statistical quality
+
+				real r[4] = {
+					(real)INV_PCG32_MAX * (real)s[0],
+					(real)INV_PCG32_MAX * (real)s[1],
+					(real)INV_PCG32_MAX * (real)s[2],
+					(real)INV_PCG32_MAX * (real)s[3]
+				};
+
+				// Box-Muller Transform
+				// https://en.wikipedia.org/wiki/Box–Muller_transform
+				real n[2] = {
+					#ifdef STARFLOOD_DOUBLE_PRECISION
+					(real)sqrt( (real)(-2.0) * (real)log(r[2]) ) * (real)cos( (real)TAU * r[3] ),
+					(real)sqrt( (real)(-2.0) * (real)log(r[2]) ) * (real)sin( (real)TAU * r[3] )
+					#else
+					(real)sqrtf( (real)(-2.0) * (real)logf(r[2]) ) * (real)cosf( (real)TAU * r[3] ),
+					(real)sqrtf( (real)(-2.0) * (real)logf(r[2]) ) * (real)sinf( (real)TAU * r[3] )
+					#endif
+				};
+
+				// spatial anti-aliasing (gaussian)
+				const real filter_sigma = (real)0.750;
+
+				real uv[2] = {
+					(real)2.0 * inv_screen_height * ( (real)idx + filter_sigma * n[0] + (real)0.5 ) - (real)1.0,
+					(real)2.0 * inv_screen_height * ( (real)idy + filter_sigma * n[1] + (real)0.5 ) - (real)1.0
+				};
+
+				/*
+				real probe_pos[3] = {
+					(real)(exp2(-ORTHO_SCALE) * (double)uv[0]),
+					(real)(exp2(-ORTHO_SCALE) * (double)uv[1]),
+					(real)(                             0.000)
+				};
+				*/
+
+				real probe_pos[3] = {
+					(real)(exp2(-ORTHO_SCALE) * (double)uv[0]),
+					(real)(                             0.000),
+					(real)(exp2(-ORTHO_SCALE) * (double)uv[1])
+				};
+
+				/*
+				real probe_pos[3] = {
+					(real)(exp2(-ORTHO_SCALE) * (double)uv[0]),
+					(real)(exp2(-ORTHO_SCALE) * (double)uv[1]),
+					(real)(                  4.000*r[1]-2.000)
+				};
+				*/
+
+				/*
+				real probe_pos[3] = {
+					(real)(exp2(-ORTHO_SCALE) * (double)uv[0]),
+					(real)(                  0.200*r[1]-0.100),
+					(real)(exp2(-ORTHO_SCALE) * (double)uv[1])
+				};
+				*/
+
+				/*
+				real probe_pos[3] = {
+					(real)(cos(TAU*r[1]) * exp2(-ORTHO_SCALE) * (double)uv[0]),
+					(real)(                exp2(-ORTHO_SCALE) * (double)uv[1]),
+					(real)(sin(TAU*r[1]) * exp2(-ORTHO_SCALE) * (double)uv[0])
+				};
+				*/
+
+				//real potential = probe_potential(mas, pos, probe_pos, N, step_number);
+				real potential = 0.0;
+
+				{
+	#ifdef PROBE_DECIMATION
+	unsigned int i_length = N / (unsigned int)PROBE_DECIMATION;
+	unsigned int i_offset = (step_number % (unsigned int)PROBE_DECIMATION) * i_length;
+	#endif
+
+	real acc_sum[3] = {(real)0.0, (real)0.0, (real)0.0};
+	real pot_sum = (real)0.0;
+	#ifdef ENABLE_KAHAN_SUMMATION
+	real acc_c[3] = {(real)0.0, (real)0.0, (real)0.0};
+	real pot_c = (real)0.0;
+	#endif
+
+	#ifdef PROBE_DECIMATION
+	for(unsigned int i = i_offset; i < (i_offset+i_length); i++) {
+	#else
+	for(unsigned int i = 0u; i < N; i++) {
+	#endif
+		real m_i = mas[i];
+
+		real r_i[3] = {
+			pos[3u*i+0u],
+			pos[3u*i+1u],
+			pos[3u*i+2u]
+		};
+
+		real r_ij[3] = {
+			probe_pos[0] - r_i[0],
+			probe_pos[1] - r_i[1],
+			probe_pos[2] - r_i[2]
+		};
+
+		real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
+
+		#ifdef EPSILON
+		real inv_r2 = (real)1.0 / ( r2 + (real)(EPSILON*EPSILON) );
+			#ifdef STARFLOOD_DOUBLE_PRECISION
+			real inv_r1 = (real)1.0 / sqrt( r2 + (real)(EPSILON*EPSILON) );
+			#else
+			real inv_r1 = (real)1.0 / sqrtf( r2 + (real)(EPSILON*EPSILON) );
+			#endif
+		#else
+		real inv_r2 = (real)0.0 < r2 ? (real)1.0 / r2 : (real)0.0;
+			#ifdef STARFLOOD_DOUBLE_PRECISION
+			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrt(r2) : (real)0.0;
+			#else
+			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrtf(r2) : (real)0.0;
+			#endif
+		#endif
+
+		// gravitational potential of body j
+		// (G and m_i are taken into account later)
+		real pot_i = m_i * inv_r1;
+
+		real F[3] = {
+			pot_i * r_ij[0u] * inv_r2,
+			pot_i * r_ij[1u] * inv_r2,
+			pot_i * r_ij[2u] * inv_r2
+		};
+
+		for(unsigned int k = 0u; k < 3u; k++) {
+			#ifdef ENABLE_KAHAN_SUMMATION
+			// Kahan summation
+			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+			real y = F[k] - acc_c[k];
+			volatile real t = acc_sum[k] + y;
+			volatile real z = t - acc_sum[k];
+			acc_c[k] = z - y;
+			acc_sum[k] = t;
+			#else
+			// Naïve summation
+			acc_sum[k] += F[k];
+			#endif
+		}
+
+		{
+			#ifdef ENABLE_KAHAN_SUMMATION
+			// Kahan summation
+			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+			real y = pot_i - pot_c;
+			volatile real t = pot_sum + y;
+			volatile real z = t - pot_sum;
+			pot_c = z - y;
+			pot_sum = t;
+			#else
+			// Naïve summation
+			pot_sum += pot_j;
+			#endif
+		}
+	}
+
+	#ifdef PROBE_DECIMATION
+	//acc[3u*i+0u] = (real)PROBE_DECIMATION * (real)(-G) * m_i * acc_sum[0u];
+	//acc[3u*i+1u] = (real)PROBE_DECIMATION * (real)(-G) * m_i * acc_sum[1u];
+	//acc[3u*i+2u] = (real)PROBE_DECIMATION * (real)(-G) * m_i * acc_sum[2u];
+
+	//return (real)PROBE_DECIMATION * (real)(-G) * pot_sum;
+	potential = (real)PROBE_DECIMATION * (real)(-G) * pot_sum;
+	#else
+	//acc[3u*i+0u] = (real)(-G) * m_i * acc_sum[0u];
+	//acc[3u*i+1u] = (real)(-G) * m_i * acc_sum[1u];
+	//acc[3u*i+2u] = (real)(-G) * m_i * acc_sum[2u];
+
+	//return (real)(-G) * pot_sum;
+	potential = (real)(-G) * pot_sum;
+	#endif
+				}
+
+				real color_phase = (real)1.000e1 * potential;
+
+				real color[3] = {
+					#ifdef STARFLOOD_DOUBLE_PRECISION
+					(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
+					(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
+					(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
+					#else
+					(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
+					(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
+					(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
+					#endif
+				};
+
+				for(int i = 0; i < 3; i++) {
+					//color[i] *= log10( -potential + ( 1.0 / pow(10.0, 1.0) ) ) + 1.0;
+					//color[i] *= -1.000e-1 * potential;
+					color[i] = -1.000e-1 * potential;
+				}
+
+				for(int i = 0; i < 3; i++) {
+					pixel_color[i] += color[i];
+					//pixel_color[i] = fmaxf(pixel_color[i], color[i]);
+				}
+			}
+
+			real scale_factor = (real)(1.0 / (double)SPATIAL_SAMPLES);
+
+			for(int i = 0; i < 3; i++) {
+				pixel_color[i] *= scale_factor;
+			}
+
+			render_buffer[4u*(w*idy+idx)+0u] = (f32)(pixel_color[0u]);
+			render_buffer[4u*(w*idy+idx)+1u] = (f32)(pixel_color[1u]);
+			render_buffer[4u*(w*idy+idx)+2u] = (f32)(pixel_color[2u]);
+			render_buffer[4u*(w*idy+idx)+3u] = (f32)(            1.0);
+		}
+	}
+	#endif
 
 	TIMING_STOP();
 	TIMING_PRINT("visualization_draw()", "rasterize_atomic");
@@ -833,6 +1088,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 	TIMING_START();
 
+	#ifdef VISUALIZATION_RASTERIZATION
 	// read the atomic buffer and finish rendering the visualization
 	for(unsigned int i = 0u; i < w * h; i++) {
 		double rgba[4] = {
@@ -865,6 +1121,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			render_buffer[4u*i+j] = (f32)rgba[j];
 		}
 	}
+	#endif
 
 	TIMING_STOP();
 	TIMING_PRINT("visualization_draw()", "finalize");

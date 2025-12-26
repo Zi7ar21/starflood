@@ -31,14 +31,14 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		};
 
 		uint32_t s[4] = {
-			(uint32_t)i,
+			(uint32_t)0xD88D5EFDu + (uint32_t)i,
 			(uint32_t)0x203F83D3u,
 			(uint32_t)0x710BE493u,
 			(uint32_t)0xA294E7F1u
 		};
 
 		pcg4d(s);
-		pcg4d(s); // second round for better statistical quality
+		//pcg4d(s); // second round for better statistical quality
 
 		double r[4] = {
 			INV_PCG32_MAX * (double)s[0],
@@ -48,6 +48,7 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		};
 
 		/*
+		// Standard Normal Distribution
 		// Box-Muller Transform
 		// https://en.wikipedia.org/wiki/Box–Muller_transform
 		double n[4] = {
@@ -62,13 +63,26 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		p[2u] = 1.000 * n[2u];
 		*/
 
-		p[0u] = cos(TAU * r[0u]) * sin(acos(2.0 * r[1u] - 1.0));
-		p[1u] = sin(TAU * r[0u]) * sin(acos(2.0 * r[1u] - 1.0));
-		p[2u] = cos(acos(2.0 * r[1u] - 1.0));
+		{
+			double the = acos(2.0*r[0]-1.0), phi = TAU * r[1];
 
-		p[0u] *= pow(r[2u], 1.0 / 3.0);
-		p[1u] *= pow(r[2u], 1.0 / 3.0);
-		p[2u] *= pow(r[2u], 1.0 / 3.0);
+			double cos_the = cos(the), sin_the = sin(the);
+			double cos_phi = cos(phi), sin_phi = sin(phi);
+
+			// random point on unit sphere
+			p[0u] = cos_phi * sin_the;
+			p[1u] = sin_phi * sin_the;
+			p[2u] =           cos_the;
+
+			// random point in unit ball
+			//p[0u] *= cbrt(r[2]);
+			//p[1u] *= cbrt(r[2]);
+			//p[2u] *= cbrt(r[2]);
+		}
+
+		p[0u] *= 1.000 * sqrt(r[2]);
+		p[1u] *= 0.025 * sqrt(r[2]);
+		p[2u] *= 1.000 * sqrt(r[2]);
 
 		pos[3u*i+0u] = (real)(1.000 * p[0u]);
 		pos[3u*i+1u] = (real)(1.000 * p[1u]);
@@ -90,14 +104,14 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		};
 
 		uint32_t s[4] = {
-			(uint32_t)i,
+			(uint32_t)0x4AFDC7CFu + (uint32_t)i,
 			(uint32_t)0xAE8D7CF2u,
 			(uint32_t)0xE4827F00u,
 			(uint32_t)0xE44CA389u
 		};
 
 		pcg4d(s);
-		pcg4d(s); // second round for better statistical quality
+		//pcg4d(s); // second round for better statistical quality
 
 		double r[4] = {
 			INV_PCG32_MAX * (double)s[0],
@@ -106,6 +120,7 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 			INV_PCG32_MAX * (double)s[3]
 		};
 
+		// Standard Normal Distribution
 		// Box-Muller Transform
 		// https://en.wikipedia.org/wiki/Box–Muller_transform
 		double n[4] = {
@@ -122,20 +137,21 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		double inv_r1 = 1.0 / ( sqrt(r2+0.001) );
 
 		
-		v[0] = 0.250 * sqrt(G * body_mass) *  p[2] + 0.000001 * n[0];
-		v[1] = 0.000 * sqrt(G * body_mass) *  p[1] + 0.000001 * n[1];
-		v[2] = 0.250 * sqrt(G * body_mass) * -p[0] + 0.000001 * n[2];
+		v[0] = 0.250 * sqrt(G * body_mass) *  p[2] + 1.000e-6 * n[0];
+		v[1] = 0.000 * sqrt(G * body_mass) *  p[1] + 1.000e-6 * n[1];
+		v[2] = 0.250 * sqrt(G * body_mass) * -p[0] + 1.000e-6 * n[2];
 		*/
+
+
+		v[0] = 0.125e-1 * sqrt(G * 1.0) *  p[2] + 1.000e-6 * n[0];
+		v[1] = 0.000e-1 * sqrt(G * 1.0) *  p[1] + 8.000e-6 * n[1];
+		v[2] = 0.125e-1 * sqrt(G * 1.0) * -p[0] + 1.000e-6 * n[2];
 
 		/*
-		v[0] = 0.250 * sqrt(G * 1.0) *  p[2] + 0.000001 * n[0];
-		v[1] = 0.000 * sqrt(G * 1.0) *  p[1] + 0.000001 * n[1];
-		v[2] = 0.250 * sqrt(G * 1.0) * -p[0] + 0.000001 * n[2];
+		v[0] = 3.000e-3 * p[0] + 1.000e-6 * n[0];
+		v[1] = 3.000e-3 * p[1] + 1.000e-6 * n[1];
+		v[2] = 3.000e-3 * p[2] + 1.000e-6 * n[2];
 		*/
-
-		v[0] = 5.000e-3 * p[0] + 1.000e-6 * n[0];
-		v[1] = 5.000e-3 * p[1] + 1.000e-6 * n[1];
-		v[2] = 5.000e-3 * p[2] + 1.000e-6 * n[2];
 
 		/*
 		v[0] = 1.0e-6 * n[0];
@@ -163,14 +179,14 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		};
 
 		uint32_t s[4] = {
-			(uint32_t)i,
+			(uint32_t)0x5D20CDF7u + (uint32_t)i,
 			(uint32_t)0xE5C4E174u,
 			(uint32_t)0xCB77B51Eu,
 			(uint32_t)0xA82C87A3u
 		};
 
 		pcg4d(s);
-		pcg4d(s); // second round for better statistical quality
+		//pcg4d(s); // second round for better statistical quality
 
 		double r[4] = {
 			INV_PCG32_MAX * (double)s[0],
