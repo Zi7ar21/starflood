@@ -64,9 +64,9 @@
 //#define NUM_BODIES 2048
 //#define NUM_BODIES 4096
 //#define NUM_BODIES 8192
-#define NUM_BODIES 16384
+//#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-//#define NUM_BODIES 65536
+#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
 //#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
@@ -74,13 +74,13 @@
 
 // Uncomment to divide the solver calculations across
 // multiple timesteps (faster, but less accurate)
-//#define PAIRWISE_SOLVER_DECIMATION 4
+#define PAIRWISE_SOLVER_DECIMATION 4
 
 // Default number of timesteps to run simulation for
 #define NUM_TIMESTEPS 10000
 
 // Simulation timestep size (dt)
-#define TIMESTEP_SIZE 0.1
+#define TIMESTEP_SIZE 0.100
 
 // Gravitational potential softening parameter
 //#define EPSILON 0.001
@@ -111,7 +111,7 @@
 
 // Uncomment to visualize the simulation using accumulation rasterization
 // Otherwise, the gravitational potential across space is probed and plotted
-//#define VISUALIZATION_RASTERIZATION
+#define VISUALIZATION_RASTERIZATION
 
 // Decimate the number of bodies used for probe calculation
 //#define PROBE_DECIMATION 16

@@ -41,19 +41,11 @@ real probe_potential(const real* restrict mas, const real* restrict pos, const r
 		real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
 
 		#ifdef EPSILON
-		real inv_r2 = (real)1.0 / ( r2 + (real)(EPSILON*EPSILON) );
-			#ifdef STARFLOOD_DOUBLE_PRECISION
-			real inv_r1 = (real)1.0 / sqrt( r2 + (real)(EPSILON*EPSILON) );
-			#else
-			real inv_r1 = (real)1.0 / sqrtf( r2 + (real)(EPSILON*EPSILON) );
-			#endif
+		real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
+		real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
 		#else
-		real inv_r2 = (real)0.0 < r2 ? (real)1.0 / r2 : (real)0.0;
-			#ifdef STARFLOOD_DOUBLE_PRECISION
-			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrt(r2) : (real)0.0;
-			#else
-			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrtf(r2) : (real)0.0;
-			#endif
+		real inv_r2 = (real)0.0 < r2 ? (real)1.0 /          (r2) : (real)0.0;
+		real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
 		#endif
 
 		// gravitational potential of body j
@@ -186,19 +178,11 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
 
 			#ifdef EPSILON
-			real inv_r2 = (real)1.0 / ( r2 + (real)(EPSILON*EPSILON) );
-				#ifdef STARFLOOD_DOUBLE_PRECISION
-				real inv_r1 = (real)1.0 / sqrt( r2 + (real)(EPSILON*EPSILON) );
-				#else
-				real inv_r1 = (real)1.0 / sqrtf( r2 + (real)(EPSILON*EPSILON) );
-				#endif
+			real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
+			real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
 			#else
-			real inv_r2 = (real)0.0 < r2 ? (real)1.0 / r2 : (real)0.0;
-				#ifdef STARFLOOD_DOUBLE_PRECISION
-				real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrt(r2) : (real)0.0;
-				#else
-				real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrtf(r2) : (real)0.0;
-				#endif
+			real inv_r2 = (real)0.0 < r2 ? (real)1.0 /          (r2) : (real)0.0;
+			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
 			#endif
 
 			// gravitational potential of body j
@@ -208,11 +192,7 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			#ifdef ENABLE_SPH
 			real a = (real)1.0 / (h_j * (real)SQRT_PI);
 
-			#ifdef STARFLOOD_DOUBLE_PRECISION
-			real W = (a * a * a) * (real)exp( -r2 / (h_j * h_j) );
-			#else
-			real W = (a * a * a) * (real)expf( -r2 / (h_j * h_j) );
-			#endif
+			real W = (a * a * a) * real_exp( -r2 / (h_j * h_j) );
 
 			real rho_j = m_j * W;
 			#endif
@@ -295,11 +275,7 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 		const real k = (real)0.100; // equation of state constant
 		const real n = (real)1.000; // polytropic index
 
-		#ifdef STARFLOOD_DOUBLE_PRECISION
-		prs[i] = (real)pow(k * rho[i], (real)1.0+(real)1.0/n);
-		#else
-		prs[i] = (real)powf(k * rho[i], (real)1.0+(real)1.0/n);
-		#endif
+		prs[i] = real_pow(k * rho[i], (real)1.0+(real)1.0/n);
 	}
 
 	#ifdef _OPENMP
@@ -361,29 +337,17 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			}
 
 			// distance to body j
-			#ifdef STARFLOOD_DOUBLE_PRECISION
-			real r1 = (real)sqrt(r2);
-			#else
-			real r1 = (real)sqrtf(r2);
-			#endif
+			real r1 = real_sqrt(r2);
 
 			#ifdef EPSILON
-			real inv_r2 = (real)1.0 / ( r2 + (real)(EPSILON*EPSILON) );
-				#ifdef STARFLOOD_DOUBLE_PRECISION
-				real inv_r1 = (real)1.0 / sqrt( r2 + (real)(EPSILON*EPSILON) );
-				#else
-				real inv_r1 = (real)1.0 / sqrtf( r2 + (real)(EPSILON*EPSILON) );
-				#endif
+			real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
+			real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
 			#else
 			real inv_r2 = (real)1.0 / r2;
 			real inv_r1 = (real)1.0 / r1;
 			#endif
 
-			#ifdef STARFLOOD_DOUBLE_PRECISION
-			real n = (real)(-2.0) * (real)exp( -r2 / (h_j * h_j) ) / (h_j * h_j * h_j * h_j * h_j) / (real)pow( (real)PI, (real)(3.0/2.0) );
-			#else
-			real n = (real)(-2.0) * expf( -r2 / (h_j * h_j) ) / (h_j * h_j * h_j * h_j * h_j) / (real)powf( (real)PI, (real)(3.0/2.0) );
-			#endif
+			real n = (real)(-2.0) * real_exp( -r2 / (h_j * h_j) ) / (h_j * h_j * h_j * h_j * h_j) / real_pow( (real)PI, (real)(3.0/2.0) );
 
 			real W_grad[3] = {
 				n * r_ij[0u],

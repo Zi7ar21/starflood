@@ -21,3 +21,28 @@ typedef f64 real;
 #else
 typedef f32 real;
 #endif
+
+// floating-point math function aliases
+#ifdef STARFLOOD_DOUBLE_PRECISION
+#define real_cos(__x) (real)cos(__x)
+#define real_sin(__x) (real)sin(__x)
+#define real_tan(__x) (real)sin(__x)
+#define real_exp(__x) (real)exp(__x)
+#define real_exp2(__x) (real)exp2(__x)
+#define real_log(__x) (real)log(__x)
+#define real_log2(__x) (real)log2(__x)
+#define real_cbrt(__x) (real)cbrt(__x)
+#define real_sqrt(__x) (real)sqrt(__x)
+#define real_pow(__x,__y) (real)pow((__x),(__y))
+#else
+#define real_cos(__x) (real)cosf(__x)
+#define real_sin(__x) (real)sinf(__x)
+#define real_tan(__x) (real)sinf(__x)
+#define real_exp(__x) (real)expf(__x)
+#define real_exp2(__x) (real)exp2f(__x)
+#define real_log(__x) (real)logf(__x)
+#define real_log2(__x) (real)log2f(__x)
+#define real_cbrt(__x) (real)cbrtf(__x)
+#define real_sqrt(__x) (real)sqrtf(__x)
+#define real_pow(__x,__y) (real)powf((__x),(__y))
+#endif

@@ -511,21 +511,15 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 		//gam = (real)0.0000 * (real)TAU;
 		//gam = (real)0.0025 * (real)TAU;
-		gam = (real)0.0625 * (real)TAU;
+		//gam = (real)0.0625 * (real)TAU;
 		//gam = (real)0.1250 * (real)TAU;
-		//gam = (real)0.2500 * (real)TAU;
+		gam = (real)0.2500 * (real)TAU;
 		//gam = (real)0.0625 * (real)TAU * cos( (real)1.000e-2 * time * (real)TAU );
-		gam = (real)1.000e-3 * time * (real)TAU;
+		//gam = (real)1.000e-3 * time * (real)TAU;
 
-		#ifdef STARFLOOD_DOUBLE_PRECISION
-		real cos_alp = (real)cos(alp), sin_alp = (real)sin(alp);
-		real cos_bet = (real)cos(bet), sin_bet = (real)sin(bet);
-		real cos_gam = (real)cos(gam), sin_gam = (real)sin(gam);
-		#else
-		real cos_alp = (real)cosf(alp), sin_alp = (real)sinf(alp);
-		real cos_bet = (real)cosf(bet), sin_bet = (real)sinf(bet);
-		real cos_gam = (real)cosf(gam), sin_gam = (real)sinf(gam);
-		#endif
+		real cos_alp = real_cos(alp), sin_alp = real_sin(alp);
+		real cos_bet = real_cos(bet), sin_bet = real_sin(bet);
+		real cos_gam = real_cos(gam), sin_gam = real_sin(gam);
 
 		real rot_mat[16] = {
 			(real)(cos_alp*cos_bet), (real)(cos_alp*sin_bet*sin_gam-sin_alp*cos_gam), (real)(cos_alp*sin_bet*cos_gam+sin_alp*sin_gam), (real)(0.0),
@@ -651,19 +645,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			vel[3u*idx+2u]
 		};
 
-		real color_phase = (real)2.000e-1 * pot[idx];
-
-		real color[3] = {
-			#ifdef STARFLOOD_DOUBLE_PRECISION
-			(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
-			(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
-			(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
-			#else
-			(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
-			(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
-			(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
-			#endif
-		};
+		real t = pot[idx];
 
 		// y = A * x
 		{
@@ -685,6 +667,14 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 				p[i] = y[i];
 			}
 		}
+
+		real color_phase = (real)2.000e-1 * t;
+
+		real color[3] = {
+			(real)0.5*real_cos( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
+			(real)0.5*real_cos( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
+			(real)0.5*real_cos( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
+		};
 
 		for(unsigned int samp_number = 0u; samp_number < (unsigned int)SPATIAL_SAMPLES; samp_number++) {
 			real p_i[3] = {
@@ -727,13 +717,8 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 				// Box-Muller Transform
 				// https://en.wikipedia.org/wiki/Box–Muller_transform
 				real n[2] = {
-					#ifdef STARFLOOD_DOUBLE_PRECISION
-					(real)sqrt( (real)(-2.0) * (real)log(r[2]) ) * (real)cos( (real)TAU * r[3] ),
-					(real)sqrt( (real)(-2.0) * (real)log(r[2]) ) * (real)sin( (real)TAU * r[3] )
-					#else
-					(real)sqrtf( (real)(-2.0) * (real)logf(r[2]) ) * (real)cosf( (real)TAU * r[3] ),
-					(real)sqrtf( (real)(-2.0) * (real)logf(r[2]) ) * (real)sinf( (real)TAU * r[3] )
-					#endif
+					real_sqrt( (real)(-2.0) * real_log(r[2]) ) * real_cos( (real)TAU * r[3] ),
+					real_sqrt( (real)(-2.0) * real_log(r[2]) ) * real_sin( (real)TAU * r[3] )
 				};
 
 				// spatial anti-aliasing (gaussian)
@@ -860,13 +845,8 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 				// Box-Muller Transform
 				// https://en.wikipedia.org/wiki/Box–Muller_transform
 				real n[2] = {
-					#ifdef STARFLOOD_DOUBLE_PRECISION
-					(real)sqrt( (real)(-2.0) * (real)log(r[2]) ) * (real)cos( (real)TAU * r[3] ),
-					(real)sqrt( (real)(-2.0) * (real)log(r[2]) ) * (real)sin( (real)TAU * r[3] )
-					#else
-					(real)sqrtf( (real)(-2.0) * (real)logf(r[2]) ) * (real)cosf( (real)TAU * r[3] ),
-					(real)sqrtf( (real)(-2.0) * (real)logf(r[2]) ) * (real)sinf( (real)TAU * r[3] )
-					#endif
+					real_sqrt( (real)(-2.0) * real_log(r[2]) ) * real_cos( (real)TAU * r[3] ),
+					real_sqrt( (real)(-2.0) * real_log(r[2]) ) * real_sin( (real)TAU * r[3] )
 				};
 
 				// spatial anti-aliasing (gaussian)
@@ -953,19 +933,11 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
 
 		#ifdef EPSILON
-		real inv_r2 = (real)1.0 / ( r2 + (real)(EPSILON*EPSILON) );
-			#ifdef STARFLOOD_DOUBLE_PRECISION
-			real inv_r1 = (real)1.0 / sqrt( r2 + (real)(EPSILON*EPSILON) );
-			#else
-			real inv_r1 = (real)1.0 / sqrtf( r2 + (real)(EPSILON*EPSILON) );
-			#endif
+		real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
+		real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
 		#else
-		real inv_r2 = (real)0.0 < r2 ? (real)1.0 / r2 : (real)0.0;
-			#ifdef STARFLOOD_DOUBLE_PRECISION
-			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrt(r2) : (real)0.0;
-			#else
-			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / sqrtf(r2) : (real)0.0;
-			#endif
+		real inv_r2 = (real)0.0 < r2 ? (real)1.0 /          (r2) : (real)0.0;
+		real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
 		#endif
 
 		// gravitational potential of body j
@@ -1029,15 +1001,9 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 				real color_phase = (real)1.000e1 * potential;
 
 				real color[3] = {
-					#ifdef STARFLOOD_DOUBLE_PRECISION
-					(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
-					(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
-					(real)0.5*(real)cos( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
-					#else
-					(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
-					(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
-					(real)0.5*(real)cosf( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
-					#endif
+					(real)0.5*real_cos( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
+					(real)0.5*real_cos( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
+					(real)0.5*real_cos( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
 				};
 
 				for(int i = 0; i < 3; i++) {
