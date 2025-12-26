@@ -80,9 +80,15 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 			//p[2u] *= cbrt(r[2]);
 		}
 
+		/*
 		p[0u] *= 1.000 * sqrt(r[2]);
 		p[1u] *= 0.025 * sqrt(r[2]);
 		p[2u] *= 1.000 * sqrt(r[2]);
+		*/
+
+		p[0u] *= 1.000 * cbrt(r[2]);
+		p[1u] *= 0.025 * cbrt(r[2]);
+		p[2u] *= 1.000 * cbrt(r[2]);
 
 		pos[3u*i+0u] = (real)(1.000 * p[0u]);
 		pos[3u*i+1u] = (real)(1.000 * p[1u]);
@@ -143,9 +149,9 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		*/
 
 
-		v[0] = 0.125e-1 * sqrt(G * 1.0) *  p[2] + 1.000e-6 * n[0];
-		v[1] = 0.000e-1 * sqrt(G * 1.0) *  p[1] + 8.000e-6 * n[1];
-		v[2] = 0.125e-1 * sqrt(G * 1.0) * -p[0] + 1.000e-6 * n[2];
+		v[0] = 5.000e-3 * sqrt(G * 1.0) *  p[2] + 1.000e-6 * n[0];
+		v[1] = 0.000e-3 * sqrt(G * 1.0) *  p[1] + 8.000e-6 * n[1];
+		v[2] = 5.000e-3 * sqrt(G * 1.0) * -p[0] + 1.000e-6 * n[2];
 
 		/*
 		v[0] = 3.000e-3 * p[0] + 1.000e-6 * n[0];

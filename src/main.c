@@ -60,11 +60,22 @@ int main(int argc, char** argv) {
 
 	unsigned int num_bodies = (unsigned int)NUM_BODIES, num_timesteps = (unsigned int)NUM_TIMESTEPS;
 
-	unsigned int visualization_dimensions[2] = {360u, 360u};
-	//unsigned int visualization_dimensions[2] = {1080u, 1080u};
+	// ( 1:1) Aspect Ratio
+	//unsigned int visualization_dimensions[2] = { 144u,  144u}; // Potato (useful for computationally intensive phase-space searches)
+	//unsigned int visualization_dimensions[2] = { 360u,  360u}; //   Standard Definition
+	//unsigned int visualization_dimensions[2] = { 720u,  720u}; //       High-Definition
+	//unsigned int visualization_dimensions[2] = {1080u, 1080u}; //  Full High-Definition
+	//unsigned int visualization_dimensions[2] = {2160u, 2160u}; // Ultra High-Definition
 
-	//unsigned int visualization_dimensions[2] = {960u, 540u};
-	//unsigned int visualization_dimensions[2] = {1920u, 1080u};
+	// (16:9) Aspect Ratio
+	//unsigned int visualization_dimensions[2] = { 640u,  360u}; //   Standard Definition
+	//unsigned int visualization_dimensions[2] = {1280u,  720u}; //       High-Definition
+	unsigned int visualization_dimensions[2] = {1920u, 1080u}; //  Full High-Definition
+	//unsigned int visualization_dimensions[2] = {3840u, 2160u}; // Ultra High-Definition
+
+	// Cinematic Aspect Ratio
+	//unsigned int visualization_dimensions[2] = {2048u, 1080u}; // DCI 2K
+	//unsigned int visualization_dimensions[2] = {4096u, 2160u}; // DCI 4K
 
 	sim_t sim;
 	vis_t vis;
@@ -331,6 +342,8 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 		}
 	}
+
+	simulation_read(&sim, "./step_0500.raw");
 
 	#ifdef ENABLE_SIM
 	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num++) {

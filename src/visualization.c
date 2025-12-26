@@ -159,7 +159,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
 	binary_buffer = (f32*)mem + (size_t)binary_buffer_offset;
 	#else
-	binary_buffer = (unsigned char*)mem + (size_t)binary_buffer_offset;
+	binary_buffer = (unsigned char*)((f32*)mem+render_buffer_offset+render_buffer_length);
 	#endif
 
 	printf("  atomic_buffer: %p (+%zu)\n", (void*)atomic_buffer, atomic_buffer_offset);
@@ -199,9 +199,11 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	TIMING_PRINT("visualization_init()", "initialize binary_buffer");
 
 	#if (2 == VISUALIZATION_IMAGE_FORMAT)
+	// the default value is 8
+	// stbi_zlib_compress() forces quality to be a minimum of 5
+	stbi_write_png_compression_level = 1;
+
 	stbi_flip_vertically_on_write(0);
-	stbi_write_png_compression_level = 6;
-	//stbi_write_png_compression_level = 14;
 	#endif
 
 	vis.w = w;
@@ -511,9 +513,9 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 		//gam = (real)0.0000 * (real)TAU;
 		//gam = (real)0.0025 * (real)TAU;
-		//gam = (real)0.0625 * (real)TAU;
+		gam = (real)0.0625 * (real)TAU;
 		//gam = (real)0.1250 * (real)TAU;
-		gam = (real)0.2500 * (real)TAU;
+		//gam = (real)0.2500 * (real)TAU;
 		//gam = (real)0.0625 * (real)TAU * cos( (real)1.000e-2 * time * (real)TAU );
 		//gam = (real)1.000e-3 * time * (real)TAU;
 

@@ -74,16 +74,16 @@
 
 // Uncomment to divide the solver calculations across
 // multiple timesteps (faster, but less accurate)
-#define PAIRWISE_SOLVER_DECIMATION 4
+//#define PAIRWISE_SOLVER_DECIMATION 4
 
 // Default number of timesteps to run simulation for
 #define NUM_TIMESTEPS 10000
 
 // Simulation timestep size (dt)
-#define TIMESTEP_SIZE 0.100
+#define TIMESTEP_SIZE 1.0e-2
 
 // Gravitational potential softening parameter
-//#define EPSILON 0.001
+#define EPSILON 1.0e-4
 
 /* === Physical Constants === */
 
@@ -117,13 +117,13 @@
 //#define PROBE_DECIMATION 16
 
 // Number of samples for spatial anti-aliasing
-#define SPATIAL_SAMPLES 4
+#define SPATIAL_SAMPLES 128
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
 #define EXPOSURE -1.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE -0.500
+#define ORTHO_SCALE 1.000
 
 // Uncomment to enable motion blur
 //#define SHUTTER_SPEED 1.000
@@ -131,13 +131,7 @@
 /* === Miscellaneous === */
 
 // Requires pthreads
-// Note: currently broken, when rendering too fast
-// the lower portion of the image may be missing
-// (even when using mutexes, perhaps there are some
-// pending memory writes to the buffers allocated
-// on the heap? mutexes should wait for memory to be
-// synchronized though so idk)
-//#define VISUALIZATION_THREADED_IO
+#define VISUALIZATION_THREADED_IO
 
 // Uncomment to use floating-point double-precision
 // On most platforms, single is IEEE-754 binary32 and double is IEEE-754 binary64
