@@ -74,7 +74,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	TIMING_INIT();
 
 	#ifdef LOG_TIMINGS_VIS_DRAW
-	if( STARFLOOD_SUCCESS != log_init(&log_timings_vis_draw, LOG_TIMINGS_VIS_DRAW) ) {
+	if( STARFLOOD_SUCCESS != log_init(&log_timings_vis_draw, OUTPUT_DIR "/" LOG_TIMINGS_VIS_DRAW) ) {
 		return STARFLOOD_FAILURE;
 	}
 
@@ -514,7 +514,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		//gam = (real)TAU * (real)0.0025;
 		//gam = (real)TAU * (real)0.0625;
 		//gam = (real)TAU * (real)0.1250;
-		//gam = (real)TAU * (real)0.2500;
+		gam = (real)TAU * (real)0.2500;
 		//gam = (real)TAU * (real)0.0625 * cos( (real)1.000e-2 * time * (real)TAU );
 		//gam = (real)TAU * (real)1.000e-3 * time;
 
@@ -623,7 +623,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 	#ifdef VISUALIZATION_RASTERIZATION
 	#ifdef _OPENMP
-		#ifdef ENABLE_OFFLOADING
+		#ifdef ENABLE_OFFLOAD_VIS
 		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pos[:3u*N], vel[:3u*N], pot[:N])
 		#else
 		#pragma omp parallel for schedule(dynamic, 1024)
@@ -820,7 +820,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	#endif
 
 	#ifdef _OPENMP
-		#ifdef ENABLE_OFFLOADING
+		#ifdef ENABLE_OFFLOAD_VIS
 		#pragma omp target teams distribute parallel for collapse(2) map(tofrom: render_buffer[:4u*w*h]) map(to: mas[:N], pos[:3u*N])
 		#else
 		#pragma omp parallel for schedule(dynamic, 256) collapse(2)

@@ -40,30 +40,14 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		pcg4d(s);
 		//pcg4d(s); // second round for better statistical quality
 
-		double r[4] = {
-			INV_PCG32_MAX * (double)s[0],
-			INV_PCG32_MAX * (double)s[1],
-			INV_PCG32_MAX * (double)s[2],
-			INV_PCG32_MAX * (double)s[3]
-		};
-
-		/*
-		// Standard Normal Distribution
-		// Box-Muller Transform
-		// https://en.wikipedia.org/wiki/Box–Muller_transform
-		double n[4] = {
-			sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[1]),
-			sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[1]),
-			sqrt( -2.0 * log(r[2]) ) * cos(TAU * r[3]),
-			sqrt( -2.0 * log(r[2]) ) * sin(TAU * r[3])
-		};
-
-		p[0u] = 1.000 * n[0u];
-		p[1u] = 1.000 * n[1u];
-		p[2u] = 1.000 * n[2u];
-		*/
-
 		{
+			double r[4] = {
+				INV_PCG32_MAX * (double)s[0],
+				INV_PCG32_MAX * (double)s[1],
+				INV_PCG32_MAX * (double)s[2],
+				INV_PCG32_MAX * (double)s[3]
+			};
+
 			double the = acos(2.0*r[0]-1.0), phi = TAU * r[1];
 
 			double cos_the = cos(the), sin_the = sin(the);
@@ -75,9 +59,34 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 			p[2u] =           cos_the;
 
 			// random point in unit ball
-			//p[0u] *= cbrt(r[2]);
-			//p[1u] *= cbrt(r[2]);
-			//p[2u] *= cbrt(r[2]);
+			p[0] *= cbrt(r[2]);
+			p[1] *= cbrt(r[2]);
+			p[2] *= cbrt(r[2]);
+		}
+
+		{
+			pcg4d(s);
+
+			double r[4] = {
+				INV_PCG32_MAX * (double)s[0],
+				INV_PCG32_MAX * (double)s[1],
+				INV_PCG32_MAX * (double)s[2],
+				INV_PCG32_MAX * (double)s[3]
+			};
+
+			// Standard Normal Distribution
+			// Box-Muller Transform
+			// https://en.wikipedia.org/wiki/Box–Muller_transform
+			double n[4] = {
+				sqrt( -2.0 * log(r[0]) ) * cos(TAU * r[1]),
+				sqrt( -2.0 * log(r[0]) ) * sin(TAU * r[1]),
+				sqrt( -2.0 * log(r[2]) ) * cos(TAU * r[3]),
+				sqrt( -2.0 * log(r[2]) ) * sin(TAU * r[3])
+			};
+
+			//p[0] = 1.000 * n[0];
+			p[1] = 1.000 * n[1];
+			//p[2] = 1.000 * n[2];
 		}
 
 		/*
@@ -86,9 +95,9 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		p[2] *= 1.000 * sqrt(r[2]);
 		*/
 
-		p[0] *= 1.000 * cbrt(r[2]);
-		p[1] *= 0.025 * cbrt(r[2]);
-		p[2] *= 1.000 * cbrt(r[2]);
+		p[0] *= 1.000;
+		p[1] *= 0.025;
+		p[2] *= 1.000;
 
 		pos[3u*i+0u] = (real)p[0u];
 		pos[3u*i+1u] = (real)p[1u];

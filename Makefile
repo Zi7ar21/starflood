@@ -1,8 +1,9 @@
 # ===== Starflood Makefile =====
 
-#CC := clang
-#CC := gcc
-CC := nvc
+#CC := clang # LLVM Clang
+#CC := gcc # GNU Compiler Collection
+#CC := icx # Intel oneAPI DPC++/C++ Compiler
+CC := nvc # NVIDIA HPC Compiler
 
 # === Basic Optimization Flags ===
 # Please ensure only one of the following sets
@@ -15,11 +16,16 @@ CC := nvc
 #CFLAGS := -flto=auto -march=native -O2
 #CFLAGS := -flto=auto -march=native -O3
 
-# NVIDIA HPC Compilers tuned for performance on compiler host machine with device offloading
-CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
+# Intel tuned for performance on compiler host machine with offloading
+#CFLAGS := -fiopenmp -fopenmp-targets=spir64 -march=native -O2
+
+# NVIDIA HPC Compilers tuned for performance on compiler host machine with offloading
+#ifeq ($(CC),nvc)
+#CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O3 --diag_suppress lossy_conversion
-#CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
+CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
+#endif
 
 # === More Optimization Flags ===
 # Uncomment any of the following special flags

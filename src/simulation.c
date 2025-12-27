@@ -32,7 +32,7 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 	TIMING_INIT();
 
 	#ifdef LOG_STATISTICS
-	if( STARFLOOD_SUCCESS != log_init(&log_statistics, LOG_STATISTICS) ) {
+	if( STARFLOOD_SUCCESS != log_init(&log_statistics, OUTPUT_DIR "/" LOG_STATISTICS) ) {
 		fprintf(stderr, "%s error: %s failed!\n", "simulation_init()", "log_init(&log_statistics)");
 		return STARFLOOD_FAILURE;
 	}
@@ -42,7 +42,7 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 	#endif
 
 	#ifdef LOG_TIMINGS_SIM_STEP
-	if( STARFLOOD_SUCCESS != log_init(&log_timings_sim_step, LOG_TIMINGS_SIM_STEP) ) {
+	if( STARFLOOD_SUCCESS != log_init(&log_timings_sim_step, OUTPUT_DIR "/" LOG_TIMINGS_SIM_STEP) ) {
 		fprintf(stderr, "%s error: %s failed!\n", "simulation_init()", "log_init(&log_timings_sim_step)");
 		return STARFLOOD_FAILURE;
 	}

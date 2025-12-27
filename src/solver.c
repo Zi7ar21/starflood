@@ -111,7 +111,7 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 	#endif
 
 	#ifdef _OPENMP
-		#ifdef ENABLE_OFFLOADING
+		#ifdef ENABLE_OFFLOAD_SIM
 			#ifdef ENABLE_SPH
 			#pragma omp target teams distribute parallel for map(tofrom: acc[:3u*N], pot[:N], rho[:N]) map(to: mas[:N], rad[:N], pos[:3u*N]) 
 			#else
@@ -279,7 +279,7 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 	}
 
 	#ifdef _OPENMP
-		#ifdef ENABLE_OFFLOADING
+		#ifdef ENABLE_OFFLOAD_SIM
 		#pragma omp target teams distribute parallel for map(tofrom: acc[:3u*N]) map(to: mas[:N], rad[:N], pos[:3u*N], rho[:N], prs[:N]) 
 		#else
 		#pragma omp parallel for schedule(dynamic, 128)

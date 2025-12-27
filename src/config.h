@@ -4,8 +4,9 @@
 
 /* === Compute === */
 
-// Uncomment to utilize offloading (when using a supported toolchain with OpenMP enabled)
-#define ENABLE_OFFLOADING
+// Uncomment to use OpenMP target constructs (if OpenMP is enabled)
+#define ENABLE_OFFLOAD_SIM
+#define ENABLE_OFFLOAD_VIS
 
 /* === File I/O === */
 
@@ -13,10 +14,10 @@
 #define OUTPUT_DIR "./out"
 
 // Uncomment to only output files every OUTPUT_INTERVAL steps
-#define OUTPUT_INTERVAL 10
+#define OUTPUT_INTERVAL 100
 
 // Uncomment to run a simulation (will otherwise load snapshots from SIM_FILENAME)
-//#define ENABLE_SIM
+#define ENABLE_SIM
 
 // Uncomment to enable simulation file I/O by default
 #define SIM_FILENAME "sim/step_%04u"
@@ -36,7 +37,7 @@
 /* === Logging === */
 
 // Uncomment to
-#define LOG_STATISTICS "./out/statistics.csv"
+#define LOG_STATISTICS "statistics.csv"
 
 // Uncomment to enable timing
 #define ENABLE_TIMING
@@ -52,10 +53,10 @@
 //#define TIMING_USE_OMP_GET_WTIME
 
 // Uncomment to log simulation_step() timings
-#define LOG_TIMINGS_SIM_STEP "./out/timings_sim_step.csv"
+#define LOG_TIMINGS_SIM_STEP "timings_sim_step.csv"
 
 // Uncomment to log visualization_draw() timings
-#define LOG_TIMINGS_VIS_DRAW "./out/timings_vis_draw.csv"
+#define LOG_TIMINGS_VIS_DRAW "timings_vis_draw.csv"
 
 /* === Run Parameters === */
 
@@ -77,7 +78,7 @@
 //#define PAIRWISE_SOLVER_DECIMATION 4
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 1
+#define NUM_TIMESTEPS 10000
 
 // Simulation timestep size (dt)
 #define TIMESTEP_SIZE 1.0e-2
@@ -123,7 +124,7 @@
 #define EXPOSURE -1.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE 2.000
+#define ORTHO_SCALE 0.000
 
 // Uncomment to enable motion blur
 //#define SHUTTER_SPEED 0.5

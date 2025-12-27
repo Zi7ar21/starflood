@@ -64,13 +64,13 @@ int main(int argc, char** argv) {
 	//unsigned int visualization_dimensions[2] = { 144u,  144u}; // Potato (useful for computationally intensive phase-space searches)
 	//unsigned int visualization_dimensions[2] = { 360u,  360u}; //   Standard Definition
 	//unsigned int visualization_dimensions[2] = { 720u,  720u}; //       High-Definition
-	//unsigned int visualization_dimensions[2] = {1080u, 1080u}; //  Full High-Definition
+	unsigned int visualization_dimensions[2] = {1080u, 1080u}; //  Full High-Definition
 	//unsigned int visualization_dimensions[2] = {2160u, 2160u}; // Ultra High-Definition
 
 	// (16:9) Aspect Ratio
 	//unsigned int visualization_dimensions[2] = { 640u,  360u}; //   Standard Definition
 	//unsigned int visualization_dimensions[2] = {1280u,  720u}; //       High-Definition
-	unsigned int visualization_dimensions[2] = {1920u, 1080u}; //  Full High-Definition
+	//unsigned int visualization_dimensions[2] = {1920u, 1080u}; //  Full High-Definition
 	//unsigned int visualization_dimensions[2] = {3840u, 2160u}; // Ultra High-Definition
 
 	// Cinematic Aspect Ratio
@@ -297,7 +297,7 @@ int main(int argc, char** argv) {
 	printf("\n        I/O enabled: %s", enable_vis_io ? "true" : "false");
 
 	if(enable_vis_io) {
-		printf("\n        vis_filename_pattern: \"%s\"", vis_filename);
+		printf("\n        vis_filename_pattern: \"%s\"", vis_filename_pattern);
 	}
 
 	printf("\n        dimensions: %ux%u", visualization_dimensions[0], visualization_dimensions[1]);
@@ -336,7 +336,7 @@ int main(int argc, char** argv) {
 	#endif
 		printf("Step #%u (run is %6.03f%% complete)\n", step_num, 100.0 * ( (double)step_num / (double)num_timesteps ) );
 		printf("t = %.06f\n", (double)TIMESTEP_SIZE * (double)step_num);
-		//fflush(stdout);
+		fflush(stdout);
 
 		sim.step_number = step_num;
 

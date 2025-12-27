@@ -2,13 +2,13 @@
 *.gz
 *.old
 *.tar
-archive/
+archive
 
 
 # Build
 *.o
 *.out
-build/
+build
 
 # Debugging
 vgcore.*
@@ -35,4 +35,4 @@ perf.data
 *.mp4
 *.pfm
 *.webm
-out/
+out
