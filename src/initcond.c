@@ -81,18 +81,18 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		}
 
 		/*
-		p[0u] *= 1.000 * sqrt(r[2]);
-		p[1u] *= 0.025 * sqrt(r[2]);
-		p[2u] *= 1.000 * sqrt(r[2]);
+		p[0] *= 1.000 * sqrt(r[2]);
+		p[1] *= 0.025 * sqrt(r[2]);
+		p[2] *= 1.000 * sqrt(r[2]);
 		*/
 
-		p[0u] *= 1.000 * cbrt(r[2]);
-		p[1u] *= 0.025 * cbrt(r[2]);
-		p[2u] *= 1.000 * cbrt(r[2]);
+		p[0] *= 1.000 * cbrt(r[2]);
+		p[1] *= 0.025 * cbrt(r[2]);
+		p[2] *= 1.000 * cbrt(r[2]);
 
-		pos[3u*i+0u] = (real)(1.000 * p[0u]);
-		pos[3u*i+1u] = (real)(1.000 * p[1u]);
-		pos[3u*i+2u] = (real)(1.000 * p[2u]);
+		pos[3u*i+0u] = (real)p[0u];
+		pos[3u*i+1u] = (real)p[1u];
+		pos[3u*i+2u] = (real)p[2u];
 	}
 
 	// Initialize Velocity

@@ -24,7 +24,7 @@
 
 			#define TIMING_STOP() clock_gettime(STARFLOOD_POSIX_CLOCKID, &t1)
 
-			#define TIMING_PRINT(function_name,label_name) printf("%s: %.03f us %s\n",function_name,1.0e-3*(double)((intmax_t)1000000000l*((intmax_t)(t1.tv_sec)-(intmax_t)(t0.tv_sec))+((intmax_t)(t1.tv_nsec)-(intmax_t)(t0.tv_nsec))),label_name)
+			#define TIMING_PRINT(function_name,label_name) printf("%s: %.03f usec %s\n",function_name,1.0e-3*(double)((intmax_t)1000000000l*((intmax_t)(t1.tv_sec)-(intmax_t)(t0.tv_sec))+((intmax_t)(t1.tv_nsec)-(intmax_t)(t0.tv_nsec))),label_name)
 
 			#define LOG_TIMING(log) fprintf((log).file,",%.03f",1.0e-3*(double)((intmax_t)1000000000l*((intmax_t)(t1.tv_sec)-(intmax_t)(t0.tv_sec))+((intmax_t)(t1.tv_nsec)-(intmax_t)(t0.tv_nsec))))
 		#else
@@ -46,7 +46,7 @@
 
 		#define TIMING_STOP() t1 = omp_get_wtime()
 
-		#define TIMING_PRINT(function_name,label_name) printf("%s: %.06f us %s\n",function_name,1.0e6*(t1-t0),label_name)
+		#define TIMING_PRINT(function_name,label_name) printf("%s: %.06f usec %s\n",function_name,1.0e6*(t1-t0),label_name)
 
 		#define LOG_TIMING(log) fprintf((log).file,"%.03f",1.0e6*(t1-t0))
 	#endif

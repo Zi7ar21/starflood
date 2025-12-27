@@ -347,7 +347,7 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			real inv_r1 = (real)1.0 / r1;
 			#endif
 
-			real n = (real)(-2.0) * real_exp( -r2 / (h_j * h_j) ) / (h_j * h_j * h_j * h_j * h_j) / real_pow( (real)PI, (real)(3.0/2.0) );
+			real n = (real)-2.0 * real_exp( -r2 / (h_j * h_j) ) / (INV_POW_PI_3_2 * h_j * h_j * h_j * h_j * h_j);
 
 			real W_grad[3] = {
 				n * r_ij[0u],

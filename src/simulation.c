@@ -155,7 +155,7 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 		return STARFLOOD_FAILURE;
 	}
 
-	printf("  mem: %p\n", mem);
+	printf("  mem: %p (%zu bytes)\n", mem, mem_size);
 
 	TIMING_START();
 
@@ -165,40 +165,40 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 	TIMING_PRINT("simulation_init()", "memset()");
 
 	{
-		mas = (real*)mem + (size_t)mas_offset;
+		mas = &( (real*)mem )[mas_offset];
 		#ifdef ENABLE_SPH
-		rad = (real*)mem + (size_t)rad_offset;
+		rad = &( (real*)mem )[rad_offset];
 		#endif
-		pos = (real*)mem + (size_t)pos_offset;
-		vel = (real*)mem + (size_t)vel_offset;
+		pos = &( (real*)mem )[pos_offset];
+		vel = &( (real*)mem )[vel_offset];
 
-		acc = (real*)mem + (size_t)acc_offset;
+		acc = &( (real*)mem )[acc_offset];
 
-		pot = (real*)mem + (size_t)pot_offset;
+		pot = &( (real*)mem )[pot_offset];
 
 		#ifdef ENABLE_SPH
-		rho = (real*)mem + (size_t)rho_offset;
-		prs = (real*)mem + (size_t)prs_offset;
+		rho = &( (real*)mem )[rho_offset];
+		prs = &( (real*)mem )[prs_offset];
 		#endif
 
-		ken = (real*)mem + (size_t)ken_offset;
-		pen = (real*)mem + (size_t)pen_offset;
+		ken = &( (real*)mem )[ken_offset];
+		pen = &( (real*)mem )[pen_offset];
 	}
 
-	printf("  mas: %p (+%zu)\n", (void*)mas, mas_offset);
+	printf("  mas: %p (%zu bytes)\n", (void*)mas, sizeof(real)*(size_t)mas_length);
 	#ifdef ENABLE_SPH
-	printf("  rad: %p (+&zu)\n", (void*)rad, rad_offset);
+	printf("  rad: %p (%zu bytes)\n", (void*)rad, sizeof(real)*(size_t)rad_length);
 	#endif
-	printf("  pos: %p (+%zu)\n", (void*)pos, pos_offset);
-	printf("  vel: %p (+%zu)\n", (void*)vel, vel_offset);
-	printf("  acc: %p (+%zu)\n", (void*)acc, acc_offset);
-	printf("  pot: %p (+%zu)\n", (void*)pot, pot_offset);
+	printf("  pos: %p (%zu bytes)\n", (void*)pos, sizeof(real)*(size_t)pos_length);
+	printf("  vel: %p (%zu bytes)\n", (void*)vel, sizeof(real)*(size_t)vel_length);
+	printf("  acc: %p (%zu bytes)\n", (void*)acc, sizeof(real)*(size_t)acc_length);
+	printf("  pot: %p (%zu bytes)\n", (void*)pot, sizeof(real)*(size_t)pot_length);
 	#ifdef ENABLE_SPH
-	printf("  rho: %p (+%zu)\n", (void*)rho, rho_offset);
-	printf("  prs: %p (+%zu)\n", (void*)prs, prs_offset);
+	printf("  rho: %p (%zu bytes)\n", (void*)rho, sizeof(real)*(size_t)rho_length);
+	printf("  prs: %p (%zu bytes)\n", (void*)prs, sizeof(real)*(size_t)prs_length);
 	#endif
-	printf("  ken: %p (+%zu)\n", (void*)ken, ken_offset);
-	printf("  pen: %p (+%zu)\n", (void*)pen, pen_offset);
+	printf("  ken: %p (%zu bytes)\n", (void*)ken, sizeof(real)*(size_t)ken_length);
+	printf("  pen: %p (%zu bytes)\n", (void*)pen, sizeof(real)*(size_t)pen_length);
 	printf("\n");
 
 	TIMING_START();

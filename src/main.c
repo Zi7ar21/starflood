@@ -80,55 +80,23 @@ int main(int argc, char** argv) {
 	sim_t sim;
 	vis_t vis;
 
-	const size_t filename_max = (size_t)STARFLOOD_FILENAME_MAX;
+	const size_t filename_max      = (size_t)STARFLOOD_FILENAME_MAX;
+	const size_t filename_mem_size = sizeof(char) * filename_max * (size_t)4u;
 
-	/*
-	char* output_dir = (char*)malloc(sizeof(char) * filename_max);
+	char* filename_mem = (char*)malloc(filename_mem_size);
 
-	if(NULL == (void*)output_dir) {
-		fprintf(stderr, "fatal error: output_dir is (char*)NULL after malloc(%zu", sizeof(char) * filename_max);
-		perror(")");
-		return EXIT_FAILURE;
-	}
-	*/
-
-	char* sim_filename_pattern = (char*)malloc(sizeof(char) * filename_max);
-
-	if(NULL == (void*)sim_filename_pattern) {
-		fprintf(stderr, "fatal error: sim_filename_pattern is (char*)NULL after malloc(%zu", sizeof(char) * filename_max);
+	if(NULL == (void*)filename_mem) {
+		fprintf(stderr, "fatal error: filename_mem is (char*)NULL after malloc(%zu", filename_mem_size);
 		perror(")");
 		return EXIT_FAILURE;
 	}
 
-	char* vis_filename_pattern = (char*)malloc(sizeof(char) * filename_max);
+	memset(filename_mem, 0, filename_mem_size);
 
-	if(NULL == (void*)vis_filename_pattern) {
-		fprintf(stderr, "fatal error: vis_filename_pattern is (char*)NULL after malloc(%zu", sizeof(char) * filename_max);
-		perror(")");
-		free(sim_filename_pattern);
-		return EXIT_FAILURE;
-	}
-
-	char* sim_filename = (char*)malloc(sizeof(char) * filename_max);
-
-	if(NULL == (void*)sim_filename) {
-		fprintf(stderr, "fatal error: sim_filename is (char*)NULL after malloc(%zu", sizeof(char) * filename_max);
-		perror(")");
-		free(sim_filename_pattern);
-		free(vis_filename_pattern);
-		return EXIT_FAILURE;
-	}
-
-	char* vis_filename = (char*)malloc(sizeof(char) * filename_max);
-
-	if(NULL == (void*)vis_filename) {
-		fprintf(stderr, "fatal error: vis_filename is (char*)NULL after malloc(%zu", sizeof(char) * filename_max);
-		perror(")");
-		free(sim_filename_pattern);
-		free(vis_filename_pattern);
-		free(sim_filename);
-		return EXIT_FAILURE;
-	}
+	char* sim_filename_pattern = &filename_mem[(size_t)0u * filename_max];
+	char* vis_filename_pattern = &filename_mem[(size_t)1u * filename_max];
+	char* sim_filename         = &filename_mem[(size_t)2u * filename_max];
+	char* vis_filename         = &filename_mem[(size_t)3u * filename_max];
 
 	#ifdef SIM_FILENAME
 	strcpy(sim_filename_pattern, OUTPUT_DIR "/" SIM_FILENAME SIM_FILE_EXTENSION);
@@ -145,20 +113,14 @@ int main(int argc, char** argv) {
 	if( 0 >= snprintf(sim_filename, filename_max, sim_filename_pattern, 0u) ) {
 		fprintf(stderr, "fatal error: snprintf(sim_filename, filename_max, \"%s\", %u) ", sim_filename_pattern, 0u);
 		perror("failed");
-		free(sim_filename);
-		free(vis_filename);
-		free(sim_filename_pattern);
-		free(vis_filename_pattern);
+		free(filename_mem);
 		return EXIT_FAILURE;
 	}
 
 	if( 0 >= snprintf(vis_filename, filename_max, vis_filename_pattern, 0u) ) {
 		fprintf(stderr, "fatal error: snprintf(vis_filename, filename_max, \"%s\", %u) ", vis_filename_pattern, 0u);
 		perror("failed");
-		free(sim_filename);
-		free(vis_filename);
-		free(sim_filename_pattern);
-		free(vis_filename_pattern);
+		free(filename_mem);
 		return EXIT_FAILURE;
 	}
 
@@ -174,6 +136,7 @@ int main(int argc, char** argv) {
 				break;
 			}
 
+			free(filename_mem);
 			return EXIT_FAILURE;
 		}
 
@@ -191,6 +154,7 @@ int main(int argc, char** argv) {
 			);
 
 			if( (argc - 1) == i ) {
+				free(filename_mem);
 				return EXIT_SUCCESS;
 			}
 
@@ -209,6 +173,7 @@ int main(int argc, char** argv) {
 			);
 
 			if( (argc - 1) == i ) {
+				free(filename_mem);
 				return EXIT_SUCCESS;
 			}
 
@@ -217,6 +182,7 @@ int main(int argc, char** argv) {
 
 		fprintf(stderr, "%s: error: unrecognized option \'%s\'\nTry \'%s --help\' for more information.\n", argv[0], argv[1], argv[0]);
 
+		free(filename_mem);
 		return EXIT_FAILURE;
 	}
 
@@ -234,7 +200,7 @@ int main(int argc, char** argv) {
 	printf("\n        _OPENMP: %d", _OPENMP);
 	printf("\n        max_threads: %d", omp_get_max_threads());
 	printf("\n        num_devices: %d", omp_get_num_devices());
-	printf("\n        wtick: %.03f nanosecond(s)", 1.0e9*omp_get_wtick());
+	printf("\n        wtick: %.03f nsec", 1.0e9*omp_get_wtick());
 	#else
 	printf("false");
 	#endif
@@ -272,23 +238,39 @@ int main(int argc, char** argv) {
 			if( 0 != clock_getres(STARFLOOD_POSIX_CLOCKID, &tp0) ) {
 				printf("N/A\n");
 			} else {
-				printf("%jd nanosecond(s)", (intmax_t)1000000000l*(intmax_t)tp0.tv_sec+(intmax_t)tp0.tv_sec);
+				printf("%jd nsec", (intmax_t)1000000000l*(intmax_t)tp0.tv_sec+(intmax_t)tp0.tv_sec);
 			}
 
-			printf("\n            instantaneously measured difference: ");
+			printf("\n            time: ");
 
-			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
-			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
-			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
-			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
-			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
-			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
-			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
-			clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
+			if( 0 != clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0) ) {
+				printf("N/A\n");
+			} else {
+				printf("%jd.%09jd sec", (intmax_t)tp0.tv_sec, (intmax_t)tp0.tv_nsec);
+			}
 
-			printf("%jd nanosecond(s)", (intmax_t)1000000000l*((intmax_t)(tp1.tv_sec)-(intmax_t)(tp0.tv_sec))+((intmax_t)(tp1.tv_nsec)-(intmax_t)(tp0.tv_nsec)));
+			printf("\n            minimum difference (100 samples): ");
 
-			printf("\n            current time: %jd.%09jd seconds", (intmax_t)tp0.tv_sec, (intmax_t)tp0.tv_nsec);
+			intmax_t clock_minimum_difference = 0;
+
+			// first sample is discarded
+			for(int i = 0; i <= 100; i++) {
+				// call clock_gettime multiple times for hot caching
+				// technically this entire thing is kind of pointless
+				// because of processor frequency scaling
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
+
+				clock_minimum_difference += (0 < i) ? (intmax_t)1000000000l*(intmax_t)(tp1.tv_sec-tp0.tv_sec)+((intmax_t)tp1.tv_nsec-(intmax_t)tp0.tv_nsec) : (intmax_t)0;
+			}
+
+			printf("%.03f nsec", 0.01 * (double)clock_minimum_difference);
 		}
 		#endif
 	#else
@@ -327,6 +309,7 @@ int main(int argc, char** argv) {
 		if( STARFLOOD_SUCCESS != visualization_init(&vis, visualization_dimensions[0], visualization_dimensions[1]) ) {
 			fprintf(stderr, "fatal error: %s failed.\n", "visualization_init()");
 
+			free(filename_mem);
 			return EXIT_FAILURE;
 		}
 	}
@@ -339,11 +322,12 @@ int main(int argc, char** argv) {
 				visualization_free(&vis);
 			}
 
+			free(filename_mem);
 			return EXIT_FAILURE;
 		}
 	}
 
-	simulation_read(&sim, "./step_0500.raw");
+	//simulation_read(&sim, "./step_0500.raw");
 
 	#ifdef ENABLE_SIM
 	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num++) {
@@ -459,10 +443,7 @@ int main(int argc, char** argv) {
 		visualization_free(&vis);
 	}
 
-	free(sim_filename);
-	free(vis_filename);
-	free(sim_filename_pattern);
-	free(vis_filename_pattern);
+	free(filename_mem);
 
 	printf("Done. Goodbye!\n");
 

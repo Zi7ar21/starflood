@@ -77,7 +77,7 @@
 //#define PAIRWISE_SOLVER_DECIMATION 4
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 10000
+#define NUM_TIMESTEPS 1
 
 // Simulation timestep size (dt)
 #define TIMESTEP_SIZE 1.0e-2
@@ -123,10 +123,10 @@
 #define EXPOSURE -1.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE 1.000
+#define ORTHO_SCALE 2.000
 
 // Uncomment to enable motion blur
-//#define SHUTTER_SPEED 1.000
+//#define SHUTTER_SPEED 0.5
 
 /* === Miscellaneous === */
 

@@ -25,15 +25,15 @@
 #include <pthread.h>
 pthread_t vis_io_thread;
 pthread_mutex_t vis_io_mutex;
+
+void* dummy_function(void* arg) {
+	return arg;
+}
 #endif
 
 #if (2 == VISUALIZATION_IMAGE_FORMAT)
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "../stb/stb_image_write.h"
-
-void* dummy_function(void* arg) {
-	return NULL;
-}
+#include <stb_image_write.h>
 #endif
 
 struct image_write_param {
@@ -102,13 +102,9 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 
 	printf("Visualization Memory Addresses:\n");
 
-	size_t atomic_buffer_length = (size_t)4u * (size_t)w * (size_t)h;
-	size_t render_buffer_length = (size_t)4u * (size_t)w * (size_t)h;
-	size_t binary_buffer_length = (size_t)3u * (size_t)w * (size_t)h;
-
-	size_t atomic_buffer_offset = (size_t)0u;
-	size_t render_buffer_offset = atomic_buffer_offset + atomic_buffer_length;
-	size_t binary_buffer_offset = render_buffer_offset + render_buffer_length;
+	size_t atomic_buffer_length = (size_t)4u * (size_t)w * (size_t)h; //  32-bit        integer, RGBA, for atomic accumulation
+	size_t render_buffer_length = (size_t)4u * (size_t)w * (size_t)h; //  32-bit floating-point, RGBA, for finishing the render and image post-processing (alpha channel is currently unused, only for alignment)
+	size_t binary_buffer_length = (size_t)3u * (size_t)w * (size_t)h; // image format-dependent, RGB , for serializing the finalized image
 
 	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
 	size_t mem_size = (sizeof(i32)*atomic_buffer_length)+(sizeof(i32)*render_buffer_length)+(sizeof(f32)*binary_buffer_length);
@@ -144,7 +140,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 		return EXIT_FAILURE;
 	}
 
-	printf("  mem: %p\n", mem);
+	printf("  mem: %p (%zu bytes)\n", mem, mem_size);
 
 	TIMING_START();
 
@@ -153,18 +149,21 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	TIMING_STOP();
 	TIMING_PRINT("visualization_init()", "memset()");
 
-	atomic_buffer = (i32*)mem + (size_t)atomic_buffer_offset;
-	render_buffer = (f32*)mem + (size_t)render_buffer_offset;
-
+	atomic_buffer = (i32*)mem;
+	render_buffer = (f32*)&atomic_buffer[atomic_buffer_length];
 	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
-	binary_buffer = (f32*)mem + (size_t)binary_buffer_offset;
+	binary_buffer = (f32*)&render_buffer[render_buffer_length];
 	#else
-	binary_buffer = (unsigned char*)((f32*)mem+render_buffer_offset+render_buffer_length);
+	binary_buffer = (unsigned char*)&render_buffer[render_buffer_length];
 	#endif
 
-	printf("  atomic_buffer: %p (+%zu)\n", (void*)atomic_buffer, atomic_buffer_offset);
-	printf("  render_buffer: %p (+%zu)\n", (void*)render_buffer, render_buffer_offset);
-	printf("  binary_buffer: %p (+%zu)\n", (void*)binary_buffer, binary_buffer_offset);
+	printf("  atomic_buffer: %p (%zu bytes)\n", (void*)atomic_buffer, sizeof(i32)*atomic_buffer_length);
+	printf("  render_buffer: %p (%zu bytes)\n", (void*)render_buffer, sizeof(f32)*render_buffer_length);
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	printf("  binary_buffer: %p (%zu bytes)\n", (void*)binary_buffer, sizeof(f32)*binary_buffer_length);
+	#else
+	printf("  binary_buffer: %p (%zu bytes)\n", (void*)binary_buffer, sizeof(unsigned char)*binary_buffer_length);
+	#endif
 	printf("\n");
 
 	TIMING_START();
@@ -505,19 +504,19 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		real bet = (real)0.0; // pitch
 		real gam = (real)0.0; // yaw
 
-		//bet = (real)0.0000 * (real)TAU;
-		//bet = (real)0.0625 * (real)TAU;
-		//bet = (real)0.1250 * (real)TAU;
-		//bet = (real)0.2500 * (real)TAU;
-		//bet = (real)1.000e-5 * time * (real)TAU;
+		//bet = (real)TAU * (real)0.0000;
+		//bet = (real)TAU * (real)0.0625;
+		//bet = (real)TAU * (real)0.1250;
+		//bet = (real)TAU * (real)0.2500;
+		//bet = (real)TAU * (real)1.000e-2 * time;
 
-		//gam = (real)0.0000 * (real)TAU;
-		//gam = (real)0.0025 * (real)TAU;
-		gam = (real)0.0625 * (real)TAU;
-		//gam = (real)0.1250 * (real)TAU;
-		//gam = (real)0.2500 * (real)TAU;
-		//gam = (real)0.0625 * (real)TAU * cos( (real)1.000e-2 * time * (real)TAU );
-		//gam = (real)1.000e-3 * time * (real)TAU;
+		//gam = (real)TAU * (real)0.0000;
+		//gam = (real)TAU * (real)0.0025;
+		//gam = (real)TAU * (real)0.0625;
+		//gam = (real)TAU * (real)0.1250;
+		//gam = (real)TAU * (real)0.2500;
+		//gam = (real)TAU * (real)0.0625 * cos( (real)1.000e-2 * time * (real)TAU );
+		//gam = (real)TAU * (real)1.000e-3 * time;
 
 		real cos_alp = real_cos(alp), sin_alp = real_sin(alp);
 		real cos_bet = real_cos(bet), sin_bet = real_sin(bet);
@@ -544,9 +543,9 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	};
 
 	#ifdef ORTHO_SCALE
-	double ortho_scale = exp2(ORTHO_SCALE);
+	const real ortho_scale = (real)exp2(ORTHO_SCALE);
 	#else
-	double ortho_scale = 1.0;
+	const real ortho_scale = (real)1.0;
 	#endif
 
 	// projection matrix
@@ -633,7 +632,8 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	for(unsigned int idx = 0u; idx < N; idx++) {
 		// https://cs418.cs.illinois.edu/website/text/math2.html
 
-		// homogenous coordinates
+		// the fourth component is for homogenous coordinates
+		// https://en.wikipedia.org/wiki/Homogeneous_coordinates
 		real p[4] = {
 			(real)(pos[3u*idx+0u]),
 			(real)(pos[3u*idx+1u]),
@@ -647,8 +647,9 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			vel[3u*idx+2u]
 		};
 
-		real t = pot[idx];
+		real potential = pot[idx];
 
+		// Apply (Model, View, Projection) Matrix
 		// y = A * x
 		{
 			real A[16], x[4], y[4];
@@ -670,20 +671,31 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			}
 		}
 
-		real color_phase = (real)2.000e-1 * t;
+		real palette_phase = (real)2.000e-1 * potential;
 
 		real color[3] = {
-			(real)0.5*real_cos( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
-			(real)0.5*real_cos( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
-			(real)0.5*real_cos( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
+			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
+			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
+			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
 		};
 
 		for(unsigned int samp_number = 0u; samp_number < (unsigned int)SPATIAL_SAMPLES; samp_number++) {
+			i32 accumulation_color[4] = {
+				(i32)( (real)1.000e2 * color[0] ),
+				(i32)( (real)1.000e2 * color[1] ),
+				(i32)( (real)1.000e2 * color[2] ),
+				(i32)1
+			};
+
 			real p_i[3] = {
 				p[0],
 				p[1],
 				p[2]
 			};
+
+			real time_offset = (real)0.0;
+
+			real sample_offset[2] = {(real)0.0, (real)0.0};
 
 			u32 s[4] = {
 				(u32)0xB79ABC95u + (u32)samp_number,
@@ -695,20 +707,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			pcg4d(s);
 			//pcg4d(s); // second round for better statistical quality
 
-			real time_offset = (real)0.0;
-
-			real sample_offset[2] = {(real)0.0, (real)0.0};
-
-			i32 accumulation_color[4] = {
-				(i32)( (real)1.000e2 * color[0] ),
-				(i32)( (real)1.000e2 * color[1] ),
-				(i32)( (real)1.000e2 * color[2] ),
-				(i32)1
-			};
-
 			{
-				//pcg4d(s);
-
 				real r[4] = {
 					(real)INV_PCG32_MAX * (real)s[0],
 					(real)INV_PCG32_MAX * (real)s[1],
@@ -723,7 +722,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 					real_sqrt( (real)(-2.0) * real_log(r[2]) ) * real_sin( (real)TAU * r[3] )
 				};
 
-				// spatial anti-aliasing (gaussian)
+				// Spatial anti-aliasing (gaussian window)
 				{
 					const real filter_sigma = (real)0.750;
 
@@ -733,7 +732,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 				{
 					#ifdef SHUTTER_SPEED
-					time_offset += (real)SHUTTER_SPEED * (r[1] - (real)0.5); // motion blur
+					time_offset += (real)SHUTTER_SPEED * (r[0] - (real)0.5); // motion blur
 					#endif
 
 					#ifdef OUTPUT_INTERVAL
@@ -752,20 +751,20 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			/*
 			// rotate2d
 			{
-				double x[2], y[2];
+				real x[2], y[2];
 
 				x[0] = p_i[1]; // Y
 				x[1] = p_i[2]; // Z
 
-				//const double theta = 0.0000 * TAU; // side-on
-				const double theta = 0.0625 * TAU; // slightly tilted
-				//const double theta = 0.1250 * TAU; // edge-on
-				//const double theta = 0.2500 * TAU; // top-down
+				//const real theta = (real)TAU * (real)0.0000; // side-on
+				const real theta = (real)TAU * (real)0.0625; // slightly tilted
+				//const real theta = (real)TAU * (real)0.1250; // edge-on
+				//const real theta = (real)TAU * (real)0.2500; // top-down
 
-				double cos_theta = cos(theta), sin_theta = sin(theta);
+				real cos_theta = real_cos(theta), sin_theta = real_sin(theta);
 
-				y[0] = cos_theta*x[0]-sin_theta*x[1];
-				y[1] = sin_theta*x[0]+cos_theta*x[1];
+				y[0] = (cos_theta*x[0])-(sin_theta*x[1]);
+				y[1] = (sin_theta*x[0])+(cos_theta*x[1]);
 
 				p_i[1] = y[0];
 				p_i[2] = y[1];
@@ -773,21 +772,21 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 			// rotate2d
 			{
-				double x[2], y[2];
+				real x[2], y[2];
 
 				x[0] = p_i[0]; // X
 				x[1] = p_i[2]; // Z
 
-				//const double theta = 0.0000 * TAU;
-				//const double theta = 0.0625 * TAU;
-				//const double theta = 0.1250 * TAU;
-				//const double theta = 0.2500 * TAU;
-				double theta = 0.001 * (time + time_offset) * TAU;
+				//const real theta = (real)TAU * (real)0.0000;
+				//const real theta = (real)TAU * (real)0.0625;
+				//const real theta = (real)TAU * (real)0.1250;
+				//const real theta = (real)TAU * (real)0.2500;
+				real theta = (real)TAU * 0.001 * (time + time_offset);
 
-				double cos_theta = cos(theta), sin_theta = sin(theta);
+				real cos_theta = real_cos(theta), sin_theta = real_sin(theta);
 
-				y[0] = cos_theta*x[0]-sin_theta*x[1];
-				y[1] = sin_theta*x[0]+cos_theta*x[1];
+				y[0] = (cos_theta*x[0])-(sin_theta*x[1]);
+				y[1] = (sin_theta*x[0])+(cos_theta*x[1]);
 
 				p_i[0] = y[0];
 				p_i[2] = y[1];
@@ -795,8 +794,8 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			*/
 
 			int coord[2] = {
-				(int)( ( (real)h * ( (real)0.5 * p_i[0] ) ) + ( (real)0.5 * (real)w ) + sample_offset[0] - (real)0.5),
-				(int)( ( (real)h * ( (real)0.5 * p_i[1] ) ) + ( (real)0.5 * (real)h ) + sample_offset[1] - (real)0.5)
+				(int)(sample_offset[0] - (real)0.5 + (real)0.5 * (real)h * p_i[0] + (real)0.5 * (real)w),
+				(int)(sample_offset[1] - (real)0.5 + (real)0.5 * (real)h * p_i[1] + (real)0.5 * (real)h)
 			};
 
 			if( (int)0 <= coord[0] && coord[0] < (int)w && (int)0 <= coord[1] && coord[1] < (int)h ) {
@@ -812,6 +811,14 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		}
 	}
 	#else
+	real uv_normalization_factor = (real)(0.5 / (double)h);
+
+	#ifdef ORTHO_SCALE
+	const real ortho_scale = (real)exp2(-ORTHO_SCALE);
+	#else
+	const real ortho_scale = (real)1.0;
+	#endif
+
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOADING
 		#pragma omp target teams distribute parallel for collapse(2) map(tofrom: render_buffer[:4u*w*h]) map(to: mas[:N], pos[:3u*N])
@@ -822,15 +829,13 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	#endif
 	for(unsigned int idx = 0u; idx < w; idx++) {
 		for(unsigned int idy = 0u; idy < h; idy++) {
-			real inv_screen_height = (real)(1.0 / (double)h);
-
 			real pixel_color[3] = {(real)0.0, (real)0.0, (real)0.0};
 
 			for(unsigned int samp_number = 0u; samp_number < (unsigned int)SPATIAL_SAMPLES; samp_number++) {
 				u32 s[4] = {
-					(u32)0xB79ABC95u+(u32)samp_number,
-					(u32)0xE0DA3F84u+(u32)(w*idy+idx),
-					(u32)0xAB75F07Bu+(u32)step_number,
+					(u32)0xB79ABC95u + (u32)samp_number,
+					(u32)0xE0DA3F84u + (u32)(w*idy+idx),
+					(u32)0xAB75F07Bu + (u32)step_number,
 					(u32)0xCF52CA01u
 				};
 
@@ -851,54 +856,41 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 					real_sqrt( (real)(-2.0) * real_log(r[2]) ) * real_sin( (real)TAU * r[3] )
 				};
 
-				// spatial anti-aliasing (gaussian)
+				// Spatial anti-aliasing (gaussian window)
 				const real filter_sigma = (real)0.750;
 
 				real uv[2] = {
-					(real)2.0 * inv_screen_height * ( (real)idx + filter_sigma * n[0] + (real)0.5 ) - (real)1.0,
-					(real)2.0 * inv_screen_height * ( (real)idy + filter_sigma * n[1] + (real)0.5 ) - (real)1.0
+					uv_normalization_factor * (filter_sigma * n[0] + (real)0.5 + (real)idx - (real)0.5 * (real)w ),
+					uv_normalization_factor * (filter_sigma * n[1] + (real)0.5 + (real)idy - (real)0.5 * (real)h )
 				};
+
+				uv[0] *= ortho_scale;
+				uv[1] *= ortho_scale;
 
 				/*
 				real probe_pos[3] = {
-					(real)(exp2(-ORTHO_SCALE) * (double)uv[0]),
-					(real)(exp2(-ORTHO_SCALE) * (double)uv[1]),
-					(real)(                             0.000)
+					(real)( uv[0]),
+					(real)( uv[1]),
+					(real)( 0.000)
 				};
 				*/
 
 				real probe_pos[3] = {
-					(real)(exp2(-ORTHO_SCALE) * (double)uv[0]),
-					(real)(                             0.000),
-					(real)(exp2(-ORTHO_SCALE) * (double)uv[1])
+					(real)( uv[0]),
+					(real)( 0.000),
+					(real)( uv[1])
 				};
 
 				/*
 				real probe_pos[3] = {
-					(real)(exp2(-ORTHO_SCALE) * (double)uv[0]),
-					(real)(exp2(-ORTHO_SCALE) * (double)uv[1]),
-					(real)(                  4.000*r[1]-2.000)
-				};
-				*/
-
-				/*
-				real probe_pos[3] = {
-					(real)(exp2(-ORTHO_SCALE) * (double)uv[0]),
-					(real)(                  0.200*r[1]-0.100),
-					(real)(exp2(-ORTHO_SCALE) * (double)uv[1])
-				};
-				*/
-
-				/*
-				real probe_pos[3] = {
-					(real)(cos(TAU*r[1]) * exp2(-ORTHO_SCALE) * (double)uv[0]),
-					(real)(                exp2(-ORTHO_SCALE) * (double)uv[1]),
-					(real)(sin(TAU*r[1]) * exp2(-ORTHO_SCALE) * (double)uv[0])
+					(real)(real_cos( (real)TAU * r[1]) * uv[0]),
+					(real)(                              uv[1]),
+					(real)(real_sin( (real)TAU * r[1]) * uv[0])
 				};
 				*/
 
 				//real potential = probe_potential(mas, pos, probe_pos, N, step_number);
-				real potential = 0.0;
+				real potential = (real)0.0;
 
 				{
 	#ifdef PROBE_DECIMATION
@@ -1003,9 +995,9 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 				real color_phase = (real)1.000e1 * potential;
 
 				real color[3] = {
-					(real)0.5*real_cos( (real)TAU * color_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
-					(real)0.5*real_cos( (real)TAU * color_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
-					(real)0.5*real_cos( (real)TAU * color_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
+					(real)0.5*real_cos( (real)TAU * color_phase - (real)( TAU * (0.0/3.0) ) )+(real)0.5,
+					(real)0.5*real_cos( (real)TAU * color_phase - (real)( TAU * (1.0/3.0) ) )+(real)0.5,
+					(real)0.5*real_cos( (real)TAU * color_phase - (real)( TAU * (2.0/3.0) ) )+(real)0.5
 				};
 
 				for(int i = 0; i < 3; i++) {
