@@ -19,12 +19,12 @@
 
 #include "common.h"
 #include "config.h"
+#include "initcond.h"
 #include "simulation.h"
 #include "solver.h"
-#include "types.h"
 #include "timing.h"
+#include "types.h"
 #include "visualization.h"
-
 
 #define SIM_FILE_EXTENSION ".raw"
 
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
 	//unsigned int visualization_dimensions[2] = { 144u,  144u}; // Potato (useful for computationally intensive phase-space searches)
 	//unsigned int visualization_dimensions[2] = { 360u,  360u}; //   Standard Definition
 	//unsigned int visualization_dimensions[2] = { 720u,  720u}; //       High-Definition
-	//unsigned int visualization_dimensions[2] = {1080u, 1080u}; //  Full High-Definition
+	unsigned int visualization_dimensions[2] = {1080u, 1080u}; //  Full High-Definition
 	//unsigned int visualization_dimensions[2] = {2160u, 2160u}; // Ultra High-Definition
 
 	// (16:9) Aspect Ratio
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
 	//unsigned int visualization_dimensions[2] = {3840u, 2160u}; // Ultra High-Definition
 
 	// Cinematic Aspect Ratio
-	unsigned int visualization_dimensions[2] = {2048u, 1080u}; // DCI 2K
+	//unsigned int visualization_dimensions[2] = {2048u, 1080u}; // DCI 2K
 	//unsigned int visualization_dimensions[2] = {4096u, 2160u}; // DCI 4K
 
 	sim_t sim;

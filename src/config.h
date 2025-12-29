@@ -17,11 +17,11 @@
 #define OUTPUT_INTERVAL 10
 
 // Uncomment to run a simulation (will otherwise load snapshots from SIM_FILENAME)
-//#define ENABLE_SIM
+#define ENABLE_SIM
 
 // Uncomment to load initial conditions from a snapshot
 // Otherwise, initcond_generate() will be used
-#define INIT_COND_FILE "/scratch/Simulations/starflood_2025-12-27/sim/step_0100.raw"
+//#define INIT_COND_FILE "/scratch/Simulations/starflood_2025-12-27/sim/step_0100.raw"
 
 // Uncomment to enable simulation file I/O by default
 //#define SIM_FILENAME "sim/step_%04u"
@@ -81,7 +81,7 @@
 //#define PAIRWISE_SOLVER_DECIMATION 4
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 10000
+#define NUM_TIMESTEPS 1000
 
 // Simulation timestep size (dt)
 #define TIMESTEP_SIZE 1.0e-2
@@ -153,4 +153,5 @@
 
 // Maximum length for filename arrays
 // (FILENAME_MAX is usually 4096 which is a bit absurd)
-#define STARFLOOD_FILENAME_MAX 256
+#define STARFLOOD_FILENAME_MAX FILENAME_MAX
+//#define STARFLOOD_FILENAME_MAX 256

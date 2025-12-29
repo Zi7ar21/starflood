@@ -175,6 +175,12 @@ If file I/O is enabled, please ensure the appropriate output directories exist. 
 mkdir -p out/sim out/vis
 ```
 
+To safely stop a run prematurely, create a file named `stop` in the output directory. If `OUTPUT_DIR` is `"./out"` (defined in [src/config.h](src/config.h)):
+
+```sh
+echo "" > out/stop
+```
+
 #### Running with Nice
 
 [`nice`](https://en.wikipedia.org/wiki/Nice_(Unix)) is a \*NIX command that can be used to run a program with a higher/lower niceness (userspace priority).

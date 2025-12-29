@@ -6,6 +6,7 @@
 #include "config.h"
 #include "types.h"
 
+/*
 real probe_potential(const real* restrict mas, const real* restrict pos, const real* probe_pos, unsigned int N, unsigned int step_number) {
 	#ifdef PROBE_DECIMATION
 	unsigned int i_length = N / (unsigned int)PROBE_DECIMATION;
@@ -103,6 +104,7 @@ real probe_potential(const real* restrict mas, const real* restrict pos, const r
 	return (real)(-G) * pot_sum;
 	#endif
 }
+*/
 
 int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real* restrict prs, const real* restrict mas, const real* restrict rad, const real* restrict pos, const real* restrict vel, unsigned int N, unsigned int step_number) {
 	#ifdef PAIRWISE_SOLVER_DECIMATION
