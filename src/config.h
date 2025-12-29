@@ -14,14 +14,17 @@
 #define OUTPUT_DIR "./out"
 
 // Uncomment to only output files every OUTPUT_INTERVAL steps
-#define OUTPUT_INTERVAL 100
+#define OUTPUT_INTERVAL 10
 
 // Uncomment to run a simulation (will otherwise load snapshots from SIM_FILENAME)
-#define ENABLE_SIM
+//#define ENABLE_SIM
+
+// Uncomment to load initial conditions from a snapshot
+// Otherwise, initcond_generate() will be used
+#define INIT_COND_FILE "/scratch/Simulations/starflood_2025-12-27/sim/step_0100.raw"
 
 // Uncomment to enable simulation file I/O by default
-#define SIM_FILENAME "sim/step_%04u"
-//#define SIM_FILENAME "sim/step_0062"
+//#define SIM_FILENAME "sim/step_%04u"
 
 // Uncomment to enable visualization by default
 #define ENABLE_VIS
@@ -49,7 +52,7 @@
 #define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC
 //#define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC_RAW
 
-// Uncomment to use omp_get_wtime() instead of POSIX functions, requires OpenMP to be enabled
+// Uncomment to use omp_get_wtime() instead of POSIX time.h functions, requires OpenMP to be enabled
 //#define TIMING_USE_OMP_GET_WTIME
 
 // Uncomment to log simulation_step() timings
@@ -118,7 +121,8 @@
 //#define PROBE_DECIMATION 16
 
 // Number of samples for spatial anti-aliasing
-#define SPATIAL_SAMPLES 128
+//#define SPATIAL_SAMPLES 128
+#define SPATIAL_SAMPLES 1024
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
 #define EXPOSURE -1.000

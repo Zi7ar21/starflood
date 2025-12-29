@@ -30,6 +30,6 @@ df.plot(x="timestamp")
 
 plt.title(filename)
 
-plt.savefig('./statistics.png', dpi=300)
+plt.savefig('./out/log_nvidia-smi.png', dpi=300)
 
 plt.show()

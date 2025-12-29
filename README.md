@@ -50,15 +50,21 @@ Starflood is an open-source astrophysical simulation code written in C.
 
 ## Documentation
 
+### Prerequisites
+
+Starflood was developed on a couple of Linux machines (x86 and ARM) and is intended to be ran on UNIX-like operating systems. [Since November 2017, every system on the TOP500 list is running Linux](https://www.top500.org/statistics/details/osfam/1/). The compatibility/stability with other types of systems may vary, but feel free to open an issue or pull request if you encounter any issues.
+
+The following sections assume you are using a \*NIX system with [Git](https://git-scm.com/), [GNU Make](https://www.gnu.org/software/make/), and a C compiler (such as [Clang](https://clang.llvm.org/) or [GCC](https://www.gnu.org/software/gcc/)) installed. In addition, [`ffmpeg`](https://ffmpeg.org/) is recommended for encoding image frame sequences as playable video files.
+
 ### Obtaining the Source Code
 
-First, clone the Starflood repository:
+First, clone the Starflood repository ([`--recurse-submodules` will automatically clone and initialize any of Starflood's git submodules](https://git-scm.com/docs/gitsubmodules)):
 
 ```sh
 git clone --recurse-submodules https://github.com/Zi7ar21/starflood.git
 ```
 
-Then, change to the repository root:
+Then, change to the directory of the repository root:
 
 ```sh
 cd starflood
@@ -66,7 +72,7 @@ cd starflood
 
 ### Configuration
 
-There are a few parameters at the top of [src/config.h](src/config.h) worth looking at, such as `NUM_BODIES`:
+Before compiling, there are a few parameters at the top of [src/config.h](src/config.h) you may want to change, such as `NUM_BODIES`:
 
 ```c
 // number of bodies in the simulation (N)
@@ -75,7 +81,7 @@ There are a few parameters at the top of [src/config.h](src/config.h) worth look
 
 ### Building the Code
 
-First, create a directory for the build files.
+First, create a directory for the build. The recommended default is `build` (already in the [.gitignore](.gitignore)). You can create it now (if it doesn't already exist):
 
 ```sh
 mkdir -p build
@@ -85,13 +91,15 @@ mkdir -p build
 
 First, make any desired changes to the [Makefile](Makefile). Some lines are commented/uncommented near the top of the file that you might want to tweak.
 
-To compile in parallel, use `-j` to specify the number of jobs:
+For parallel compilation, use `-j` to specify the number of jobs:
 
 ```sh
 make -j$(nproc) all
 ```
 
-To clean up after the build (required if any modificaitons have been made to the source code):
+(`$(nproc)` just returns the number of available processors, it can be substituted for a number or decreased to meet memory/resource limitations).
+
+To clean up after the build (required if any modifications have been made to the source code):
 
 ```sh
 make clean
@@ -99,8 +107,8 @@ make clean
 
 ##### Flag Description
 
-- `-ffast-math`: Allows replacement of standard math library functions with native instructions (i.e. `sqrt()` becomes the native x86 SSE instruction `sqrtss`). **Note**: This flag may cause runs to be non-deterministic across compilers and vendors!
-- `-march=native`: Generate binaries optimized for the compiler host machine (i.e. cache optimizations and enables any supported SIMD instruction sets, such as [x86 AVX](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) or [ARM NEON](https://en.wikipedia.org/wiki/ARM_architecture_family#Advanced_SIMD_(Neon))).
+- `-ffast-math`: Allows replacement of standard math library functions with native instructions (i.e. `sqrt()` becomes the native x86 SSE instruction `sqrtss`). **Note**: This flag may also change associativity (order of floating-point operations), causing runs to be non-deterministic across compilers and vendors!
+- `-march=native`: Tells the compiler to tune generated code for the local processor on the host machine (i.e. cache size-aware optimizations, allows the use of instruction sets such as [x86 AVX](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) or [ARM NEON](https://en.wikipedia.org/wiki/ARM_architecture_family#Advanced_SIMD_(Neon))).
 
 #### OpenMP Offloading
 

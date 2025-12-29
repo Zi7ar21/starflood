@@ -201,24 +201,6 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 	printf("  pen: %p (%zu bytes)\n", (void*)pen, sizeof(real)*(size_t)pen_length);
 	printf("\n");
 
-	TIMING_START();
-
-	#ifdef ENABLE_SIM
-	initcond_generate(mas, rad, pos, vel, N);
-	#endif
-
-	TIMING_STOP();
-	TIMING_PRINT("simulation_init()", "initcond_generate");
-	TIMING_START();
-
-	#ifdef ENABLE_SIM
-	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, N, 0u);
-	#endif
-
-	TIMING_STOP();
-	TIMING_PRINT("simulation_init()", "solver_run");
-	TIMING_START();
-
 	{
 		sim.step_number = 0u;
 

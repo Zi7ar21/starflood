@@ -18,15 +18,23 @@
 				#define STARFLOOD_POSIX_CLOCKID CLOCK_REALTIME
 			#endif
 
-			#define TIMING_INIT() struct timespec t0, t1;
+			#define TIMING_INIT() struct timespec __t0, __t1;
 
-			#define TIMING_START() clock_gettime(STARFLOOD_POSIX_CLOCKID, &t0)
+			#define TIMING_START() \
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &__t1); \
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &__t0); \
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &__t1); \
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &__t0); \
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &__t1); \
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &__t0); \
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &__t1); \
+			clock_gettime(STARFLOOD_POSIX_CLOCKID, &__t0)
 
-			#define TIMING_STOP() clock_gettime(STARFLOOD_POSIX_CLOCKID, &t1)
+			#define TIMING_STOP() clock_gettime(STARFLOOD_POSIX_CLOCKID, &__t1)
 
-			#define TIMING_PRINT(function_name,label_name) printf("%s: %.03f usec %s\n",function_name,1.0e-3*(double)((intmax_t)1000000000l*((intmax_t)(t1.tv_sec)-(intmax_t)(t0.tv_sec))+((intmax_t)(t1.tv_nsec)-(intmax_t)(t0.tv_nsec))),label_name)
+			#define TIMING_PRINT(function_name,label_name) printf("%s: %.03f usec %s\n",function_name,1.0e-3*(double)((intmax_t)1000000000l*(intmax_t)(__t1.tv_sec-__t0.tv_sec)+((intmax_t)__t1.tv_nsec-(intmax_t)__t0.tv_nsec)),label_name)
 
-			#define LOG_TIMING(log) fprintf((log).file,",%.03f",1.0e-3*(double)((intmax_t)1000000000l*((intmax_t)(t1.tv_sec)-(intmax_t)(t0.tv_sec))+((intmax_t)(t1.tv_nsec)-(intmax_t)(t0.tv_nsec))))
+			#define LOG_TIMING(log) fprintf((log).file,",%.03f",1.0e-3*(double)((intmax_t)1000000000l*(intmax_t)(__t1.tv_sec-__t0.tv_sec)+((intmax_t)__t1.tv_nsec-(intmax_t)__t0.tv_nsec)))
 		#else
 			#error "When not using #define TIMING_USE_OMP_GET_WTIME, POSIX function clock_gettime() is required, which needs _POSIX_C_SOURCE >= 199309L to be defined before including headers from the standard library."
 		#endif
@@ -36,17 +44,22 @@
 		#endif
 
 		#define TIMING_INIT() \
-		volatile double t0 = 0.0; \
-		volatile double t1 = 0.0
+		volatile double __t0 = 0.0; \
+		volatile double __t1 = 0.0
 
 		#define TIMING_START() \
-		t0 = omp_get_wtime(); \
-		t1 = omp_get_wtime(); \
-		t0 = omp_get_wtime()
+		__t1 = omp_get_wtime(); \
+		__t0 = omp_get_wtime(); \
+		__t1 = omp_get_wtime(); \
+		__t0 = omp_get_wtime(); \
+		__t1 = omp_get_wtime(); \
+		__t0 = omp_get_wtime(); \
+		__t1 = omp_get_wtime(); \
+		__t0 = omp_get_wtime()
 
 		#define TIMING_STOP() t1 = omp_get_wtime()
 
-		#define TIMING_PRINT(function_name,label_name) printf("%s: %.06f usec %s\n",function_name,1.0e6*(t1-t0),label_name)
+		#define TIMING_PRINT(function_name,label_name) printf("%s: %.06f usec %s\n",function_name,1.0e6*(__t1-__t0),label_name)
 
 		#define LOG_TIMING(log) fprintf((log).file,"%.03f",1.0e6*(t1-t0))
 	#endif

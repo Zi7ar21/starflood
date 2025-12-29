@@ -4,8 +4,7 @@
 *.tar
 archive
 
-
-# Build
+# Builds
 *.o
 *.out
 build
@@ -18,7 +17,7 @@ vgcore.*
 .vscode
 *.code-workspace
 
-# Logs
+# Logging
 *.log
 
 # Profiling
@@ -31,8 +30,10 @@ vgcore.*
 *.profraw
 perf.data
 
+# Starflood Output
+*.raw
+out
+
 # Visualizations
 *.mp4
-*.pfm
 *.webm
-out

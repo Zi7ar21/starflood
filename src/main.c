@@ -20,6 +20,7 @@
 #include "common.h"
 #include "config.h"
 #include "simulation.h"
+#include "solver.h"
 #include "types.h"
 #include "timing.h"
 #include "visualization.h"
@@ -64,7 +65,7 @@ int main(int argc, char** argv) {
 	//unsigned int visualization_dimensions[2] = { 144u,  144u}; // Potato (useful for computationally intensive phase-space searches)
 	//unsigned int visualization_dimensions[2] = { 360u,  360u}; //   Standard Definition
 	//unsigned int visualization_dimensions[2] = { 720u,  720u}; //       High-Definition
-	unsigned int visualization_dimensions[2] = {1080u, 1080u}; //  Full High-Definition
+	//unsigned int visualization_dimensions[2] = {1080u, 1080u}; //  Full High-Definition
 	//unsigned int visualization_dimensions[2] = {2160u, 2160u}; // Ultra High-Definition
 
 	// (16:9) Aspect Ratio
@@ -74,7 +75,7 @@ int main(int argc, char** argv) {
 	//unsigned int visualization_dimensions[2] = {3840u, 2160u}; // Ultra High-Definition
 
 	// Cinematic Aspect Ratio
-	//unsigned int visualization_dimensions[2] = {2048u, 1080u}; // DCI 2K
+	unsigned int visualization_dimensions[2] = {2048u, 1080u}; // DCI 2K
 	//unsigned int visualization_dimensions[2] = {4096u, 2160u}; // DCI 4K
 
 	sim_t sim;
@@ -231,22 +232,22 @@ int main(int argc, char** argv) {
 		}
 
 		{
-			struct timespec tp0, tp1;
+			struct timespec ts0, ts1;
 
 			printf("\n            res: ");
 
-			if( 0 != clock_getres(STARFLOOD_POSIX_CLOCKID, &tp0) ) {
+			if( 0 != clock_getres(STARFLOOD_POSIX_CLOCKID, &ts0) ) {
 				printf("N/A\n");
 			} else {
-				printf("%jd nsec", (intmax_t)1000000000l*(intmax_t)tp0.tv_sec+(intmax_t)tp0.tv_sec);
+				printf("%jd nsec", (intmax_t)1000000000l*(intmax_t)ts0.tv_sec+(intmax_t)ts0.tv_sec);
 			}
 
 			printf("\n            time: ");
 
-			if( 0 != clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0) ) {
+			if( 0 != clock_gettime(STARFLOOD_POSIX_CLOCKID, &ts0) ) {
 				printf("N/A\n");
 			} else {
-				printf("%jd.%09jd sec", (intmax_t)tp0.tv_sec, (intmax_t)tp0.tv_nsec);
+				printf("%jd.%09jd sec", (intmax_t)ts0.tv_sec, (intmax_t)ts0.tv_nsec);
 			}
 
 			printf("\n            minimum difference (100 samples): ");
@@ -258,16 +259,16 @@ int main(int argc, char** argv) {
 				// call clock_gettime multiple times for hot caching
 				// technically this entire thing is kind of pointless
 				// because of processor frequency scaling
-				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
-				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
-				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
-				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
-				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
-				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
-				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp0);
-				clock_gettime(STARFLOOD_POSIX_CLOCKID, &tp1);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &ts0);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &ts1);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &ts0);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &ts1);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &ts0);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &ts1);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &ts0);
+				clock_gettime(STARFLOOD_POSIX_CLOCKID, &ts1);
 
-				clock_minimum_difference += (0 < i) ? (intmax_t)1000000000l*(intmax_t)(tp1.tv_sec-tp0.tv_sec)+((intmax_t)tp1.tv_nsec-(intmax_t)tp0.tv_nsec) : (intmax_t)0;
+				clock_minimum_difference += (0 < i) ? (intmax_t)1000000000l*(intmax_t)(ts1.tv_sec-ts0.tv_sec)+((intmax_t)ts1.tv_nsec-(intmax_t)ts0.tv_nsec) : (intmax_t)0;
 			}
 
 			printf("%.03f nsec", 0.01 * (double)clock_minimum_difference);
@@ -305,6 +306,7 @@ int main(int argc, char** argv) {
 
 	fflush(stdout);
 
+	// initialize the visualization
 	if(enable_vis) {
 		if( STARFLOOD_SUCCESS != visualization_init(&vis, visualization_dimensions[0], visualization_dimensions[1]) ) {
 			fprintf(stderr, "fatal error: %s failed.\n", "visualization_init()");
@@ -314,20 +316,43 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	if(enable_sim || enable_sim_io) {
-		if( STARFLOOD_SUCCESS != simulation_init(&sim, num_bodies) ) {
-			fprintf(stderr, "fatal error: %s failed.\n", "simulation_init()");
+	// initialize the simulation
+	if( STARFLOOD_SUCCESS != simulation_init(&sim, num_bodies) ) {
+		fprintf(stderr, "fatal error: %s failed.\n", "simulation_init()");
 
-			if(enable_vis) {
-				visualization_free(&vis);
-			}
-
-			free(filename_mem);
-			return EXIT_FAILURE;
+		if(enable_vis) {
+			visualization_free(&vis);
 		}
+
+		free(filename_mem);
+		return EXIT_FAILURE;
 	}
 
-	//simulation_read(&sim, "./step_0500.raw");
+	// simulation initial conditions
+	#ifdef INIT_COND_FILE
+	if( STARFLOOD_SUCCESS != simulation_read(&sim, INIT_COND_FILE) ) {
+		if(enable_vis) {
+			visualization_free(&vis);
+		}
+
+		simulation_free(&sim);
+		free(filename_mem);
+		return EXIT_FAILURE;
+	}
+	#else
+	if( STARFLOOD_SUCCESS != initcond_generate(sim.mas, sim.rad, sim.pos, sim.vel, sim.N) ) {
+		if(enable_vis) {
+			visualization_free(&vis);
+		}
+
+		simulation_free(&sim);
+		free(filename_mem);
+		return EXIT_FAILURE;
+	}
+
+	// An initial solver step is needed for the first leapfrog "kick" in the "kick-drift-kick" form, since acceleration is only updated after "drift"
+	solver_run(sim.acc, sim.pot, sim.rho, sim.prs, sim.mas, sim.rad, sim.pos, sim.vel, sim.N, 0u);
+	#endif
 
 	#ifdef ENABLE_SIM
 	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num++) {
@@ -435,9 +460,7 @@ int main(int argc, char** argv) {
 
 	fflush(stdout);
 
-	if(enable_sim || enable_sim_io) {
-		simulation_free(&sim);
-	}
+	simulation_free(&sim);
 
 	if(enable_vis) {
 		visualization_free(&vis);

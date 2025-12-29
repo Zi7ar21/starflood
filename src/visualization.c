@@ -508,13 +508,13 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		//bet = (real)TAU * (real)0.0625;
 		//bet = (real)TAU * (real)0.1250;
 		//bet = (real)TAU * (real)0.2500;
-		//bet = (real)TAU * (real)1.000e-2 * time;
+		bet = (real)TAU * (real)1.000e-2 * time;
 
 		//gam = (real)TAU * (real)0.0000;
 		//gam = (real)TAU * (real)0.0025;
 		//gam = (real)TAU * (real)0.0625;
 		//gam = (real)TAU * (real)0.1250;
-		gam = (real)TAU * (real)0.2500;
+		//gam = (real)TAU * (real)0.2500;
 		//gam = (real)TAU * (real)0.0625 * cos( (real)1.000e-2 * time * (real)TAU );
 		//gam = (real)TAU * (real)1.000e-3 * time;
 

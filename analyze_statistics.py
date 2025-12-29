@@ -30,6 +30,6 @@ df.plot(x="step_number")
 
 plt.title(filename)
 
-plt.savefig('./statistics.png', dpi=300)
+plt.savefig('./out/statistics.png', dpi=300)
 
 plt.show()
