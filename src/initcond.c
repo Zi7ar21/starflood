@@ -8,7 +8,19 @@
 #include "types.h"
 
 int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos, real* restrict vel, unsigned int N) {
-	const double body_mass = 1.0 / (double)N;
+	//double     body_mass = 1.000e0 / (double)N;
+	//double inv_body_mass = 1.000e0 * (double)N;
+
+	// for a ball with a mass density of 1
+	const double radius = 1.000;
+	const double volume = PI_4_3 * (radius * radius);
+
+	double     body_mass = volume / (double)N;
+	double inv_body_mass = (double)N / volume;
+
+	// for unit sphere with different density
+	//double     body_mass = INV_PI_4_3 * 1.000e-1 / (double)N;
+	//double inv_body_mass =     PI_4_3 * (double)N / 1.000e-1;
 
 	// Initialize Mass
 	for(unsigned int i = 0u; i < N; i++) {
@@ -41,38 +53,53 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		//pcg4d(s); // second round for better statistical quality
 
 		{
-			double r[4] = {
-				INV_PCG32_MAX * (double)s[0],
-				INV_PCG32_MAX * (double)s[1],
-				INV_PCG32_MAX * (double)s[2],
-				INV_PCG32_MAX * (double)s[3]
-			};
+			double r[4];
 
-			double the = acos(2.0*r[0]-1.0), phi = TAU * r[1];
+			for(int j = 0; j < 4; j++) {
+				r[j] = INV_PCG32_MAX * (double)s[j];
+			}
 
-			double cos_the = cos(the), sin_the = sin(the);
+			double phi = TAU * r[0], the = acos(2.0*r[1]-1.0);
+
 			double cos_phi = cos(phi), sin_phi = sin(phi);
+			double cos_the = cos(the), sin_the = sin(the);
 
 			// random point on unit sphere
-			p[0u] = cos_phi * sin_the;
-			p[1u] = sin_phi * sin_the;
-			p[2u] =           cos_the;
+			p[0] = cos_phi * sin_the;
+			p[1] = sin_phi * sin_the;
+			p[2] =           cos_the;
 
 			// random point in unit ball
-			p[0] *= cbrt(r[2]);
-			p[1] *= cbrt(r[2]);
-			p[2] *= cbrt(r[2]);
+			p[0] *= radius * cbrt(r[2]);
+			p[1] *= radius * cbrt(r[2]);
+			p[2] *= radius * cbrt(r[2]);
+
+			//p[0] *= radius * sqrt(r[2]);
+			//p[1] *= radius * sqrt(r[2]);
+			//p[2] *= radius * sqrt(r[2]);
+
+			/*
+			p[0] *= radius * (r[2]);
+			p[1] *= radius * (r[2]);
+			p[2] *= radius * (r[2]);
+			*/
+
+			/*
+			p[0] *= 0.0 < r[3] ? (1.0 / r[3]) - 1.0 : 1.0;
+			p[1] *= 0.0 < r[3] ? (1.0 / r[3]) - 1.0 : 1.0;
+			p[2] *= 0.0 < r[3] ? (1.0 / r[3]) - 1.0 : 1.0;
+			*/
 		}
 
+		/*
 		{
 			pcg4d(s);
 
-			double r[4] = {
-				INV_PCG32_MAX * (double)s[0],
-				INV_PCG32_MAX * (double)s[1],
-				INV_PCG32_MAX * (double)s[2],
-				INV_PCG32_MAX * (double)s[3]
-			};
+			double r[4];
+
+			for(int j = 0; j < 4; j++) {
+				r[j] = INV_PCG32_MAX * (double)s[j];
+			}
 
 			// Standard Normal Distribution
 			// Box-Muller Transform
@@ -85,9 +112,24 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 			};
 
 			//p[0] = 1.000 * n[0];
-			p[1] = 1.000 * n[1];
+			//p[1] = 1.000 * n[1];
 			//p[2] = 1.000 * n[2];
 		}
+		*/
+
+		/*
+		{
+			double r[4];
+
+			for(int j = 0; j < 4; j++) {
+				r[j] = INV_PCG32_MAX * (double)s[j];
+			}
+
+			p[0] = 2.000*r[0]-1.000;
+			p[1] = 2.000*r[1]-1.000;
+			p[2] = 2.000*r[2]-1.000;
+		}
+		*/
 
 		/*
 		p[0] *= 1.000 * sqrt(r[2]);
@@ -95,9 +137,9 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		p[2] *= 1.000 * sqrt(r[2]);
 		*/
 
-		p[0] *= 1.000;
-		p[1] *= 0.025;
-		p[2] *= 1.000;
+		//p[0] *= 1.000;
+		//p[1] *= 0.025;
+		//p[2] *= 1.000;
 
 		pos[3u*i+0u] = (real)p[0u];
 		pos[3u*i+1u] = (real)p[1u];
@@ -128,12 +170,11 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		pcg4d(s);
 		//pcg4d(s); // second round for better statistical quality
 
-		double r[4] = {
-			INV_PCG32_MAX * (double)s[0],
-			INV_PCG32_MAX * (double)s[1],
-			INV_PCG32_MAX * (double)s[2],
-			INV_PCG32_MAX * (double)s[3]
-		};
+		double r[4];
+
+		for(int j = 0; j < 4; j++) {
+			r[j] = INV_PCG32_MAX * (double)s[j];
+		}
 
 		// Standard Normal Distribution
 		// Box-Muller Transform
@@ -145,22 +186,60 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 			sqrt( -2.0 * log(r[2]) ) * sin(TAU * r[3])
 		};
 
+		//double sigma = sqrt(k_B * T / mas[i]);
+		//double sigma = sqrt(1.000e-14 * inv_body_mass);
+		double sigma = 1.000e-4;
+
+		n[0] *= sigma;
+		n[1] *= sigma;
+		n[2] *= sigma;
+		n[3] *= sigma;
+
+		double velocity = sqrt( (n[0]*n[0])+(n[1]*n[1])+(n[2]*n[2]) );
+
+		{
+			pcg4d(s);
+
+			for(int j = 0; j < 4; j++) {
+				r[j] = INV_PCG32_MAX * (double)s[j];
+			}
+
+			double phi = TAU * r[0], the = acos(2.0*r[1]-1.0);
+
+			double cos_phi = cos(phi), sin_phi = sin(phi);
+			double cos_the = cos(the), sin_the = sin(the);
+
+			// random point on unit sphere
+			v[0] = cos_phi * sin_the;
+			v[1] = sin_phi * sin_the;
+			v[2] =           cos_the;
+
+			v[0] *= velocity;
+			v[1] *= velocity;
+			v[2] *= velocity;
+		}
+
+		//double r2 = (p[0]*p[0])+(p[2]*p[2]);
+		double r2 = (p[0]*p[0])+(p[1]*p[1])+(p[2]*p[2]);
+
+		double inv_r2 = 0.0 < r2 ? 1.0 /     (r2) : 0.0;
+		double inv_r1 = 0.0 < r2 ? 1.0 / sqrt(r2) : 0.0;
+
+		v[0] += 8.000e-3 * sqrt(PI_8_3 * G) * p[0];
+		v[1] += 8.000e-3 * sqrt(PI_8_3 * G) * p[1];
+		v[2] += 8.000e-3 * sqrt(PI_8_3 * G) * p[2];
+
 		/*
-		double r2 = (p[0]*p[0])+(p[2]*p[2]);
-
-		double inv_r2 = 1.0 / (      r2+0.001  );
-		double inv_r1 = 1.0 / ( sqrt(r2+0.001) );
-
-		
-		v[0] = 0.250 * sqrt(G * body_mass) *  p[2] + 1.000e-6 * n[0];
-		v[1] = 0.000 * sqrt(G * body_mass) *  p[1] + 1.000e-6 * n[1];
-		v[2] = 0.250 * sqrt(G * body_mass) * -p[0] + 1.000e-6 * n[2];
+		v[0] = 0.250 * sqrt(G * 2.0 * body_mass) *  p[2] + 1.000e-6 * n[0];
+		v[1] = 0.000 * sqrt(G * 2.0 * body_mass) *  p[1] + 1.000e-6 * n[1];
+		v[2] = 0.250 * sqrt(G * 2.0 * body_mass) * -p[0] + 1.000e-6 * n[2];
 		*/
 
-
-		v[0] = 5.000e-3 * sqrt(G * 1.0) *  p[2] + 1.000e-6 * n[0];
-		v[1] = 0.000e-3 * sqrt(G * 1.0) *  p[1] + 8.000e-6 * n[1];
-		v[2] = 5.000e-3 * sqrt(G * 1.0) * -p[0] + 1.000e-6 * n[2];
+		/*
+		v[0] = 5.000e-3 * sqrt(G * 2.0) *  p[2] + 1.000e-6 * n[0];
+		v[1] = 0.000e-3 * sqrt(G * 2.0) *  p[1] + 8.000e-6 * n[1];
+		v[2] = 5.000e-3 * sqrt(G * 2.0) * -p[0] + 1.000e-6 * n[2];
+		*/
 
 		/*
 		v[0] = 3.000e-3 * p[0] + 1.000e-6 * n[0];
@@ -169,9 +248,9 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		*/
 
 		/*
-		v[0] = 1.0e-6 * n[0];
-		v[1] = 1.0e-6 * n[1];
-		v[2] = 1.0e-6 * n[2];
+		v[0] = 1.000e-6 * n[0];
+		v[1] = 1.000e-6 * n[1];
+		v[2] = 1.000e-6 * n[2];
 		*/
 
 		vel[3u*i+0u] = (real)v[0u];
@@ -203,17 +282,29 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		pcg4d(s);
 		//pcg4d(s); // second round for better statistical quality
 
-		double r[4] = {
-			INV_PCG32_MAX * (double)s[0],
-			INV_PCG32_MAX * (double)s[1],
-			INV_PCG32_MAX * (double)s[2],
-			INV_PCG32_MAX * (double)s[3]
-		};
+		double r[4];
 
+		for(int j = 0; j < 4; j++) {
+			r[j] = INV_PCG32_MAX * (double)s[j];
+		}
+
+		/*
 		// Thin disk
-		//if(0.000 <= r[0] && r[0] < 0.850) {
-		//	p[1] *= 0.025;
-		//}
+		if(0.000 <= r[0] && r[0] < 0.850) {
+			p[1] *= 0.025;
+
+			double r2 = (p[0]*p[0])+(p[1]*p[1])+(p[2]*p[2]);
+
+			double inv_r2 = 0.0 < r2 ? 1.0 /     (r2) : 0.0;
+			double inv_r1 = 0.0 < r2 ? 1.0 / sqrt(r2) : 0.0;
+
+			if( 10.0*10.0 > r2 ) {
+				v[0] = 5.000e-3 * sqrt(G * 1.0) * inv_r1 *  p[2];
+				v[1] = 0.000e-3 * sqrt(G * 1.0) * inv_r1 *  p[1];
+				v[2] = 5.000e-3 * sqrt(G * 1.0) * inv_r1 * -p[0];
+			}
+		}
+		*/
 
 		//p[0] += r[1] < 0.500 ?  4.000 : -4.000;
 		/*

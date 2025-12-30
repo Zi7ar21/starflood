@@ -416,8 +416,6 @@ int simulation_step(sim_t* restrict simulation) {
 
 	sim_t sim = *simulation;
 
-	const real dt = (real)TIMESTEP_SIZE;
-
 	unsigned int step_number = sim.step_number;
 
 	unsigned int N = sim.N;
@@ -436,6 +434,8 @@ int simulation_step(sim_t* restrict simulation) {
 
 	real* ken = sim.ken;
 	real* pen = sim.pen;
+
+	const real dt = (real)TIMESTEP_SIZE;
 
 	// for the very first leapfrog kick
 	//if(0u >= step_number) {
@@ -507,22 +507,22 @@ int simulation_step(sim_t* restrict simulation) {
 
 	// compute total energy
 	{
-		double T_sum = 0.0, T_c = 0.0; // Kinetic Energy
-		double V_sum = 0.0, V_c = 0.0; // Potential Energy
+		double T_sum = 0.0, T_com = 0.0; // Kinetic Energy
+		double V_sum = 0.0, V_com = 0.0; // Potential Energy
 
 		TIMING_START();
 
 		for(unsigned int i = 0u; i < N; i++) {
-			// Naïve summation
-			//V_sum += (double)ken[i];
-
 			// Kahan summation
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			double y = (double)ken[i] - T_c;
+			double y = (double)ken[i] - T_com;
 			volatile double t = T_sum + y;
 			volatile double z = t - T_sum;
-			T_c = z - y;
+			T_com = z - y;
 			T_sum = t;
+
+			// Naïve summation
+			//T_sum += (double)ken[i];
 		}
 
 		TIMING_STOP();
@@ -533,16 +533,16 @@ int simulation_step(sim_t* restrict simulation) {
 		TIMING_START();
 
 		for(unsigned int i = 0u; i < N; i++) {
-			// Naïve summation
-			//V_sum += (double)pen[i];
-
 			// Kahan summation
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			double y = (double)pen[i] - V_c;
+			double y = (double)pen[i] - V_com;
 			volatile double t = V_sum + y;
 			volatile double z = t - V_sum;
-			V_c = z - y;
+			V_com = z - y;
 			V_sum = t;
+
+			// Naïve summation
+			//V_sum += (double)pen[i];
 		}
 
 		TIMING_STOP();

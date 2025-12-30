@@ -14,7 +14,7 @@
 #define OUTPUT_DIR "./out"
 
 // Uncomment to only output files every OUTPUT_INTERVAL steps
-#define OUTPUT_INTERVAL 10
+#define OUTPUT_INTERVAL 100
 
 // Uncomment to run a simulation (will otherwise load snapshots from SIM_FILENAME)
 #define ENABLE_SIM
@@ -24,7 +24,7 @@
 //#define INIT_COND_FILE "/scratch/Simulations/starflood_2025-12-27/sim/step_0100.raw"
 
 // Uncomment to enable simulation file I/O by default
-//#define SIM_FILENAME "sim/step_%04u"
+#define SIM_FILENAME "sim/step_%04u"
 
 // Uncomment to enable visualization by default
 #define ENABLE_VIS
@@ -64,6 +64,7 @@
 /* === Run Parameters === */
 
 // Default number of bodies in the simulation (N)
+// It is recommended you set this to a power of 2
 //#define NUM_BODIES 1024
 //#define NUM_BODIES 2048
 //#define NUM_BODIES 4096
@@ -81,23 +82,23 @@
 //#define PAIRWISE_SOLVER_DECIMATION 4
 
 // Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 1000
+#define NUM_TIMESTEPS 10000
 
 // Simulation timestep size (dt)
-#define TIMESTEP_SIZE 1.0e-2
+#define TIMESTEP_SIZE 1.000e-1
 
 // Gravitational potential softening parameter
-#define EPSILON 1.0e-4
+#define EPSILON 1.000e-3
 
 /* === Physical Constants === */
 
-// Gravitational constant (physical units are not yet implemented)
+// Gravitational constant (arbitrary)
 #define G 1.000
 
-// alternative (pc * (km/s)^2 * M_sol^-1)
+// Gravitational constant (pc * M_sol^-1 * (km/s)^2)
 //#define G 4.3009172706e-3
 
-// alternative (m^3 * kg^-1 * s^2)
+// Gravitational constant (m^3 * kg^-1 * s^2)
 // https://physics.nist.gov/cgi-bin/cuu/Value?bg
 //#define G 6.6743e-11
 
@@ -109,7 +110,11 @@
 
 // Uncomment to use Kahan Summation in the solver for higher simulation accuracy
 // Useful for single-precision floating-point calculations
-#define ENABLE_KAHAN_SUMMATION
+#define ENABLE_KAHAN_SUMMATION_SOLVER
+
+// Uncomment to use Kahan Summation in the solver for potential energy statistics
+// Does not affect simulation behavior, only the accuracy of derived statistics
+#define ENABLE_KAHAN_SUMMATION_ENERGY
 
 /* === Visualization === */
 
@@ -121,14 +126,16 @@
 //#define PROBE_DECIMATION 16
 
 // Number of samples for spatial anti-aliasing
-//#define SPATIAL_SAMPLES 128
-#define SPATIAL_SAMPLES 1024
+#define SPATIAL_SAMPLES 128
 
 // Exposure compensation, in Log2 scale (0 = the sum of all pixels per body rendered is 1.000)
 #define EXPOSURE -1.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE 0.000
+#define ORTHO_SCALE -0.500
+
+// Uncomment to enable automatic scaling
+#define AUTOSCALING
 
 // Uncomment to enable motion blur
 //#define SHUTTER_SPEED 0.5

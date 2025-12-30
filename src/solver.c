@@ -1,116 +1,22 @@
 #include "solver.h"
 
 #include <math.h>
+#include <stdio.h>
 
 #include "common.h"
 #include "config.h"
+#include "timing.h"
 #include "types.h"
 
-/*
-real probe_potential(const real* restrict mas, const real* restrict pos, const real* probe_pos, unsigned int N, unsigned int step_number) {
-	#ifdef PROBE_DECIMATION
-	unsigned int i_length = N / (unsigned int)PROBE_DECIMATION;
-	unsigned int i_offset = (step_number % (unsigned int)PROBE_DECIMATION) * i_length;
-	#endif
-
-	real acc_sum[3] = {(real)0.0, (real)0.0, (real)0.0};
-	real pot_sum = (real)0.0;
-	#ifdef ENABLE_KAHAN_SUMMATION
-	real acc_c[3] = {(real)0.0, (real)0.0, (real)0.0};
-	real pot_c = (real)0.0;
-	#endif
-
-	#ifdef PROBE_DECIMATION
-	for(unsigned int i = i_offset; i < (i_offset+i_length); i++) {
-	#else
-	for(unsigned int i = 0u; i < N; i++) {
-	#endif
-		real m_i = mas[i];
-
-		real r_i[3] = {
-			pos[3u*i+0u],
-			pos[3u*i+1u],
-			pos[3u*i+2u]
-		};
-
-		real r_ij[3] = {
-			probe_pos[0] - r_i[0],
-			probe_pos[1] - r_i[1],
-			probe_pos[2] - r_i[2]
-		};
-
-		real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
-
-		#ifdef EPSILON
-		real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
-		real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
-		#else
-		real inv_r2 = (real)0.0 < r2 ? (real)1.0 /          (r2) : (real)0.0;
-		real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
-		#endif
-
-		// gravitational potential of body j
-		// (G and m_i are taken into account later)
-		real pot_i = m_i * inv_r1;
-
-		real F[3] = {
-			pot_i * r_ij[0u] * inv_r2,
-			pot_i * r_ij[1u] * inv_r2,
-			pot_i * r_ij[2u] * inv_r2
-		};
-
-		for(unsigned int k = 0u; k < 3u; k++) {
-			#ifdef ENABLE_KAHAN_SUMMATION
-			// Kahan summation
-			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			real y = F[k] - acc_c[k];
-			volatile real t = acc_sum[k] + y;
-			volatile real z = t - acc_sum[k];
-			acc_c[k] = z - y;
-			acc_sum[k] = t;
-			#else
-			// Naïve summation
-			acc_sum[k] += F[k];
-			#endif
-		}
-
-		{
-			#ifdef ENABLE_KAHAN_SUMMATION
-			// Kahan summation
-			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			real y = pot_i - pot_c;
-			volatile real t = pot_sum + y;
-			volatile real z = t - pot_sum;
-			pot_c = z - y;
-			pot_sum = t;
-			#else
-			// Naïve summation
-			pot_sum += pot_j;
-			#endif
-		}
-	}
-
-	#ifdef PROBE_DECIMATION
-	//acc[3u*i+0u] = (real)PROBE_DECIMATION * (real)(-G) * m_i * acc_sum[0u];
-	//acc[3u*i+1u] = (real)PROBE_DECIMATION * (real)(-G) * m_i * acc_sum[1u];
-	//acc[3u*i+2u] = (real)PROBE_DECIMATION * (real)(-G) * m_i * acc_sum[2u];
-
-	return (real)PROBE_DECIMATION * (real)(-G) * pot_sum;
-	#else
-	//acc[3u*i+0u] = (real)(-G) * m_i * acc_sum[0u];
-	//acc[3u*i+1u] = (real)(-G) * m_i * acc_sum[1u];
-	//acc[3u*i+2u] = (real)(-G) * m_i * acc_sum[2u];
-
-	return (real)(-G) * pot_sum;
-	#endif
-}
-*/
-
 int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real* restrict prs, const real* restrict mas, const real* restrict rad, const real* restrict pos, const real* restrict vel, unsigned int N, unsigned int step_number) {
+	TIMING_INIT();
+
 	#ifdef PAIRWISE_SOLVER_DECIMATION
 	unsigned int j_length = N / (unsigned int)PAIRWISE_SOLVER_DECIMATION;
 	unsigned int j_offset = (step_number % (unsigned int)PAIRWISE_SOLVER_DECIMATION) * j_length;
 	#endif
+
+	TIMING_START();
 
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOAD_SIM
@@ -125,16 +31,21 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
 		real acc_sum[3] = {(real)0.0, (real)0.0, (real)0.0};
+
+		#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
+		real acc_com[3] = {(real)0.0, (real)0.0, (real)0.0};
+		#endif
+
 		real pot_sum = (real)0.0;
-		#ifdef ENABLE_KAHAN_SUMMATION
-		real acc_c[3] = {(real)0.0, (real)0.0, (real)0.0};
-		real pot_c = (real)0.0;
+
+		#ifdef ENABLE_KAHAN_SUMMATION_ENERGY
+		real pot_com = (real)0.0;
 		#endif
 
 		#ifdef ENABLE_SPH
 		real rho_sum = (real)0.0;
 		#ifdef ENABLE_KAHAN_SUMMATION
-		real rho_c = (real)0.0;
+		real rho_com = (real)0.0;
 		#endif
 		#endif
 
@@ -152,9 +63,11 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 		#else
 		for(unsigned int j = 0u; j < N; j++) {
 		#endif
+			/*
 			if(i == j) {
 				continue;
 			}
+			*/
 
 			real m_j = mas[j]; // body j's mass
 
@@ -171,13 +84,13 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 
 			// vector from body j's position to body i's position
 			real r_ij[3] = {
-				r_i[0u] - r_j[0u],
-				r_i[1u] - r_j[1u],
-				r_i[2u] - r_j[2u]
+				r_i[0] - r_j[0],
+				r_i[1] - r_j[1],
+				r_i[2] - r_j[2]
 			};
 
 			// squared distance to body j
-			real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
+			real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
 
 			#ifdef EPSILON
 			real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
@@ -200,19 +113,19 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			#endif
 
 			real F[3] = {
-				pot_j * r_ij[0u] * inv_r2,
-				pot_j * r_ij[1u] * inv_r2,
-				pot_j * r_ij[2u] * inv_r2
+				pot_j * inv_r2 * r_ij[0],
+				pot_j * inv_r2 * r_ij[1],
+				pot_j * inv_r2 * r_ij[2]
 			};
 
 			for(unsigned int k = 0u; k < 3u; k++) {
-				#ifdef ENABLE_KAHAN_SUMMATION
+				#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = F[k] - acc_c[k];
+				real y = F[k] - acc_com[k];
 				volatile real t = acc_sum[k] + y;
 				volatile real z = t - acc_sum[k];
-				acc_c[k] = z - y;
+				acc_com[k] = z - y;
 				acc_sum[k] = t;
 				#else
 				// Naïve summation
@@ -220,30 +133,15 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 				#endif
 			}
 
-			{
-				#ifdef ENABLE_KAHAN_SUMMATION
-				// Kahan summation
-				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = pot_j - pot_c;
-				volatile real t = pot_sum + y;
-				volatile real z = t - pot_sum;
-				pot_c = z - y;
-				pot_sum = t;
-				#else
-				// Naïve summation
-				pot_sum += pot_j;
-				#endif
-			}
-
 			#ifdef ENABLE_SPH
 			{
-				#ifdef ENABLE_KAHAN_SUMMATION
+				#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = rho_j - rho_c;
+				real y = rho_j - rho_com;
 				volatile real t = rho_sum + y;
 				volatile real z = t - rho_sum;
-				rho_c = z - y;
+				rho_com = z - y;
 				rho_sum = t;
 				#else
 				// Naïve summation
@@ -251,34 +149,61 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 				#endif
 			}
 			#endif
+
+			{
+				#ifdef ENABLE_KAHAN_SUMMATION_ENERGY
+				// Kahan summation
+				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+				real y = pot_j - pot_com;
+				volatile real t = pot_sum + y;
+				volatile real z = t - pot_sum;
+				pot_com = z - y;
+				pot_sum = t;
+				#else
+				// Naïve summation
+				pot_sum += pot_j;
+				#endif
+			}
 		}
 
 		#ifdef PAIRWISE_SOLVER_DECIMATION
 		acc[3u*i+0u] = (real)PAIRWISE_SOLVER_DECIMATION * (real)(-G) * m_i * acc_sum[0u];
 		acc[3u*i+1u] = (real)PAIRWISE_SOLVER_DECIMATION * (real)(-G) * m_i * acc_sum[1u];
 		acc[3u*i+2u] = (real)PAIRWISE_SOLVER_DECIMATION * (real)(-G) * m_i * acc_sum[2u];
-
-		pot[i] = (real)PAIRWISE_SOLVER_DECIMATION * (real)(-G) * pot_sum;
+		pot[   i   ] = (real)PAIRWISE_SOLVER_DECIMATION * (real)(-G) * pot_sum;
 		#else
 		acc[3u*i+0u] = (real)(-G) * m_i * acc_sum[0u];
 		acc[3u*i+1u] = (real)(-G) * m_i * acc_sum[1u];
 		acc[3u*i+2u] = (real)(-G) * m_i * acc_sum[2u];
-
-		pot[i] = (real)(-G) * pot_sum;
+		pot[   i   ] = (real)(-G) * pot_sum;
 		#endif
 
 		#ifdef ENABLE_SPH
-		rho[i] = rho_sum;
+		rho[   i   ] = rho_sum;
 		#endif
 	}
 
-	#ifdef ENABLE_SPH
-	for(unsigned int i = 0u; i < N; i++) {
-		const real k = (real)0.100; // equation of state constant
-		const real n = (real)1.000; // polytropic index
+	TIMING_STOP();
+	TIMING_PRINT("solver_run()", "pairwise_loop");
 
-		prs[i] = real_pow(k * rho[i], (real)1.0+(real)1.0/n);
+	#ifdef ENABLE_SPH
+	// https://en.wikipedia.org/wiki/Polytrope
+	const real eos_k = (real)0.100; // constant of proportionality
+	const real eos_n = (real)1.000; // polytropic index
+
+	{
+		const real eos_exponent = (real)( (1.0 / (double)eos_n) + 1.0 );
+
+		TIMING_START();
+
+		for(unsigned int i = 0u; i < N; i++) {
+			prs[i] = real_pow(eos_k * rho[i], eos_exponent);
+		}
 	}
+
+	TIMING_STOP();
+	TIMING_PRINT("solver_run()", "sph_pressure");
+	TIMING_START();
 
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOAD_SIM
@@ -289,8 +214,8 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
 		real acc_sum[3] = {(real)0.0, (real)0.0, (real)0.0};
-		#ifdef ENABLE_KAHAN_SUMMATION
-		real acc_c[3] = {(real)0.0, (real)0.0, (real)0.0};
+		#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
+		real acc_com[3] = {(real)0.0, (real)0.0, (real)0.0};
 		#endif
 
 		real m_i = mas[i]; // body i's mass
@@ -305,14 +230,19 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 		real rho_i = rho[i];
 		real prs_i = prs[i];
 
+		real rho_i2 = rho_i * rho_i;
+
+		// particle i's contribution to the SPH conservation of momentum equation
+		real con_i = (real)0.0 < rho_i2 ? prs_i / rho_i2 : (real)0.0;
+
 		for(unsigned int j = 0u; j < N; j++) {
+			/*
 			if(i == j) {
 				continue;
 			}
+			*/
 
 			real m_j = mas[j]; // body j's mass
-
-			real h_j = rad[j]; // body j's smoothing radius
 
 			// body j's position
 			real r_j[3] = {
@@ -326,13 +256,18 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 
 			// vector from body j's position to body i's position
 			real r_ij[3] = {
-				r_i[0u] - r_j[0u],
-				r_i[1u] - r_j[1u],
-				r_i[2u] - r_j[2u]
+				r_i[0] - r_j[0],
+				r_i[1] - r_j[1],
+				r_i[2] - r_j[2]
 			};
 
+			real rho_j2 = rho_j * rho_j;
+
+			// particle j's contribution to the SPH conservation of momentum equation
+			real con_j = (real)0.0 < rho_j2 ? prs_j / rho_j2 : (real)0.0;
+
 			// squared distance to body j
-			real r2 = (r_ij[0u]*r_ij[0u])+(r_ij[1u]*r_ij[1u])+(r_ij[2u]*r_ij[2u]);
+			real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
 
 			if( r2 > (real)(1.000 * 1.000) ) {
 				continue;
@@ -352,29 +287,29 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			real n = (real)-2.0 * real_exp( -r2 / (h_j * h_j) ) / (INV_POW_PI_3_2 * h_j * h_j * h_j * h_j * h_j);
 
 			real W_grad[3] = {
-				n * r_ij[0u],
-				n * r_ij[1u],
-				n * r_ij[2u],
+				n * r_ij[0],
+				n * r_ij[1],
+				n * r_ij[2],
 			};
 
-			real F[3] = {
-				( prs_i / (rho_i * rho_i + (real)1.0e-6) + prs_j / (rho_j * rho_j + (real)1.0e-6) ) * W_grad[0u],
-				( prs_i / (rho_i * rho_i + (real)1.0e-6) + prs_j / (rho_j * rho_j + (real)1.0e-6) ) * W_grad[1u],
-				( prs_i / (rho_i * rho_i + (real)1.0e-6) + prs_j / (rho_j * rho_j + (real)1.0e-6) ) * W_grad[2u]
+			real X[3] = {
+				(con_i + con_j) * W_grad[0],
+				(con_i + con_j) * W_grad[1],
+				(con_i + con_j) * W_grad[2]
 			};
 
 			for(unsigned int k = 0u; k < 3u; k++) {
-				#ifdef ENABLE_KAHAN_SUMMATION
+				#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = F[k] - acc_c[k];
+				real y = X[k] - acc_com[k];
 				volatile real t = acc_sum[k] + y;
 				volatile real z = t - acc_sum[k];
-				acc_c[k] = z - y;
+				acc_com[k] = z - y;
 				acc_sum[k] = t;
 				#else
 				// Naïve summation
-				acc_sum[k] += F[k];
+				acc_sum[k] += X[k];
 				#endif
 			}
 		}
@@ -383,6 +318,9 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 		acc[3u*i+1u] += -m_i * acc_sum[1u];
 		acc[3u*i+2u] += -m_i * acc_sum[2u];
 	}
+
+	TIMING_STOP();
+	TIMING_PRINT("solver_run()", "sph_conservation");
 	#endif
 
 	return STARFLOOD_SUCCESS;

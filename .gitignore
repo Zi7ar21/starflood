@@ -30,6 +30,9 @@ vgcore.*
 *.profraw
 perf.data
 
+# Python
+.venv
+
 # Starflood Output
 *.raw
 out

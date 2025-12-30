@@ -21,10 +21,11 @@ endif
 
 # NVIDIA HPC Compilers tuned for performance on compiler host machine with offloading
 ifeq ($(CC),nvc)
-CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
+#CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O3 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
+CFLAGS := -gpu=ccnative,fastmath -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
 endif
 
 # === More Optimization Flags ===

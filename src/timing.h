@@ -57,10 +57,10 @@
 		__t1 = omp_get_wtime(); \
 		__t0 = omp_get_wtime()
 
-		#define TIMING_STOP() t1 = omp_get_wtime()
+		#define TIMING_STOP() __t1 = omp_get_wtime()
 
 		#define TIMING_PRINT(function_name,label_name) printf("%s: %.06f usec %s\n",function_name,1.0e6*(__t1-__t0),label_name)
 
-		#define LOG_TIMING(log) fprintf((log).file,"%.03f",1.0e6*(t1-t0))
+		#define LOG_TIMING(log) fprintf((log).file,"%.03f",1.0e6*(__t1-__t0))
 	#endif
 #endif

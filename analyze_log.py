@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 log_dir = './out'
 
 #log_name = 'log_nvidia-smi'
-#log_name = 'statistics'
-log_name = 'timings_sim_step'
+log_name = 'statistics'
+#log_name = 'timings_sim_step'
 #log_name = 'timings_vis_draw'
 
 log_file = log_dir + '/' + log_name + '.csv'
@@ -48,6 +48,7 @@ mpl.rcParams['ytick.labelcolor'] = (0.800, 0.800, 0.800)
 
 if ('log_nvidia-smi' == log_name):
 	df.plot(x='timestamp', y=['power.draw [W]'], figsize=(8,6))
+	df.plot(x='timestamp', y=['fan.speed [%]'], figsize=(8,6))
 else:
 	df.plot(x='step_number', figsize=(8,6))
 
@@ -71,6 +72,6 @@ else:
 
 plt.title(log_name)
 
-plt.savefig(log_dir + log_name + '.png', dpi=300)
+plt.savefig(log_dir + '/' + log_name + '.png', dpi=300)
 
 plt.show()

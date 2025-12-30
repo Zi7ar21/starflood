@@ -347,6 +347,7 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 	TIMING_START();
 
 	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	// Copy render_buffer->binary_buffer without alpha channel
 	for(unsigned int y = 0u; y < image_h; y++) {
 		for(unsigned int x = 0u; x < image_w; x++) {
 			binary_buffer[3u*(image_w*y+x)+0u] = render_buffer[4u*(image_w*y+x)+0u];
@@ -357,6 +358,8 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 	#else
 	for(unsigned int y = 0u; y < image_h; y++) {
 		for(unsigned int x = 0u; x < image_w; x++) {
+			unsigned char pixel[3];
+
 			f32 color[3] = {
 				(f32)render_buffer[4u*(image_w*y+x)+0u],
 				(f32)render_buffer[4u*(image_w*y+x)+1u],
@@ -366,7 +369,6 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 			// Clamp values to range [0, 1]
 			for(int i = 0; i < 3; i++) {
 				//color[i] = (f32)fminf(fmaxf(color[i], (f32)0.0), (f32)1.0);
-
 				color[i] = (f32)0.0 < color[i] ? color[i] : (f32)0.0;
 				color[i] = (f32)1.0 > color[i] ? color[i] : (f32)1.0;
 			}
@@ -381,27 +383,41 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 			#if (1 == VISUALIZATION_IMAGE_FORMAT)
 			// BT.709 non-linear transfer function
 			for(int i = 0; i < 3; i++) {
-				color[i] = (f32)0.018053968510807 <= color[i] ? (f32)1.099296826809442 * (f32)powf(color[i], (f32)0.45) - (f32)0.099296826809442 : (f32)4.500 * color[i];
+				color[i] = (f32)0.018053968510807 <= color[i] ? (f32)1.099296826809442 * (f32)powf( (float)color[i], (float)0.45 ) - (f32)0.099296826809442 : (f32)4.500 * color[i];
 			}
 			#endif
 
 			#if (2 == VISUALIZATION_IMAGE_FORMAT)
 			// IEC 61966-2-1 sRGB non-linear transfer function
 			for(int i = 0; i < 3; i++) {
-				color[i] = (f32)0.0031308 < color[i] ? (f32)1.055 * (f32)powf( color[i], (f32)(1.0/2.4) ) - (f32)0.055 : (f32)12.92 * color[i];
+				color[i] = (f32)0.0031308 < color[i] ? (f32)1.055 * (f32)powf(  (float)color[i], (float)(1.0/2.4) ) - (f32)0.055 : (f32)12.92 * color[i];
 			}
 			#endif
 
 			// 8-bit quantization [0, 255]
-			unsigned char rgb[3] = {
-				(unsigned char)( (f32)255.0 * color[0] ),
-				(unsigned char)( (f32)255.0 * color[1] ),
-				(unsigned char)( (f32)255.0 * color[2] )
-			};
+			{
+				for(int i = 0; i < 3; i++) {
+					color[i] *= (f32)255.0;
+				}
 
-			binary_buffer[3u*(image_w*((image_h-1u)-y)+x)+0u] = rgb[0u];
-			binary_buffer[3u*(image_w*((image_h-1u)-y)+x)+1u] = rgb[1u];
-			binary_buffer[3u*(image_w*((image_h-1u)-y)+x)+2u] = rgb[2u];
+				for(int i = 0; i < 3; i++) {
+					color[i] = (f32)roundf( (float)color[i] );
+				}
+
+				for(int i = 0; i < 3; i++) {
+					//color[i] = (f32)fminf(fmaxf(color[i], (f32)0.0), (f32)1.0);
+					color[i] = (f32)(  0.0) < color[i] ? color[i] : (f32)(  0.0);
+					color[i] = (f32)(255.0) > color[i] ? color[i] : (f32)(255.0);
+				}
+
+				for(int i = 0; i < 3; i++) {
+					pixel[i] = (unsigned char)color[i];
+				}
+			}
+
+			binary_buffer[3u*(image_w*((image_h-1u)-y)+x)+0u] = pixel[0u];
+			binary_buffer[3u*(image_w*((image_h-1u)-y)+x)+1u] = pixel[1u];
+			binary_buffer[3u*(image_w*((image_h-1u)-y)+x)+2u] = pixel[2u];
 		}
 	}
 	#endif
@@ -456,6 +472,42 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 	real* pot = sim.pot; // for color
 
+	double average_radius;
+
+	{
+		average_radius = 0.0;
+
+		double sum_com = 0.0;
+
+		for(unsigned int i = 0u; i < N; i++) {
+			double pos_i[3] = {
+				(double)pos[3u*i+0u],
+				(double)pos[3u*i+1u],
+				(double)pos[3u*i+2u]
+			};
+
+			double r2 = (pos_i[0]*pos_i[0])+(pos_i[1]*pos_i[1])+(pos_i[2]*pos_i[2]);
+			double r1 = sqrt(r2);
+
+			{
+				// Kahan summation
+				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+				double y = r1 - sum_com;
+				volatile double t = average_radius + y;
+				volatile double z = t - average_radius;
+				sum_com = z - y;
+				average_radius = t;
+
+				// Naïve summation
+				//average_radius += r1;
+			}
+		}
+
+		average_radius *= 1.0 / (double)N;
+
+		printf("average_radius: % .15f\n", average_radius);
+	}
+
 	double pot_min = (double)pot[0u];
 	double pot_max = (double)pot[0u];
 
@@ -508,7 +560,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		//bet = (real)TAU * (real)0.0625;
 		//bet = (real)TAU * (real)0.1250;
 		//bet = (real)TAU * (real)0.2500;
-		bet = (real)TAU * (real)1.000e-2 * time;
+		//bet = (real)TAU * (real)1.000e-3 * time;
 
 		//gam = (real)TAU * (real)0.0000;
 		//gam = (real)TAU * (real)0.0025;
@@ -543,9 +595,13 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	};
 
 	#ifdef ORTHO_SCALE
-	const real ortho_scale = (real)exp2(ORTHO_SCALE);
+	real ortho_scale = (real)exp2(ORTHO_SCALE);
 	#else
-	const real ortho_scale = (real)1.0;
+	real ortho_scale = (real)1.0;
+	#endif
+
+	#ifdef AUTOSCALING
+	ortho_scale *= (real)(1.0 / average_radius);
 	#endif
 
 	// projection matrix
@@ -674,16 +730,16 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		real palette_phase = (real)2.000e-1 * potential;
 
 		real color[3] = {
-			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( (0.0/3.0) * TAU ) )+(real)0.5,
-			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( (1.0/3.0) * TAU ) )+(real)0.5,
-			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( (2.0/3.0) * TAU ) )+(real)0.5
+			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (0.0/3.0) ) )+(real)0.5,
+			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (1.0/3.0) ) )+(real)0.5,
+			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (2.0/3.0) ) )+(real)0.5
 		};
 
 		for(unsigned int samp_number = 0u; samp_number < (unsigned int)SPATIAL_SAMPLES; samp_number++) {
 			i32 accumulation_color[4] = {
-				(i32)( (real)1.000e2 * color[0] ),
-				(i32)( (real)1.000e2 * color[1] ),
-				(i32)( (real)1.000e2 * color[2] ),
+				(i32)( (real)100.0 * color[0] ),
+				(i32)( (real)100.0 * color[1] ),
+				(i32)( (real)100.0 * color[2] ),
 				(i32)1
 			};
 
@@ -798,7 +854,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 				(int)(sample_offset[1] - (real)0.5 + (real)0.5 * (real)h * p_i[1] + (real)0.5 * (real)h)
 			};
 
-			if( (int)0 <= coord[0] && coord[0] < (int)w && (int)0 <= coord[1] && coord[1] < (int)h ) {
+			if( 0 <= coord[0] && coord[0] < (int)w && 0 <= coord[1] && coord[1] < (int)h ) {
 				unsigned int pixel_index = w * (unsigned int)coord[1] + (unsigned int)coord[0];
 
 				for(unsigned int i = 0u; i < 4u; i++) {
@@ -901,8 +957,8 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	real acc_sum[3] = {(real)0.0, (real)0.0, (real)0.0};
 	real pot_sum = (real)0.0;
 	#ifdef ENABLE_KAHAN_SUMMATION
-	real acc_c[3] = {(real)0.0, (real)0.0, (real)0.0};
-	real pot_c = (real)0.0;
+	real acc_com[3] = {(real)0.0, (real)0.0, (real)0.0};
+	real pot_com = (real)0.0;
 	#endif
 
 	#ifdef PROBE_DECIMATION
@@ -948,10 +1004,10 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			#ifdef ENABLE_KAHAN_SUMMATION
 			// Kahan summation
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			real y = F[k] - acc_c[k];
+			real y = F[k] - acc_com[k];
 			volatile real t = acc_sum[k] + y;
 			volatile real z = t - acc_sum[k];
-			acc_c[k] = z - y;
+			acc_com[k] = z - y;
 			acc_sum[k] = t;
 			#else
 			// Naïve summation
@@ -963,10 +1019,10 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			#ifdef ENABLE_KAHAN_SUMMATION
 			// Kahan summation
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			real y = pot_i - pot_c;
+			real y = pot_i - pot_com;
 			volatile real t = pot_sum + y;
 			volatile real z = t - pot_sum;
-			pot_c = z - y;
+			pot_com = z - y;
 			pot_sum = t;
 			#else
 			// Naïve summation
@@ -1033,14 +1089,8 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	#endif
 	TIMING_START();
 
-	// Since atomic_buffer colors are quantized integers, it needs a floating-point scaling factor
-	double pixel_value_scale = 1.0;
-
-	pixel_value_scale *= 1.000e-2;
-
-	#ifdef SPATIAL_SAMPLES
-	pixel_value_scale *= 1.0 / (double)SPATIAL_SAMPLES;
-	#endif
+	// floating-point scaling factor for integer atomic_buffer
+	double pixel_value_scale = 0.01 / (double)SPATIAL_SAMPLES;
 
 	#ifdef EXPOSURE
 	pixel_value_scale *= exp2(EXPOSURE);
@@ -1051,12 +1101,14 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	#ifdef VISUALIZATION_RASTERIZATION
 	// read the atomic buffer and finish rendering the visualization
 	for(unsigned int i = 0u; i < w * h; i++) {
-		double rgba[4] = {
+		double pixel[4] = {
 			(double)0.250,
 			(double)0.250,
 			(double)0.250,
 			(double)1.000
 		};
+
+		i32 accum[4];
 
 		for(unsigned int j = 0u; j < 4u; j++) {
 			i32 val = (i32)0;
@@ -1066,19 +1118,23 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			#endif
 			val = atomic_buffer[4u*i+j];
 
-			rgba[j] = pixel_value_scale * (double)val;
+			accum[j] = val;
+		}
+
+		for(int j = 0; j < 4; j++) {
+			pixel[j] = pixel_value_scale * (double)accum[j];
 		}
 
 		// tonemapping
-		for(unsigned int j = 0u; j < 4u; j++) {
-			rgba[j] = tanh(rgba[j]);
+		for(int j = 0; j < 4; j++) {
+			pixel[j] = tanh(pixel[j]);
 		}
 
 		// set alpha channel to 1.000
-		rgba[3u] = (double)1.000;
+		pixel[3] = (double)1.000;
 
 		for(unsigned int j = 0u; j < 4u; j++) {
-			render_buffer[4u*i+j] = (f32)rgba[j];
+			render_buffer[4u*i+j] = (f32)pixel[j];
 		}
 	}
 	#endif
