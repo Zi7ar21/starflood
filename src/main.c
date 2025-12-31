@@ -20,6 +20,7 @@
 #include "common.h"
 #include "config.h"
 #include "initcond.h"
+#include "ply.h"
 #include "simulation.h"
 #include "solver.h"
 #include "timing.h"
@@ -309,8 +310,7 @@ int main(int argc, char** argv) {
 	// initialize the visualization
 	if(enable_vis) {
 		if( STARFLOOD_SUCCESS != visualization_init(&vis, visualization_dimensions[0], visualization_dimensions[1]) ) {
-			fprintf(stderr, "fatal error: %s failed.\n", "visualization_init()");
-
+			fprintf(stderr, "fatal error: visualization_init(&vis, %u, %u) failed.\n", visualization_dimensions[0], visualization_dimensions[1]);
 			free(filename_mem);
 			return EXIT_FAILURE;
 		}
@@ -318,7 +318,7 @@ int main(int argc, char** argv) {
 
 	// initialize the simulation
 	if( STARFLOOD_SUCCESS != simulation_init(&sim, num_bodies) ) {
-		fprintf(stderr, "fatal error: %s failed.\n", "simulation_init()");
+		fprintf(stderr, "fatal error: simulation_init(&sim, %u) failed.\n", num_bodies);
 
 		if(enable_vis) {
 			visualization_free(&vis);
@@ -331,6 +331,8 @@ int main(int argc, char** argv) {
 	// simulation initial conditions
 	#ifdef INIT_COND_FILE
 	if( STARFLOOD_SUCCESS != simulation_read(&sim, INIT_COND_FILE) ) {
+		fprintf(stderr, "fatal error: simulation_read(&sim, \"%s\") failed.\n", INIT_COND_FILE);
+
 		if(enable_vis) {
 			visualization_free(&vis);
 		}
@@ -341,6 +343,8 @@ int main(int argc, char** argv) {
 	}
 	#else
 	if( STARFLOOD_SUCCESS != initcond_generate(sim.mas, sim.rad, sim.pos, sim.vel, sim.N) ) {
+		fprintf(stderr, "fatal error: initcond_generate() failed.\n");
+
 		if(enable_vis) {
 			visualization_free(&vis);
 		}
@@ -351,8 +355,22 @@ int main(int argc, char** argv) {
 	}
 
 	// An initial solver step is needed for the first leapfrog "kick" in the "kick-drift-kick" form, since acceleration is only updated after "drift"
-	solver_run(sim.acc, sim.pot, sim.rho, sim.prs, sim.mas, sim.rad, sim.pos, sim.vel, sim.N, 0u);
+	if( STARFLOOD_SUCCESS != solver_run(sim.acc, sim.pot, sim.rho, sim.prs, sim.mas, sim.rad, sim.pos, sim.vel, sim.N, 0u) ) {
+		fprintf(stderr, "fatal error: solver_run() failed.\n");
+
+		if(enable_vis) {
+			visualization_free(&vis);
+		}
+
+		simulation_free(&sim);
+		free(filename_mem);
+		return EXIT_FAILURE;
+	}
 	#endif
+
+	if( STARFLOOD_SUCCESS != ply_write(OUTPUT_DIR "/initcond.ply", sim.pos, sim.N) ) {
+		fprintf(stderr, "error: ply_write(\"%s\", &sim.pos, %u) failed.\n", OUTPUT_DIR "/initcond.ply", sim.N);
+	}
 
 	#ifdef ENABLE_SIM
 	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num++) {
@@ -361,16 +379,14 @@ int main(int argc, char** argv) {
 	#endif
 		printf("Step #%u (run is %6.03f%% complete)\n", step_num, 100.0 * ( (double)step_num / (double)num_timesteps ) );
 		printf("t = %.06f\n", (double)TIMESTEP_SIZE * (double)step_num);
-		fflush(stdout);
-
-		sim.step_number = step_num;
 
 		// check stop condition (a file named "stop" in OUTPUT_DIR)
 		{
 			FILE* stopfile = fopen(OUTPUT_DIR "/" "stop", "r");
 
 			if(NULL != (void*)stopfile) {
-				fprintf(stderr, "Stopfile found! Stopping run...\n");
+				printf("\nStopfile found! Stopping run...\n");
+				fflush(stdout);
 
 				if( 0 != fclose(stopfile) ) {
 					fprintf(stderr, "error: fclose(stopfile) ");
@@ -385,6 +401,10 @@ int main(int argc, char** argv) {
 				break;
 			}
 		}
+
+		fflush(stdout);
+
+		sim.step_number = step_num;
 
 		#ifdef SIM_FILENAME
 		unsigned int sim_file_num = step_num;
@@ -460,10 +480,14 @@ int main(int argc, char** argv) {
 
 	fflush(stdout);
 
-	simulation_free(&sim);
+	if( STARFLOOD_SUCCESS != simulation_free(&sim) ) {
+		fprintf(stderr, "error: simulation_free(&sim) failed.\n");
+	}
 
 	if(enable_vis) {
-		visualization_free(&vis);
+		if( STARFLOOD_SUCCESS != visualization_free(&vis) ) {
+			fprintf(stderr, "error: visualization_free(&vis) failed.\n");
+		}
 	}
 
 	free(filename_mem);

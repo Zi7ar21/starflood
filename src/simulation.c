@@ -307,11 +307,6 @@ int simulation_step(sim_t* restrict simulation) {
 
 	const real dt = (real)TIMESTEP_SIZE;
 
-	// for the very first leapfrog kick
-	//if(0u >= step_number) {
-	//	solver_run(acc, pot, mas, rad, pos, N, step_number);
-	//}
-
 	#ifdef LOG_STATISTICS
 	fprintf(log_statistics.file, "%u", step_number);
 	#endif
@@ -347,7 +342,9 @@ int simulation_step(sim_t* restrict simulation) {
 	TIMING_START();
 
 	// run the solver
-	solver_run(acc, pot, rho, prs, mas, rad, pos, vel, N, step_number);
+	if( STARFLOOD_SUCCESS != solver_run(acc, pot, rho, prs, mas, rad, pos, vel, N, step_number) ) {
+		fprintf(stderr, "%s error: %s failed.\n", "simulation_step()", "solver_run()");
+	}
 
 	TIMING_STOP();
 	TIMING_PRINT("simulation_step()", "solver_run");

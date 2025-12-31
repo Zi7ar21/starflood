@@ -77,6 +77,8 @@ void* image_write(void* arg) {
 	#endif
 
 	if( 0 != fclose(file) ) {
+		fprintf(stderr, "%s error: fclose() ", "image_write()");
+		perror("failed");
 		#ifdef VISUALIZATION_THREADED_IO
 		pthread_mutex_unlock(&vis_io_mutex);
 		#endif

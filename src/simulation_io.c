@@ -73,7 +73,10 @@ int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
 	TIMING_PRINT("simulation_read()", "fread()");
 	TIMING_START();
 
-	fclose(file);
+	if( 0 != fclose(file) ) {
+		fprintf(stderr, "%s error: fclose() ", "simulation_read()");
+		perror("failed");
+	}
 
 	TIMING_STOP();
 	TIMING_PRINT("simulation_read()", "fclose()");
@@ -100,9 +103,7 @@ int simulation_save(const sim_t* restrict simulation, const char* restrict filen
 
 	if(NULL == (void*)file) {
 		fprintf(stderr, "%s error: fopen(\"%s\", \"%s\") ", "simulation_save()", filename, "wb");
-
 		perror("failed");
-
 		return STARFLOOD_FAILURE;
 	}
 
@@ -131,6 +132,8 @@ int simulation_save(const sim_t* restrict simulation, const char* restrict filen
 	TIMING_START();
 
 	if( 0 != fclose(file) ) {
+		fprintf(stderr, "%s error: fclose() ", "simulation_save()");
+		perror("failed");
 		return STARFLOOD_FAILURE;
 	}
 

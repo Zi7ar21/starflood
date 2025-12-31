@@ -1,7 +1,7 @@
 # ===== Starflood Makefile =====
 
-#CC := clang
-CC := gcc
+CC := clang
+#CC := gcc
 #CC := icx
 #CC := nvc
 
@@ -13,6 +13,11 @@ CFLAGS := -Og
 # Clang/GCC tuned for performance on compiler host machine
 #CFLAGS := -flto=auto -march=native -O2
 #CFLAGS := -flto=auto -march=native -O3
+
+# GCC flag to enable auto-vectorization (GCC doesn't enable this unless using -O3, and Clang uses its own auto-vectorization by default)
+ifeq ($(CC),gcc)
+#CFLAGS := -ftree-vectorize $(CFLAGS)
+endif
 
 # Intel oneAPI DPC++/C++ Compiler tuned for performance on compiler host machine with offloading
 ifeq ($(CC),icx)
@@ -82,7 +87,7 @@ OUT_DIR := ./build
 
 SRC_DIR := ./src
 
-SRCS := main.c initcond.c log.c simulation.c simulation_io.c solver.c visualization.c visualization_io.c
+SRCS := main.c initcond.c log.c ply.c simulation.c simulation_io.c solver.c visualization.c visualization_io.c
 
 OBJS := $(addprefix $(OUT_DIR)/src/,$(addsuffix .o,$(SRCS)))
 
@@ -108,6 +113,9 @@ $(OUT_DIR)/src/initcond.c.o: $(SRC_DIR)/initcond.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUT_DIR)/src/log.c.o: $(SRC_DIR)/log.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OUT_DIR)/src/ply.c.o: $(SRC_DIR)/ply.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUT_DIR)/src/simulation.c.o: $(SRC_DIR)/simulation.c | $(OUT_DIR)/src

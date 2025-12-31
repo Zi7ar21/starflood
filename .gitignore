@@ -34,6 +34,7 @@ perf.data
 .venv
 
 # Starflood Output
+*.ply
 *.raw
 out
 

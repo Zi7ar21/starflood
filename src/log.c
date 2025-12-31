@@ -15,9 +15,7 @@ int log_init(log_t* restrict log, const char* restrict filename) {
 
 	if(NULL == (void*)log->file) {
 		fprintf(stderr, "%s error: fopen(\"%s\", \"%s\") ", "log_init()", filename, "w");
-
 		perror("failed");
-
 		return STARFLOOD_FAILURE;
 	}
 
@@ -27,9 +25,7 @@ int log_init(log_t* restrict log, const char* restrict filename) {
 int log_free(log_t* restrict log) {
 	if( 0 != fclose(log->file) ) {
 		fprintf(stderr, "%s error: fclose() ", "log_init()");
-
 		perror("failed");
-
 		return STARFLOOD_FAILURE;
 	}
 
@@ -38,6 +34,8 @@ int log_free(log_t* restrict log) {
 
 int log_sync(log_t* restrict log) {
 	if( 0 != fflush(log->file) ) {
+		fprintf(stderr, "%s error: fflush() ", "log_sync()");
+		perror("failed");
 		return STARFLOOD_FAILURE;
 	}
 
