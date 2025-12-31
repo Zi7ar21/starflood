@@ -1,9 +1,9 @@
 # ===== Starflood Makefile =====
 
 #CC := clang
-#CC := gcc
+CC := gcc
 #CC := icx
-CC := nvc
+#CC := nvc
 
 # === Basic Optimization Flags ===
 
@@ -62,8 +62,9 @@ CFLAGS := $(CFLAGS) -Wall -Wconversion -Wextra -Wshadow
 # Disable warnings
 CFLAGS := $(CFLAGS) -Wno-unused-parameter -Wno-unused-variable
 
-# Use debug flags
-CFLAGS := $(DEBUG_CFLAGS) $(CFLAGS)
+# Include stb headers as if they were system headers
+# (so that the compiler doesn't generate errors for stb_image_write.h)
+#CFLAGS := $(CFLAGS) -isystem stb
 
 # Link the standard math library
 LDFLAGS := -lm
@@ -72,43 +73,54 @@ LDFLAGS := -lm
 # (only for visualization threaded I/O)
 LDFLAGS := $(LDFLAGS) -lpthread
 
+# Enable debug flags
+CFLAGS := $(DEBUG_CFLAGS) $(CFLAGS)
+
 # === Targets ===
 
 OUT_DIR := ./build
 
 SRC_DIR := ./src
 
-SRCS := main.c initcond.c log.c simulation.c solver.c visualization.c
+SRCS := main.c initcond.c log.c simulation.c simulation_io.c solver.c visualization.c visualization_io.c
 
-OBJS := $(addprefix $(OUT_DIR)/,$(addsuffix .o,$(SRCS)))
+OBJS := $(addprefix $(OUT_DIR)/src/,$(addsuffix .o,$(SRCS)))
 
 .PHONY: all
 all: $(OUT_DIR)/starflood
 
 .PHONY: clean
 clean:
-	rm -fv $(OUT_DIR)/starflood $(OBJS)
+	rm -fdv $(OUT_DIR)/starflood $(OBJS)
+	rm -fdv $(OUT_DIR)/src
+#	rm -fdv $(OUT_DIR)
 
-$(OUT_DIR):
-	mkdir -p $(OUT_DIR)
+$(OUT_DIR)/src:
+	mkdir -p $(OUT_DIR)/src
 
-$(OUT_DIR)/starflood: $(OBJS) | $(OUT_DIR)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+$(OUT_DIR)/starflood: $(OBJS) | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -isystem stb $^ -o $@ $(LDFLAGS)
 
-$(OUT_DIR)/main.c.o: src/main.c
-	$(CC) $(CFLAGS) -isystem stb -c $< -o $@
+$(OUT_DIR)/src/main.c.o: $(SRC_DIR)/main.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OUT_DIR)/initcond.c.o: src/initcond.c
-	$(CC) $(CFLAGS) -isystem stb -c $< -o $@
+$(OUT_DIR)/src/initcond.c.o: $(SRC_DIR)/initcond.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OUT_DIR)/log.c.o: src/log.c
-	$(CC) $(CFLAGS) -isystem stb -c $< -o $@
+$(OUT_DIR)/src/log.c.o: $(SRC_DIR)/log.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OUT_DIR)/simulation.c.o: src/simulation.c
-	$(CC) $(CFLAGS) -isystem stb -c $< -o $@
+$(OUT_DIR)/src/simulation.c.o: $(SRC_DIR)/simulation.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OUT_DIR)/solver.c.o: src/solver.c
-	$(CC) $(CFLAGS) -isystem stb -c $< -o $@
+$(OUT_DIR)/src/simulation_io.c.o: $(SRC_DIR)/simulation_io.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OUT_DIR)/visualization.c.o: src/visualization.c
+$(OUT_DIR)/src/solver.c.o: $(SRC_DIR)/solver.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OUT_DIR)/src/visualization.c.o: $(SRC_DIR)/visualization.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OUT_DIR)/src/visualization_io.c.o: $(SRC_DIR)/visualization_io.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -isystem stb -c $< -o $@

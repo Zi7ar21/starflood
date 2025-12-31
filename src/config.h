@@ -157,8 +157,3 @@
 // There is really no point increasing this
 // much before you are just wasting memory
 #define STARFLOOD_ALIGNMENT 4194304
-
-// Maximum length for filename arrays
-// (FILENAME_MAX is usually 4096 which is a bit absurd)
-#define STARFLOOD_FILENAME_MAX FILENAME_MAX
-//#define STARFLOOD_FILENAME_MAX 256

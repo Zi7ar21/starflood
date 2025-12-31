@@ -1,3 +1,6 @@
+// Needed for timing.h
+#define _POSIX_C_SOURCE 199309L
+
 #include "solver.h"
 
 #include <math.h>

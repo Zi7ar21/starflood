@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 
+#include "common.h"
+#include "config.h"
 #include "simulation.h"
 #include "types.h"
 
@@ -29,3 +31,16 @@ int visualization_free(vis_t* restrict visualization);
 int visualization_save(const vis_t* restrict visualization, const char* restrict filename);
 
 int visualization_draw(const vis_t* restrict visualization, const sim_t* restrict simulation);
+
+struct image_write_param {
+	unsigned int image_w;
+	unsigned int image_h;
+
+	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	volatile f32* binary_buffer;
+	#else
+	volatile unsigned char* binary_buffer;
+	#endif
+
+	char filename[STARFLOOD_FILENAME_MAX];
+};
