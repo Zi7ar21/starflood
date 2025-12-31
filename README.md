@@ -178,7 +178,7 @@ mkdir -p out/sim out/vis
 To safely stop a run prematurely, create a file named `stop` in the output directory. If `OUTPUT_DIR` is `"./out"` (defined in [src/config.h](src/config.h)):
 
 ```sh
-echo "" > out/stop
+touch out/stop
 ```
 
 #### Running with Nice
