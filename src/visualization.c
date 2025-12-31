@@ -508,7 +508,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			}
 		}
 
-		real palette_phase = (real)2.000e-1 * potential;
+		real palette_phase = (real)1.000e0 * potential;
 
 		real color[3] = {
 			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (0.0/3.0) ) )+(real)0.5,

@@ -1,9 +1,9 @@
 # ===== Starflood Makefile =====
 
-CC := clang
+#CC := clang
 #CC := gcc
 #CC := icx
-#CC := nvc
+CC := nvc
 
 # === Basic Optimization Flags ===
 

@@ -38,6 +38,8 @@ perf.data
 *.raw
 out
 
-# Visualizations
+# Visualization
+*.blend?*
+*.exr
 *.mp4
 *.webm

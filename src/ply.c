@@ -27,7 +27,7 @@ int ply_write(const char* restrict filename, float* restrict vertex_xyz, size_t 
 	int byte_order_is_le = 1;
 
 	// This may seem a bit verbose, but it can handle:
-	// - Arbitrary integer type sizes (replace uint32_t or uint64_t)
+	// - Arbitrary integer type sizes up to 2048-bit (replace uint32_t or uint64_t, and magic_number)
 	// - Detection of non-little and non-big endianess (such as mixed endianess)
 	// - Different endianess at runtime
 	// - Machines with non-octet unsigned char (assuming uint8_t syntax works)

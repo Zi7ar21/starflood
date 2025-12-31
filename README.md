@@ -1,33 +1,41 @@
-# ![Starflood](images/starflood-badge.png)
+# ![Starflood Badge](images/starflood-badge.png)
 
 Starflood is an open-source astrophysical simulation code written in C.
 
+> _A Starflood N-body simulation (N = 65536) of an expanding self-gravitating sphere, visualized using [Blender](https://en.wikipedia.org/wiki/Blender_(software)) Cycles_
+> ![N-body simulation visualization rendered using Blender Cycles](images/expanding_sphere_N_65536_blender_cycles_sRGB.png)
+
 ## Features
 
-- Cosmological [N-body simulation](https://en.wikipedia.org/wiki/N-body_simulation)
-  - Gravity solver using pairwise summation (aka [particle-particle method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pp)), O(N²)
-- Parallelization using [OpenMP](https://www.openmp.org/) (compiler directive-based)
-  - Device/GPU compute when using a toolchain with offloading support
+- Parallelization via [OpenMP](https://www.openmp.org/)
+  - Device/GPU acceleration (when using a toolchain with offloading support)
+- [N-body gravitational simulation](https://en.wikipedia.org/wiki/N-body_simulation)
+  - Gravitational solver using O(N²) brute-force method a.k.a. [particle-particle method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pp)
+- [Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
+  - Hydrodynamics solver O(N²) brute-force method for neighbor search
+- [Leapfrog integration](https://en.wikipedia.org/wiki/Leapfrog_integration)
+  - is a second-order [symplectic integrator](https://en.wikipedia.org/wiki/Symplectic_integrator)
 - Visualization
   - Accumulation rasterization using [atomic](https://en.wikipedia.org/wiki/Linearizability#Primitive_atomic_instructions) operations
   - [Spatial anti-aliasing](https://en.wikipedia.org/wiki/Spatial_anti-aliasing) ([Gaussian window function](https://en.wikipedia.org/wiki/Window_function#Gaussian_window) stochastic sampling)
+- Generation of Initial Conditions (ICs)
 - File I/O
-  - Timesteps from the simulation can be saved in a raw binary format.
-  - Visualization can be done during a run, or later after it has been completed.
-    - The frame sequence is saved as a series of individual images, which can be encoded using tools such as [`ffmpeg`](https://ffmpeg.org/).
-    - [PFM graphic image file format (`.pfm`)](https://netpbm.sourceforge.net/doc/pfm.html)
+  - Simulation snapshots can be saved as files (in a raw binary format), body positions can be saved in the [Standford Polygon File Format (`.ply`)](https://en.wikipedia.org/wiki/PLY_(file_format))
+  - Visualization can be done during a run, or afterwards by loading snapshot files
+    - The frame sequence is saved as a series of individual images, which can be encoded using tools such as [`ffmpeg`](https://ffmpeg.org/)
+    - Floating-point images can be saved in the [PFM graphic image file format (`.pfm`)](https://netpbm.sourceforge.net/doc/pfm.html)
 
 ### Planned (To-do List)
 
-- Add physically accurate initial conditions
-  - [Andromeda-Milky Way collision](https://en.wikipedia.org/wiki/Andromeda–Milky_Way_collision)
-  - [Molecular cloud/Stellar nursery](https://en.wikipedia.org/wiki/Molecular_cloud)
 - Add support for [distributed computing](https://en.wikipedia.org/wiki/Distributed_computing)
   - [Message Passing Interface (MPI)](https://en.wikipedia.org/wiki/Message_Passing_Interface)
 - Add support for [volume rendering](https://en.wikipedia.org/wiki/Volume_rendering) to visualization
-- Improve physical solver(s)
-  - Add support for [Barnes-Hut](https://en.wikipedia.org/wiki/Barnes–Hut_simulation) tree method
-  - Add support for [Fast Multipole Method (FMM)](https://en.wikipedia.org/wiki/Fast_multipole_method)
+- Create physically accurate initial conditions
+  - [Andromeda-Milky Way collision](https://en.wikipedia.org/wiki/Andromeda–Milky_Way_collision)
+  - [Molecular cloud/Stellar nursery](https://en.wikipedia.org/wiki/Molecular_cloud)
+- Improve physical solvers
+  - [Barnes-Hut](https://en.wikipedia.org/wiki/Barnes–Hut_simulation) tree method
+  - [Fast Multipole Method (FMM)](https://en.wikipedia.org/wiki/Fast_multipole_method)
 
 ## References
 
