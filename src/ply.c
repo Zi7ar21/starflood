@@ -22,21 +22,18 @@ int ply_write(const char* restrict filename, float* restrict vertex_xyz, size_t 
 
 	volatile uint32_t magic_number = (uint32_t)0x40C90FDBu;
 	//volatile uint64_t magic_number = (uint32_t)0x401921FB54442D18u;
-	
-	int byte_order_is_be = 1;
-	int byte_order_is_le = 1;
 
-	// This may seem a bit verbose, but it can handle:
-	// - Arbitrary integer type sizes up to 2048-bit (replace uint32_t or uint64_t, and magic_number)
-	// - Detection of non-little and non-big endianess (such as mixed endianess)
-	// - Different endianess at runtime
-	// - Machines with non-octet unsigned char (assuming uint8_t syntax works)
-	for(size_t i = 0u; i < sizeof(magic_number); i++) {
-		byte_order_is_le = ((uint8_t*)&magic_number)[i] == (uint8_t)((uint32_t)0xFFu & (magic_number >> (uint32_t)((                                  i)*(size_t)8u))) ? byte_order_is_le : 0;
-		byte_order_is_be = ((uint8_t*)&magic_number)[i] == (uint8_t)((uint32_t)0xFFu & (magic_number >> (uint32_t)(((sizeof(magic_number)-(size_t)1u)-i)*(size_t)8u))) ? byte_order_is_be : 0;
-		//byte_order_is_le = ((uint8_t*)&magic_number)[i] == (uint8_t)((uint64_t)0xFFu & (magic_number >> (uint64_t)((                                  i)*(size_t)8u))) ? byte_order_is_le : 0;
-		//byte_order_is_be = ((uint8_t*)&magic_number)[i] == (uint8_t)((uint64_t)0xFFu & (magic_number >> (uint64_t)(((sizeof(magic_number)-(size_t)1u)-i)*(size_t)8u))) ? byte_order_is_be : 0;
+	uint32_t accumulator = (uint32_t)0u;
+	//uint64_t accumulator = (uint64_t)0u;
+
+	for(size_t i = (size_t)0u; i < sizeof(magic_number); i++) {
+		accumulator |= ( (uint8_t*)&magic_number )[i] << (size_t)8u * i;
 	}
+
+	int byte_order_is_le = (uint32_t)0x40C90FDBu == accumulator;
+	int byte_order_is_be = (uint32_t)0xDB0FC940u == accumulator;
+	//int byte_order_is_le = (uint64_t)0x401921FB54442D18u == accumulator;
+	//int byte_order_is_be = (uint64_t)0x182D4454FB211940u == accumulator;
 
 	if( (!byte_order_is_le && !byte_order_is_be) || (byte_order_is_be && byte_order_is_le) ) {
 		fprintf(stderr, "%s error: Unable to detect host byte order (non-standard endianess).\n", "ply_write()");
