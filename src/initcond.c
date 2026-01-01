@@ -78,17 +78,13 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 			//p[1] *= radius * sqrt(r[2]);
 			//p[2] *= radius * sqrt(r[2]);
 
-			/*
-			p[0] *= radius * (r[2]);
-			p[1] *= radius * (r[2]);
-			p[2] *= radius * (r[2]);
-			*/
+			//p[0] *= radius * (r[2]);
+			//p[1] *= radius * (r[2]);
+			//p[2] *= radius * (r[2]);
 
-			/*
 			p[0] *= 0.0 < r[3] ? (1.0 / r[3]) - 1.0 : 1.0;
 			p[1] *= 0.0 < r[3] ? (1.0 / r[3]) - 1.0 : 1.0;
 			p[2] *= 0.0 < r[3] ? (1.0 / r[3]) - 1.0 : 1.0;
-			*/
 		}
 
 		/*
@@ -225,21 +221,17 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		double inv_r2 = 0.0 < r2 ? 1.0 /     (r2) : 0.0;
 		double inv_r1 = 0.0 < r2 ? 1.0 / sqrt(r2) : 0.0;
 
-		v[0] += 8.000e-3 * sqrt(PI_8_3 * G) * p[0];
-		v[1] += 8.000e-3 * sqrt(PI_8_3 * G) * p[1];
-		v[2] += 8.000e-3 * sqrt(PI_8_3 * G) * p[2];
+		//v[0] += 8.000e-3 * sqrt(PI_8_3 * G) * p[0];
+		//v[1] += 8.000e-3 * sqrt(PI_8_3 * G) * p[1];
+		//v[2] += 8.000e-3 * sqrt(PI_8_3 * G) * p[2];
 
-		/*
-		v[0] = 0.250 * sqrt(G * 2.0 * body_mass) *  p[2] + 1.000e-6 * n[0];
-		v[1] = 0.000 * sqrt(G * 2.0 * body_mass) *  p[1] + 1.000e-6 * n[1];
-		v[2] = 0.250 * sqrt(G * 2.0 * body_mass) * -p[0] + 1.000e-6 * n[2];
-		*/
+		//v[0] = 0.250 * sqrt(G * 2.0 * body_mass) *  p[2] + 1.000e-6 * n[0];
+		//v[1] = 0.000 * sqrt(G * 2.0 * body_mass) *  p[1] + 1.000e-6 * n[1];
+		//v[2] = 0.250 * sqrt(G * 2.0 * body_mass) * -p[0] + 1.000e-6 * n[2];
 
-		/*
-		v[0] = 5.000e-3 * sqrt(G * 2.0) *  p[2] + 1.000e-6 * n[0];
-		v[1] = 0.000e-3 * sqrt(G * 2.0) *  p[1] + 8.000e-6 * n[1];
-		v[2] = 5.000e-3 * sqrt(G * 2.0) * -p[0] + 1.000e-6 * n[2];
-		*/
+		//v[0] = 5.000e-3 * sqrt(G * 2.0) *  p[2] + 1.000e-6 * n[0];
+		//v[1] = 0.000e-3 * sqrt(G * 2.0) *  p[1] + 8.000e-6 * n[1];
+		//v[2] = 5.000e-3 * sqrt(G * 2.0) * -p[0] + 1.000e-6 * n[2];
 
 		/*
 		v[0] = 3.000e-3 * p[0] + 1.000e-6 * n[0];
@@ -247,18 +239,16 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		v[2] = 3.000e-3 * p[2] + 1.000e-6 * n[2];
 		*/
 
-		/*
-		v[0] = 1.000e-6 * n[0];
-		v[1] = 1.000e-6 * n[1];
-		v[2] = 1.000e-6 * n[2];
-		*/
+		//v[0] = 1.000e-6 * n[0];
+		//v[1] = 1.000e-6 * n[1];
+		//v[2] = 1.000e-6 * n[2];
 
 		vel[3u*i+0u] = (real)v[0u];
 		vel[3u*i+1u] = (real)v[1u];
 		vel[3u*i+2u] = (real)v[2u];
 	}
 
-	#if 0
+	#if 1
 	// Transform Position/Velocity
 	for(unsigned int i = 0u; i < N; i++) {
 		double p[3] = {
@@ -289,9 +279,8 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 			r[j] = INV_PCG32_MAX * (double)s[j];
 		}
 
-		/*
 		// Thin disk
-		if(0.000 <= r[0] && r[0] < 0.850) {
+		//if(0.000 <= r[0] && r[0] < 0.850) {
 			p[1] *= 0.025;
 
 			double r2 = (p[0]*p[0])+(p[1]*p[1])+(p[2]*p[2]);
@@ -299,13 +288,12 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 			double inv_r2 = 0.0 < r2 ? 1.0 /     (r2) : 0.0;
 			double inv_r1 = 0.0 < r2 ? 1.0 / sqrt(r2) : 0.0;
 
-			if( 10.0*10.0 > r2 ) {
-				v[0] = 5.000e-3 * sqrt(G * 1.0) * inv_r1 *  p[2];
-				v[1] = 0.000e-3 * sqrt(G * 1.0) * inv_r1 *  p[1];
-				v[2] = 5.000e-3 * sqrt(G * 1.0) * inv_r1 * -p[0];
+			if(10.0 * 10.0 > r2) {
+				v[0] = 1.000e-2 * sqrt(PI_8_3 * G) * inv_r1 *  p[2];
+				v[1] = 0.000e-2 * sqrt(PI_8_3 * G) * inv_r1 *  p[1];
+				v[2] = 1.000e-2 * sqrt(PI_8_3 * G) * inv_r1 * -p[0];
 			}
-		}
-		*/
+		//}
 
 		//p[0] += r[1] < 0.500 ?  4.000 : -4.000;
 		/*

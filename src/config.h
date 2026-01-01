@@ -18,14 +18,14 @@
 /* === General === */
 
 // Default number of simulation timesteps to run
-#define NUM_TIMESTEPS 10
+#define NUM_TIMESTEPS 10000
 
 // Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
 // If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed
 #define ENABLE_SIM
 
 // Uncomment to enable visualization
-#define ENABLE_VIS
+//#define ENABLE_VIS
 
 /* === File I/O === */
 
@@ -33,7 +33,7 @@
 #define OUTPUT_DIR "./out"
 
 // Uncomment to only output files every OUTPUT_INTERVAL steps
-//#define OUTPUT_INTERVAL 10
+#define OUTPUT_INTERVAL 100
 
 // Uncomment to load initial conditions from a snapshot
 // Otherwise, initcond_generate() will be used
@@ -54,7 +54,7 @@
 // and SIM_FILE_FORMAT_READ != SIM_FILE_FORMAT_SAVE, then snapshots will be read and
 // immediately saved in the format specified by SIM_FILE_FORMAT_SAVE.
 #define SIM_FILE_FORMAT_READ 0
-#define SIM_FILE_FORMAT_SAVE 0
+#define SIM_FILE_FORMAT_SAVE 2
 
 // Format to use for writing visualization image files
 // 0: PFM (RGB, 32-bit floating-point,     linear       )
@@ -110,7 +110,7 @@
 //#define PAIRWISE_SOLVER_DECIMATION 4
 
 // Simulation timestep size (dt)
-#define TIMESTEP_SIZE 1.000e-0
+#define TIMESTEP_SIZE 1.000e-2
 
 // Gravitational potential softening parameter
 #define EPSILON 1.000e-3
@@ -130,7 +130,7 @@
 /* === Solver === */
 
 // Uncomment to enable smoothed-particle hydrodynamics
-#define ENABLE_SPH
+//#define ENABLE_SPH
 
 // Uncomment to use Kahan Summation in the solver for higher simulation accuracy
 // Useful for single-precision floating-point calculations
