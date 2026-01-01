@@ -12,7 +12,7 @@
 #include "timing.h"
 #include "types.h"
 
-#ifdef VISUALIZATION_THREADED_IO
+#ifdef ENABLE_VIS_IO_THREAD
 #include <pthread.h>
 extern pthread_t vis_io_thread;
 extern pthread_mutex_t vis_io_mutex;
@@ -26,7 +26,7 @@ extern struct image_write_param image_write_params;
 #endif
 
 void* image_write(void* arg) {
-	#ifdef VISUALIZATION_THREADED_IO
+	#ifdef ENABLE_VIS_IO_THREAD
 	pthread_mutex_lock(&vis_io_mutex);
 	#endif
 
@@ -47,7 +47,7 @@ void* image_write(void* arg) {
 	if(NULL == (void*)file) {
 		fprintf(stderr, "%s error: fopen(\"%s\", \"%s\") ", "image_write()", filename, "wb");
 		perror("failed");
-		#ifdef VISUALIZATION_THREADED_IO
+		#ifdef ENABLE_VIS_IO_THREAD
 		pthread_mutex_unlock(&vis_io_mutex);
 		#endif
 		return NULL;
@@ -85,7 +85,7 @@ void* image_write(void* arg) {
 	}
 	#endif
 
-	#ifdef VISUALIZATION_THREADED_IO
+	#ifdef ENABLE_VIS_IO_THREAD
 	pthread_mutex_unlock(&vis_io_mutex);
 	#endif
 
@@ -93,7 +93,7 @@ void* image_write(void* arg) {
 }
 
 int visualization_save(const vis_t* restrict visualization, const char* restrict filename) {
-	#ifdef VISUALIZATION_THREADED_IO
+	#ifdef ENABLE_VIS_IO_THREAD
 	pthread_mutex_lock(&vis_io_mutex);
 	pthread_join(vis_io_thread, NULL);
 	#endif
@@ -210,7 +210,7 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 	stbi_flip_vertically_on_write(0);
 	#endif
 
-	#ifdef VISUALIZATION_THREADED_IO
+	#ifdef ENABLE_VIS_IO_THREAD
 	pthread_create(&vis_io_thread, NULL, image_write, NULL);
 	#else
 	image_write(NULL);
@@ -219,7 +219,7 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 	TIMING_STOP();
 	TIMING_PRINT("visualization_save()", "image_write()");
 
-	#ifdef VISUALIZATION_THREADED_IO
+	#ifdef ENABLE_VIS_IO_THREAD
 	pthread_mutex_unlock(&vis_io_mutex);
 	#endif
 

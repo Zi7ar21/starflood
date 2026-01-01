@@ -377,7 +377,7 @@ int main(int argc, char** argv) {
 	#else
 	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num += (unsigned int)OUTPUT_INTERVAL) {
 	#endif
-		printf("Step #%u (run is %6.03f%% complete)\n", step_num, 100.0 * ( (double)step_num / (double)num_timesteps ) );
+		printf("Step #%u (run is %6.03f%% complete)\n", step_num, 100.0 * (0 < num_timesteps ? (double)step_num / (double)num_timesteps : 1.0) );
 		printf("t = %.06f\n", (double)TIMESTEP_SIZE * (double)step_num);
 
 		// check stop condition (a file named "stop" in OUTPUT_DIR)
@@ -467,7 +467,7 @@ int main(int argc, char** argv) {
 			}
 		}
 
-		if(enable_sim) {
+		if( (step_num < num_timesteps) && enable_sim) {
 			if( STARFLOOD_SUCCESS != simulation_step(&sim) ) {
 				fprintf(stderr, "error: simulation_step(&sim) failed.\n");
 			}

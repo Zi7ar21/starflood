@@ -21,7 +21,7 @@
 #include "types.h"
 #include "timing.h"
 
-#ifdef VISUALIZATION_THREADED_IO
+#ifdef ENABLE_VIS_IO_THREAD
 #include <pthread.h>
 pthread_t vis_io_thread;
 pthread_mutex_t vis_io_mutex;
@@ -38,7 +38,7 @@ log_t log_timings_vis_draw;
 #endif
 
 int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned int h) {
-	#ifdef VISUALIZATION_THREADED_IO
+	#ifdef ENABLE_VIS_IO_THREAD
 	if( 0 != pthread_create(&vis_io_thread, NULL, dummy_function, NULL) ) {
 		fprintf(stderr, "%s error: pthread_create(&vis_io_thread, NULL, dummy_function, NULL) ", "visualization_init()");
 		perror("failed");
@@ -192,7 +192,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 }
 
 int visualization_free(vis_t* restrict visualization) {
-	#ifdef VISUALIZATION_THREADED_IO
+	#ifdef ENABLE_VIS_IO_THREAD
 	pthread_join(vis_io_thread, NULL);
 	pthread_mutex_destroy(&vis_io_mutex);
 	#endif

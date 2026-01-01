@@ -8,14 +8,21 @@
 #define ENABLE_OFFLOAD_SIM
 #define ENABLE_OFFLOAD_VIS
 
+// Uncomment to create a separate thread for visualization file output (requires pthreads)
+// If the visualization I/O thread is not finished by the time the next frame is ready,
+// the main thread will wait for it to finish. Note that this is experimental, and if, for
+// some reason, the visualization I/O thread is killed or segfaults, the main thread will
+// never finish waiting!
+#define ENABLE_VIS_IO_THREAD
+
 /* === General === */
 
 // Default number of simulation timesteps to run
-#define NUM_TIMESTEPS 0
+#define NUM_TIMESTEPS 100
 
 // Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
 // If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed
-//#define ENABLE_SIM
+#define ENABLE_SIM
 
 // Uncomment to enable visualization
 #define ENABLE_VIS
@@ -26,11 +33,11 @@
 #define OUTPUT_DIR "./out"
 
 // Uncomment to only output files every OUTPUT_INTERVAL steps
-#define OUTPUT_INTERVAL 100
+//#define OUTPUT_INTERVAL 10
 
 // Uncomment to load initial conditions from a snapshot
 // Otherwise, initcond_generate() will be used
-#define INIT_COND_FILE "/scratch/Simulations/ICs/starflood_expanding_sphere_1.raw"
+//#define INIT_COND_FILE "/scratch/Simulations/ICs/starflood_expanding_sphere_1.raw"
 
 // Uncomment to write simulation snapshots to OUTPUT_DIR/SIM_FILENAME(          .raw), if ENABLE_SIM is defined
 #define SIM_FILENAME "sim/step_%04u"
@@ -68,7 +75,7 @@
 // When commented, it defaults to CLOCK_MONOTONIC
 // Note: This has no effect when using #define TIMING_USE_OMP_GET_WTIME
 //#define STARFLOOD_POSIX_CLOCKID CLOCK_REALTIME
-#define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC
+//#define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC
 //#define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC_RAW
 
 /* === Simulation Parameters === */
@@ -111,9 +118,8 @@
 
 /* === Solver === */
 
-// TODO: Finish implementing SPH
 // Uncomment to enable smoothed-particle hydrodynamics
-//#define ENABLE_SPH
+#define ENABLE_SPH
 
 // Uncomment to use Kahan Summation in the solver for higher simulation accuracy
 // Useful for single-precision floating-point calculations
@@ -139,18 +145,15 @@
 #define EXPOSURE -1.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE -0.500
+#define ORTHO_SCALE -1.000
 
 // Uncomment to enable automatic scaling
-#define AUTOSCALING
+//#define AUTOSCALING
 
 // Uncomment to enable motion blur
 //#define SHUTTER_SPEED 0.5
 
 /* === Miscellaneous === */
-
-// Requires pthreads
-#define VISUALIZATION_THREADED_IO
 
 // Uncomment to use floating-point double-precision
 // On most platforms, single is IEEE-754 binary32 and double is IEEE-754 binary64

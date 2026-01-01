@@ -215,6 +215,10 @@ Look at [`encode_ffmpeg.sh`](encode_ffmpeg.sh) for examples.
 
 Look at [`ffplay.sh`](ffplay.sh) for examples.
 
+### Simulation Snapshots
+
+Simulation snapshots are currently saved in a raw binary format, that depends on the options Starflood was configured with.
+
 ### Profiling Starflood
 
 #### GNU Time

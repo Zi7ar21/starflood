@@ -47,12 +47,16 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 
 		#ifdef ENABLE_SPH
 		real rho_sum = (real)0.0;
-		#ifdef ENABLE_KAHAN_SUMMATION
+		#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
 		real rho_com = (real)0.0;
 		#endif
 		#endif
 
 		real m_i = mas[i]; // body i's mass
+
+		#ifdef ENABLE_SPH
+		real h_i = rad[i]; // body i's smoothing radius
+		#endif
 
 		// body i's position
 		real r_i[3] = {
@@ -85,14 +89,14 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 				pos[3u*j+2u]
 			};
 
-			// vector from body j's position to body i's position
+			// vector to body i's position from body j's position
 			real r_ij[3] = {
 				r_i[0] - r_j[0],
 				r_i[1] - r_j[1],
 				r_i[2] - r_j[2]
 			};
 
-			// squared distance to body j
+			// squared distance between bodies i and j
 			real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
 
 			#ifdef EPSILON
@@ -108,11 +112,13 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			real pot_j = m_j * inv_r1;
 
 			#ifdef ENABLE_SPH
-			real a = (real)1.0 / (h_j * (real)SQRT_PI);
+			real a_i = (real)INV_SQRT_PI / h_i;
+			real a_j = (real)INV_SQRT_PI / h_j;
 
-			real W = (a * a * a) * real_exp( -r2 / (h_j * h_j) );
+			real W_i = (a_i * a_i * a_i) * real_exp( -r2 / (h_i * h_i) );
+			real W_j = (a_j * a_j * a_j) * real_exp( -r2 / (h_j * h_j) );
 
-			real rho_j = m_j * W;
+			real rho_j = (real)0.5 * (W_i + W_j) * m_j;
 			#endif
 
 			real F[3] = {
@@ -222,6 +228,7 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 		#endif
 
 		real m_i = mas[i]; // body i's mass
+		real h_i = rad[i]; // body i's smoothing radius
 
 		// body i's position
 		real r_i[3] = {
@@ -230,10 +237,10 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			pos[3u*i+2u]
 		};
 
-		real rho_i = rho[i];
-		real prs_i = prs[i];
+		real rho_i = rho[i]; // body i's density
+		real prs_i = prs[i]; // body i's pressure
 
-		real rho_i2 = rho_i * rho_i;
+		real rho_i2 = rho_i * rho_i; // body i's density squared
 
 		// particle i's contribution to the SPH conservation of momentum equation
 		real con_i = (real)0.0 < rho_i2 ? prs_i / rho_i2 : (real)0.0;
@@ -246,6 +253,7 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			*/
 
 			real m_j = mas[j]; // body j's mass
+			real h_j = rad[j]; // body j's smoothing radius
 
 			// body j's position
 			real r_j[3] = {
@@ -254,51 +262,49 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 				pos[3u*j+2u]
 			};
 
-			real rho_j = rho[j];
-			real prs_j = prs[j];
+			real rho_j = rho[j]; // body j's density
+			real prs_j = prs[j]; // body j's pressure
 
-			// vector from body j's position to body i's position
+			// vector to body i's position from body j's position
 			real r_ij[3] = {
 				r_i[0] - r_j[0],
 				r_i[1] - r_j[1],
 				r_i[2] - r_j[2]
 			};
 
-			real rho_j2 = rho_j * rho_j;
+			real rho_j2 = rho_j * rho_j; // body j's density squared
 
 			// particle j's contribution to the SPH conservation of momentum equation
 			real con_j = (real)0.0 < rho_j2 ? prs_j / rho_j2 : (real)0.0;
 
-			// squared distance to body j
+			// squared distance between bodies i and j
 			real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
 
 			if( r2 > (real)(1.000 * 1.000) ) {
 				continue;
 			}
 
-			// distance to body j
-			real r1 = real_sqrt(r2);
-
 			#ifdef EPSILON
 			real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
 			real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
 			#else
-			real inv_r2 = (real)1.0 / r2;
-			real inv_r1 = (real)1.0 / r1;
+			real inv_r2 = (real)0.0 < r2 ? (real)1.0 /          (r2) : (real)0.0;
+			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
 			#endif
 
-			real n = (real)-2.0 * real_exp( -r2 / (h_j * h_j) ) / (INV_POW_PI_3_2 * h_j * h_j * h_j * h_j * h_j);
+			real n_i = (real)-2.0 * real_exp( -r2 / (h_i * h_i) ) / (INV_POW_PI_3_2 * h_i * h_i * h_i * h_i * h_i);
+			real n_j = (real)-2.0 * real_exp( -r2 / (h_j * h_j) ) / (INV_POW_PI_3_2 * h_j * h_j * h_j * h_j * h_j);
 
-			real W_grad[3] = {
-				n * r_ij[0],
-				n * r_ij[1],
-				n * r_ij[2],
+			real W_ij_grad[3] = {
+				(real)0.5 * (n_i + n_j) * r_ij[0],
+				(real)0.5 * (n_i + n_j) * r_ij[1],
+				(real)0.5 * (n_i + n_j) * r_ij[2],
 			};
 
 			real X[3] = {
-				(con_i + con_j) * W_grad[0],
-				(con_i + con_j) * W_grad[1],
-				(con_i + con_j) * W_grad[2]
+				(con_i + con_j) * W_ij_grad[0],
+				(con_i + con_j) * W_ij_grad[1],
+				(con_i + con_j) * W_ij_grad[2]
 			};
 
 			for(unsigned int k = 0u; k < 3u; k++) {

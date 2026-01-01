@@ -258,6 +258,7 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		vel[3u*i+2u] = (real)v[2u];
 	}
 
+	#if 0
 	// Transform Position/Velocity
 	for(unsigned int i = 0u; i < N; i++) {
 		double p[3] = {
@@ -323,6 +324,7 @@ int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos
 		vel[3u*i+1u] = (real)v[1u];
 		vel[3u*i+2u] = (real)v[2u];
 	}
+	#endif
 
 	return STARFLOOD_SUCCESS;
 }

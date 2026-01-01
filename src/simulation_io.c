@@ -16,9 +16,15 @@ int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
 
 	sim_t sim = *simulation;
 
+	#ifdef STARFLOOD_DOUBLE_PRECISION
+	if( sizeof(real) != sizeof(double) ) {
+		return STARFLOOD_FAILURE;
+	}
+	#else
 	if( sizeof(real) != sizeof(float) ) {
 		return STARFLOOD_FAILURE;
 	}
+	#endif
 
 	unsigned int N = sim.N;
 
