@@ -15,7 +15,7 @@
 			#include <time.h>
 
 			#ifndef STARFLOOD_POSIX_CLOCKID
-				#define STARFLOOD_POSIX_CLOCKID CLOCK_REALTIME
+				#define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC
 			#endif
 
 			#define TIMING_INIT() struct timespec __t0, __t1;

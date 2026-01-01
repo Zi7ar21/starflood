@@ -906,10 +906,12 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			pixel[j] = pixel_value_scale * (double)accum[j];
 		}
 
+		#if (0 < VISUALIZATION_IMAGE_FORMAT)
 		// tonemapping
 		for(int j = 0; j < 4; j++) {
 			pixel[j] = tanh(pixel[j]);
 		}
+		#endif
 
 		// set alpha channel to 1.000
 		pixel[3] = (double)1.000;

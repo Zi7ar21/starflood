@@ -41,13 +41,6 @@ void* image_write(void* arg) {
 
 	char* filename = image_write_params.filename;
 
-	#if (2 == VISUALIZATION_IMAGE_FORMAT)
-	int stride = (int)(sizeof(unsigned char) * (size_t)3u * (size_t)image_w);
-
-	if( 0 == stbi_write_png(filename, (int)image_w, (int)image_h, 3, binary_buffer, stride) ) {
-	}
-	#endif
-
 	#if (1 >= VISUALIZATION_IMAGE_FORMAT)
 	FILE* file = fopen(filename, "wb");
 
@@ -79,11 +72,16 @@ void* image_write(void* arg) {
 	if( 0 != fclose(file) ) {
 		fprintf(stderr, "%s error: fclose() ", "image_write()");
 		perror("failed");
-		#ifdef VISUALIZATION_THREADED_IO
-		pthread_mutex_unlock(&vis_io_mutex);
-		#endif
-		return NULL;
 		//return STARFLOOD_FAILURE;
+	}
+	#endif
+
+	#if (2 == VISUALIZATION_IMAGE_FORMAT)
+	int stride = (int)(sizeof(unsigned char) * (size_t)3u * (size_t)image_w);
+
+	if( 0 == stbi_write_png(filename, (int)image_w, (int)image_h, 3, binary_buffer, stride) ) {
+		fprintf(stderr, "%s error: stbi_write_png() ", "image_write()");
+		perror("failed");
 	}
 	#endif
 

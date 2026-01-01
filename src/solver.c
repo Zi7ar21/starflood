@@ -187,7 +187,7 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("solver_run()", "pairwise_loop");
+	TIMING_PRINT("solver_run()", "brute_force");
 
 	#ifdef ENABLE_SPH
 	// https://en.wikipedia.org/wiki/Polytrope

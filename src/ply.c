@@ -27,7 +27,8 @@ int ply_write(const char* restrict filename, float* restrict vertex_xyz, size_t 
 	//uint64_t accumulator = (uint64_t)0u;
 
 	for(size_t i = (size_t)0u; i < sizeof(magic_number); i++) {
-		accumulator |= ( (uint8_t*)&magic_number )[i] << (size_t)8u * i;
+		accumulator |= (uint32_t)( (uint8_t*)&magic_number )[i] << (uint32_t)(i * (size_t)8u);
+		//accumulator |= (uint64_t)( (uint8_t*)&magic_number )[i] << (uint64_t)(i * (size_t)8u);
 	}
 
 	int byte_order_is_le = (uint32_t)0x40C90FDBu == accumulator;

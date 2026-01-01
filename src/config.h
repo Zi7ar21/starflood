@@ -8,60 +8,70 @@
 #define ENABLE_OFFLOAD_SIM
 #define ENABLE_OFFLOAD_VIS
 
+/* === General === */
+
+// Default number of simulation timesteps to run
+#define NUM_TIMESTEPS 0
+
+// Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
+// If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed
+//#define ENABLE_SIM
+
+// Uncomment to enable visualization
+#define ENABLE_VIS
+
 /* === File I/O === */
 
 // Output directory prefix
 #define OUTPUT_DIR "./out"
 
 // Uncomment to only output files every OUTPUT_INTERVAL steps
-#define OUTPUT_INTERVAL 10
-
-// Uncomment to run a simulation (will otherwise load snapshots from SIM_FILENAME)
-#define ENABLE_SIM
+#define OUTPUT_INTERVAL 100
 
 // Uncomment to load initial conditions from a snapshot
 // Otherwise, initcond_generate() will be used
-#define INIT_COND_FILE "/scratch/Simulations/starflood_2025-12-29/sim/step_0100.raw"
+#define INIT_COND_FILE "/scratch/Simulations/ICs/starflood_expanding_sphere_1.raw"
 
-// Uncomment to enable simulation file I/O by default
+// Uncomment to write simulation snapshots to OUTPUT_DIR/SIM_FILENAME(          .raw), if ENABLE_SIM is defined
 #define SIM_FILENAME "sim/step_%04u"
 
-// Uncomment to enable visualization by default
-#define ENABLE_VIS
-
-// Uncomment to enable visualization file I/O by default
+// Uncomment to write visualization frames to OUTPUT_DIR/VIS_FILENAME(.pfm/.ppm/.png), if ENABLE_VIS is defined
 #define VIS_FILENAME "vis/step_%04u"
 
+// Image format to use for visualization images
 // 0: PFM (RGB, 32-bit floating-point,     linear       )
 // 1: PPM (RGB,  8-bit        integer, non-linear BT.709)
-// 2: PNG (RGB,  8-bit        integer, non-linear   sRGB) (requires stb_image_write.h)
+// 2: PNG (RGB,  8-bit        integer, non-linear   sRGB) (requires stb submodule for stb_image_write.h)
 #define VISUALIZATION_IMAGE_FORMAT 2
 
-/* === Logging === */
-
-// Uncomment to
+// Uncomment to log statistics to a CSV file (OUTPUT_DIR/LOG_STATISTICS)
 #define LOG_STATISTICS "statistics.csv"
+
+// Uncomment to log    simulation_step() timings to a CSV file (OUTPUT_DIR/LOG_TIMINGS_SIM_STEP), if ENABLE_TIMING is defined
+#define LOG_TIMINGS_SIM_STEP "timings_sim_step.csv"
+
+// Uncomment to log visualization_draw() timings to a CSV file (OUTPUT_DIR/LOG_TIMINGS_VIS_DRAW), if ENABLE_TIMING is defined
+#define LOG_TIMINGS_VIS_DRAW "timings_vis_draw.csv"
+
+// Uncomment to log statistics to a CSV file (OUTPUT_DIR/LOG_STATISTICS)
+#define LOG_STATISTICS "statistics.csv"
+
+/* === Logging Parameters === */
 
 // Uncomment to enable timing
 #define ENABLE_TIMING
 
+// Uncomment to use omp_get_wtime() instead of POSIX time.h functions, requires OpenMP to be enabled
+//#define TIMING_USE_OMP_GET_WTIME
+
 // Uncomment to override the POSIX clockid (used by clock_getres(), clock_gettime(), etc.)
-// When commented, it defaults to CLOCK_REALTIME
+// When commented, it defaults to CLOCK_MONOTONIC
 // Note: This has no effect when using #define TIMING_USE_OMP_GET_WTIME
 //#define STARFLOOD_POSIX_CLOCKID CLOCK_REALTIME
 #define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC
 //#define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC_RAW
 
-// Uncomment to use omp_get_wtime() instead of POSIX time.h functions, requires OpenMP to be enabled
-//#define TIMING_USE_OMP_GET_WTIME
-
-// Uncomment to log simulation_step() timings
-#define LOG_TIMINGS_SIM_STEP "timings_sim_step.csv"
-
-// Uncomment to log visualization_draw() timings
-#define LOG_TIMINGS_VIS_DRAW "timings_vis_draw.csv"
-
-/* === Run Parameters === */
+/* === Simulation Parameters === */
 
 // Default number of bodies in the simulation (N)
 // It is recommended you set this to a power of 2
@@ -81,11 +91,8 @@
 // multiple timesteps (faster, but less accurate)
 //#define PAIRWISE_SOLVER_DECIMATION 4
 
-// Default number of timesteps to run simulation for
-#define NUM_TIMESTEPS 1000
-
 // Simulation timestep size (dt)
-#define TIMESTEP_SIZE 1.000e-1
+#define TIMESTEP_SIZE 1.000e-0
 
 // Gravitational potential softening parameter
 #define EPSILON 1.000e-3

@@ -3,7 +3,7 @@
 Starflood is an open-source astrophysical simulation code written in C.
 
 > _A Starflood N-body simulation (N = 65536) of an expanding self-gravitating sphere, visualized using [Blender](https://en.wikipedia.org/wiki/Blender_(software)) Cycles_
-> ![N-body simulation visualization rendered using Blender Cycles](images/expanding_sphere_N_65536_blender_cycles_sRGB.png)
+> ![N-body simulation visualization rendered using Blender Cycles](images/expanding_sphere_N_65536_0_blender_cycles_sRGB.png)
 
 ## Features
 
