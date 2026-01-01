@@ -20,7 +20,7 @@ extern pthread_mutex_t vis_io_mutex;
 
 extern struct image_write_param image_write_params;
 
-#if (2 == VISUALIZATION_IMAGE_FORMAT)
+#if (2 == VIS_FILE_FORMAT)
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 #endif
@@ -33,7 +33,7 @@ void* image_write(void* arg) {
 	unsigned int image_w = image_write_params.image_w;
 	unsigned int image_h = image_write_params.image_h;
 
-	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	#if (0 >= VIS_FILE_FORMAT)
 	f32* binary_buffer = (f32*)image_write_params.binary_buffer;
 	#else
 	unsigned char* binary_buffer = (unsigned char*)image_write_params.binary_buffer;
@@ -41,7 +41,7 @@ void* image_write(void* arg) {
 
 	char* filename = image_write_params.filename;
 
-	#if (1 >= VISUALIZATION_IMAGE_FORMAT)
+	#if (1 >= VIS_FILE_FORMAT)
 	FILE* file = fopen(filename, "wb");
 
 	if(NULL == (void*)file) {
@@ -53,7 +53,7 @@ void* image_write(void* arg) {
 		return NULL;
 	}
 
-	#if (0 == VISUALIZATION_IMAGE_FORMAT)
+	#if (0 == VIS_FILE_FORMAT)
 	// PFM graphic image file format
 	// https://netpbm.sourceforge.net/doc/pfm.html
 	fprintf(file, "PF\n%zu %zu\n-1.0\n", (size_t)image_w, (size_t)image_h);
@@ -61,7 +61,7 @@ void* image_write(void* arg) {
 	fwrite(binary_buffer, sizeof(f32), (size_t)3u * (size_t)image_w * (size_t)image_h, file);
 	#endif
 
-	#if (1 == VISUALIZATION_IMAGE_FORMAT)
+	#if (1 == VIS_FILE_FORMAT)
 	// PPM Netpbm color image format
 	// https://netpbm.sourceforge.net/doc/ppm.html
 	fprintf(file, "P6\n%zu %zu %u\n", (size_t)image_w, (size_t)image_h, 255u);
@@ -76,7 +76,7 @@ void* image_write(void* arg) {
 	}
 	#endif
 
-	#if (2 == VISUALIZATION_IMAGE_FORMAT)
+	#if (2 == VIS_FILE_FORMAT)
 	int stride = (int)(sizeof(unsigned char) * (size_t)3u * (size_t)image_w);
 
 	if( 0 == stbi_write_png(filename, (int)image_w, (int)image_h, 3, binary_buffer, stride) ) {
@@ -94,8 +94,11 @@ void* image_write(void* arg) {
 
 int visualization_save(const vis_t* restrict visualization, const char* restrict filename) {
 	#ifdef ENABLE_VIS_IO_THREAD
+	if( 0 != pthread_join(vis_io_thread, NULL) ) {
+		return STARFLOOD_FAILURE;
+	}
+
 	pthread_mutex_lock(&vis_io_mutex);
-	pthread_join(vis_io_thread, NULL);
 	#endif
 
 	TIMING_INIT();
@@ -107,7 +110,7 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 
 	f32* render_buffer = vis.render_buffer;
 
-	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	#if (0 >= VIS_FILE_FORMAT)
 	f32* binary_buffer = vis.binary_buffer;
 	#else
 	unsigned char* binary_buffer = vis.binary_buffer;
@@ -115,7 +118,7 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 
 	TIMING_START();
 
-	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	#if (0 >= VIS_FILE_FORMAT)
 	// Copy render_buffer->binary_buffer without alpha channel
 	for(unsigned int y = 0u; y < image_h; y++) {
 		for(unsigned int x = 0u; x < image_w; x++) {
@@ -149,14 +152,14 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 			}
 			*/
 
-			#if (1 == VISUALIZATION_IMAGE_FORMAT)
+			#if (1 == VIS_FILE_FORMAT)
 			// BT.709 non-linear transfer function
 			for(int i = 0; i < 3; i++) {
 				color[i] = (f32)0.018053968510807 <= color[i] ? (f32)1.099296826809442 * (f32)powf( (float)color[i], (float)0.45 ) - (f32)0.099296826809442 : (f32)4.500 * color[i];
 			}
 			#endif
 
-			#if (2 == VISUALIZATION_IMAGE_FORMAT)
+			#if (2 == VIS_FILE_FORMAT)
 			// IEC 61966-2-1 sRGB non-linear transfer function
 			for(int i = 0; i < 3; i++) {
 				color[i] = (f32)0.0031308 < color[i] ? (f32)1.055 * (f32)powf(  (float)color[i], (float)(1.0/2.4) ) - (f32)0.055 : (f32)12.92 * color[i];
@@ -202,7 +205,7 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 
 	strcpy(image_write_params.filename, filename);
 
-	#if (2 == VISUALIZATION_IMAGE_FORMAT)
+	#if (2 == VIS_FILE_FORMAT)
 	// the default value is 8
 	// stbi_zlib_compress() forces quality to be a minimum of 5
 	stbi_write_png_compression_level = 1;

@@ -18,7 +18,7 @@
 /* === General === */
 
 // Default number of simulation timesteps to run
-#define NUM_TIMESTEPS 100
+#define NUM_TIMESTEPS 10
 
 // Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
 // If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed
@@ -45,11 +45,22 @@
 // Uncomment to write visualization frames to OUTPUT_DIR/VIS_FILENAME(.pfm/.ppm/.png), if ENABLE_VIS is defined
 #define VIS_FILENAME "vis/step_%04u"
 
-// Image format to use for visualization images
+// Format to use for reading/writing simulation snapshot files
+// 0: RAW (no header, just a dump of sim.mem)
+// 1: PLY (simple)
+// 2: PLY (custom), includes custom properties
+// CAUTION: reading ply files is not finished yet, do not change SIM_FILE_FORMAT_READ
+// It is safe to convert old runs in RAW binary format to PLY, if !enable_sim (in main.c)
+// and SIM_FILE_FORMAT_READ != SIM_FILE_FORMAT_SAVE, then snapshots will be read and
+// immediately saved in the format specified by SIM_FILE_FORMAT_SAVE.
+#define SIM_FILE_FORMAT_READ 0
+#define SIM_FILE_FORMAT_SAVE 0
+
+// Format to use for writing visualization image files
 // 0: PFM (RGB, 32-bit floating-point,     linear       )
 // 1: PPM (RGB,  8-bit        integer, non-linear BT.709)
 // 2: PNG (RGB,  8-bit        integer, non-linear   sRGB) (requires stb submodule for stb_image_write.h)
-#define VISUALIZATION_IMAGE_FORMAT 2
+#define VIS_FILE_FORMAT 2
 
 // Uncomment to log statistics to a CSV file (OUTPUT_DIR/LOG_STATISTICS)
 #define LOG_STATISTICS "statistics.csv"
@@ -167,3 +178,15 @@
 // There is really no point increasing this
 // much before you are just wasting memory
 #define STARFLOOD_ALIGNMENT 4194304
+
+// Uncomment to override max filename length (otherwise use FILENAME_MAX)
+// FILENAME_MAX is often 4096
+#define STARFLOOD_FILENAME_MAX 256
+
+// Source code information (--help/--version)
+#define STARFLOOD_REPOSITORY "https://github.com/Zi7ar21/starflood"
+
+// Version information
+#define STARFLOOD_VERSION_MAJOR 0
+#define STARFLOOD_VERSION_MINOR 0
+#define STARFLOOD_VERSION_PATCH 1

@@ -87,7 +87,7 @@ OUT_DIR := ./build
 
 SRC_DIR := ./src
 
-SRCS := main.c initcond.c log.c ply.c simulation.c simulation_io.c solver.c visualization.c visualization_io.c
+SRCS := main.c initcond.c log.c simulation.c simulation_io.c solver.c visualization.c visualization_io.c
 
 OBJS := $(addprefix $(OUT_DIR)/src/,$(addsuffix .o,$(SRCS)))
 
@@ -113,9 +113,6 @@ $(OUT_DIR)/src/initcond.c.o: $(SRC_DIR)/initcond.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUT_DIR)/src/log.c.o: $(SRC_DIR)/log.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OUT_DIR)/src/ply.c.o: $(SRC_DIR)/ply.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUT_DIR)/src/simulation.c.o: $(SRC_DIR)/simulation.c | $(OUT_DIR)/src

@@ -72,7 +72,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	i32* atomic_buffer = (i32*)NULL;
 	f32* render_buffer = (f32*)NULL;
 
-	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	#if (0 >= VIS_FILE_FORMAT)
 	f32* binary_buffer = (f32*)NULL;
 	#else
 	unsigned char* binary_buffer = (unsigned char*)NULL;
@@ -88,7 +88,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	size_t render_buffer_length = (size_t)4u * (size_t)w * (size_t)h; //  32-bit floating-point, RGBA, for finishing the render and image post-processing (alpha channel is currently unused, only for alignment)
 	size_t binary_buffer_length = (size_t)3u * (size_t)w * (size_t)h; // image format-dependent, RGB , for serializing the finalized image
 
-	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	#if (0 >= VIS_FILE_FORMAT)
 	size_t mem_size = (sizeof(i32)*atomic_buffer_length)+(sizeof(i32)*render_buffer_length)+(sizeof(f32)*binary_buffer_length);
 	#else
 	size_t mem_size = (sizeof(i32)*atomic_buffer_length)+(sizeof(i32)*render_buffer_length)+(sizeof(unsigned char)*binary_buffer_length);
@@ -133,7 +133,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 
 	atomic_buffer = (i32*)mem;
 	render_buffer = (f32*)&atomic_buffer[atomic_buffer_length];
-	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	#if (0 >= VIS_FILE_FORMAT)
 	binary_buffer = (f32*)&render_buffer[render_buffer_length];
 	#else
 	binary_buffer = (unsigned char*)&render_buffer[render_buffer_length];
@@ -141,7 +141,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 
 	printf("  atomic_buffer: %p (%zu bytes)\n", (void*)atomic_buffer, sizeof(i32)*atomic_buffer_length);
 	printf("  render_buffer: %p (%zu bytes)\n", (void*)render_buffer, sizeof(f32)*render_buffer_length);
-	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	#if (0 >= VIS_FILE_FORMAT)
 	printf("  binary_buffer: %p (%zu bytes)\n", (void*)binary_buffer, sizeof(f32)*binary_buffer_length);
 	#else
 	printf("  binary_buffer: %p (%zu bytes)\n", (void*)binary_buffer, sizeof(unsigned char)*binary_buffer_length);
@@ -170,7 +170,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 
 	TIMING_START();
 	for(unsigned int i = 0u; i < 3u * w * h; i++) {
-		#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+		#if (0 >= VIS_FILE_FORMAT)
 		binary_buffer[i] = (f32)0.000;
 		#else
 		binary_buffer[i] = (unsigned char)0u;
@@ -219,7 +219,7 @@ int visualization_free(vis_t* restrict visualization) {
 	vis.atomic_buffer = (i32*)NULL;
 	vis.render_buffer = (f32*)NULL;
 
-	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	#if (0 >= VIS_FILE_FORMAT)
 	vis.binary_buffer = (f32*)NULL;
 	#else
 	vis.binary_buffer = (unsigned char*)NULL;
@@ -906,7 +906,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			pixel[j] = pixel_value_scale * (double)accum[j];
 		}
 
-		#if (0 < VISUALIZATION_IMAGE_FORMAT)
+		#if (0 < VIS_FILE_FORMAT)
 		// tonemapping
 		for(int j = 0; j < 4; j++) {
 			pixel[j] = tanh(pixel[j]);

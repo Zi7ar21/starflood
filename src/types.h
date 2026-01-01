@@ -22,6 +22,13 @@ typedef f64 real;
 typedef f32 real;
 #endif
 
+// String of the floating-point type name (used for writing .ply file header)
+#ifdef STARFLOOD_DOUBLE_PRECISION
+#define REAL_TYPE_STRING "double"
+#else
+#define REAL_TYPE_STRING "float"
+#endif
+
 // floating-point math function aliases
 #ifdef STARFLOOD_DOUBLE_PRECISION
 #define real_cos(__x) (real)cos(__x)

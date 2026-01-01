@@ -17,7 +17,7 @@ typedef struct {
 	f32* render_buffer; // render buffer for the post-processed render
 
 	// binary image data for file I/O
-	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	#if (0 >= VIS_FILE_FORMAT)
 	f32* binary_buffer;
 	#else
 	unsigned char* binary_buffer;
@@ -36,7 +36,7 @@ struct image_write_param {
 	unsigned int image_w;
 	unsigned int image_h;
 
-	#if (0 >= VISUALIZATION_IMAGE_FORMAT)
+	#if (0 >= VIS_FILE_FORMAT)
 	volatile f32* binary_buffer;
 	#else
 	volatile unsigned char* binary_buffer;

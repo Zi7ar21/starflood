@@ -3,8 +3,8 @@
 # exit on error
 set -e
 
-#OUTPUT_DIR="./out"
-#OUTPUT_DIR="/scratch/Simulations/starflood_expanding_sphere_1"
+OUTPUT_DIR="./out"
+#OUTPUT_DIR="/scratch/Simulations/starflood_expanding_sphere_0"
 
 FRAMERATE="30"
 

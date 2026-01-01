@@ -20,24 +20,37 @@
 #include "common.h"
 #include "config.h"
 #include "initcond.h"
-#include "ply.h"
 #include "simulation.h"
 #include "solver.h"
 #include "timing.h"
 #include "types.h"
 #include "visualization.h"
 
-#define SIM_FILE_EXTENSION ".raw"
+#if (0 >= SIM_FILE_FORMAT_READ)
+#define SIM_FILE_EXTENSION_READ ".raw"
+#endif
 
-#if (0 == VISUALIZATION_IMAGE_FORMAT)
+#if (1 <= SIM_FILE_FORMAT_READ)
+#define SIM_FILE_EXTENSION_READ ".ply"
+#endif
+
+#if (0 >= SIM_FILE_FORMAT_SAVE)
+#define SIM_FILE_EXTENSION_SAVE ".raw"
+#endif
+
+#if (1 <= SIM_FILE_FORMAT_SAVE)
+#define SIM_FILE_EXTENSION_SAVE ".ply"
+#endif
+
+#if (0 == VIS_FILE_FORMAT)
 #define VIS_FILE_EXTENSION ".pfm"
 #endif
 
-#if (1 == VISUALIZATION_IMAGE_FORMAT)
+#if (1 == VIS_FILE_FORMAT)
 #define VIS_FILE_EXTENSION ".ppm"
 #endif
 
-#if (2 == VISUALIZATION_IMAGE_FORMAT)
+#if (2 == VIS_FILE_FORMAT)
 #define VIS_FILE_EXTENSION ".png"
 #endif
 
@@ -82,8 +95,12 @@ int main(int argc, char** argv) {
 	sim_t sim;
 	vis_t vis;
 
+	#ifdef STARFLOOD_FILENAME_MAX
 	const size_t filename_max      = (size_t)STARFLOOD_FILENAME_MAX;
-	const size_t filename_mem_size = sizeof(char) * filename_max * (size_t)4u;
+	#else
+	const size_t filename_max      = (size_t)FILENAME_MAX;
+	#endif
+	const size_t filename_mem_size = sizeof(char) * filename_max * (size_t)6u;
 
 	char* filename_mem = (char*)malloc(filename_mem_size);
 
@@ -95,32 +112,43 @@ int main(int argc, char** argv) {
 
 	memset(filename_mem, 0, filename_mem_size);
 
-	char* sim_filename_pattern = &filename_mem[(size_t)0u * filename_max];
-	char* vis_filename_pattern = &filename_mem[(size_t)1u * filename_max];
-	char* sim_filename         = &filename_mem[(size_t)2u * filename_max];
-	char* vis_filename         = &filename_mem[(size_t)3u * filename_max];
+	char* sim_read_file_pattern = &filename_mem[(size_t)0u * filename_max];
+	char* sim_save_file_pattern = &filename_mem[(size_t)1u * filename_max];
+	char* vis_save_file_pattern = &filename_mem[(size_t)2u * filename_max];
+	char* sim_read_file_name    = &filename_mem[(size_t)3u * filename_max];
+	char* sim_save_file_name    = &filename_mem[(size_t)4u * filename_max];
+	char* vis_save_file_name    = &filename_mem[(size_t)5u * filename_max];
 
 	#ifdef SIM_FILENAME
-	strcpy(sim_filename_pattern, OUTPUT_DIR "/" SIM_FILENAME SIM_FILE_EXTENSION);
+	strcpy(sim_read_file_pattern, OUTPUT_DIR "/" SIM_FILENAME SIM_FILE_EXTENSION_READ);
+	strcpy(sim_save_file_pattern, OUTPUT_DIR "/" SIM_FILENAME SIM_FILE_EXTENSION_SAVE);
 	#else
-	strcpy(sim_filename_pattern, OUTPUT_DIR "/sim/step_%04u" SIM_FILE_EXTENSION);
+	strcpy(sim_read_file_pattern, OUTPUT_DIR "/sim/step_%04u" SIM_FILE_EXTENSION_READ);
+	strcpy(sim_save_file_pattern, OUTPUT_DIR "/sim/step_%04u" SIM_FILE_EXTENSION_SAVE);
 	#endif
 
 	#ifdef VIS_FILENAME
-	strcpy(vis_filename_pattern, OUTPUT_DIR "/" VIS_FILENAME VIS_FILE_EXTENSION);
+	strcpy(vis_save_file_pattern, OUTPUT_DIR "/" VIS_FILENAME VIS_FILE_EXTENSION);
 	#else
-	strcpy(vis_filename_pattern, OUTPUT_DIR "/vis/step_%04u" VIS_FILE_EXTENSION);
+	strcpy(vis_save_file_pattern, OUTPUT_DIR "/vis/step_%04u" VIS_FILE_EXTENSION);
 	#endif
 
-	if( 0 >= snprintf(sim_filename, filename_max, sim_filename_pattern, 0u) ) {
-		fprintf(stderr, "fatal error: snprintf(sim_filename, filename_max, \"%s\", %u) ", sim_filename_pattern, 0u);
+	if( 0 >= snprintf(sim_read_file_name, filename_max, sim_read_file_pattern, 0u) ) {
+		fprintf(stderr, "fatal error: snprintf(%s, filename_max, \"%s\", %u) ", "sim_read_file_name", sim_read_file_pattern, 0u);
 		perror("failed");
 		free(filename_mem);
 		return EXIT_FAILURE;
 	}
 
-	if( 0 >= snprintf(vis_filename, filename_max, vis_filename_pattern, 0u) ) {
-		fprintf(stderr, "fatal error: snprintf(vis_filename, filename_max, \"%s\", %u) ", vis_filename_pattern, 0u);
+	if( 0 >= snprintf(sim_save_file_name, filename_max, sim_save_file_pattern, 0u) ) {
+		fprintf(stderr, "fatal error: snprintf(%s, filename_max, \"%s\", %u) ", "sim_save_file_name", sim_save_file_pattern, 0u);
+		perror("failed");
+		free(filename_mem);
+		return EXIT_FAILURE;
+	}
+
+	if( 0 >= snprintf(vis_save_file_name, filename_max, vis_save_file_pattern, 0u) ) {
+		fprintf(stderr, "fatal error: snprintf(%s, filename_max, \"%s\", %u) ", "vis_save_file_name", vis_save_file_pattern, 0u);
 		perror("failed");
 		free(filename_mem);
 		return EXIT_FAILURE;
@@ -165,7 +193,7 @@ int main(int argc, char** argv) {
 
 		if( 0 == strcmp("-V", argv[i]) || 0 == strcmp("--version", argv[i]) ) {
 			printf(
-				"Starflood %d.%d.%d\n"
+				"Starflood version %d.%d.%d\n"
 				"\n"
 				"Starflood repository: <%s>\n",
 				STARFLOOD_VERSION_MAJOR,
@@ -190,7 +218,7 @@ int main(int argc, char** argv) {
 
 	printf("=== Starflood ===\n");
 
-	printf("\n  Version %d.%d.%d\n", STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH);
+	printf("  Version %d.%d.%d\n", STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH);
 
 	fflush(stdout);
 
@@ -285,7 +313,8 @@ int main(int argc, char** argv) {
 	printf("\n        I/O enabled: %s", enable_sim_io ? "true" : "false");
 
 	if(enable_sim_io) {
-		printf("\n        sim_filename_pattern: \"%s\"", sim_filename_pattern);
+		printf("\n        sim_read_file_pattern: \"%s\"", sim_read_file_pattern);
+		printf("\n        sim_save_file_pattern: \"%s\"", sim_save_file_pattern);
 	}
 
 	printf("\n        N: %u", num_bodies);
@@ -299,7 +328,7 @@ int main(int argc, char** argv) {
 	printf("\n        I/O enabled: %s", enable_vis_io ? "true" : "false");
 
 	if(enable_vis_io) {
-		printf("\n        vis_filename_pattern: \"%s\"", vis_filename_pattern);
+		printf("\n        vis_save_file_pattern: \"%s\"", vis_save_file_pattern);
 	}
 
 	printf("\n        dimensions: %ux%u", visualization_dimensions[0], visualization_dimensions[1]);
@@ -342,41 +371,43 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 	#else
-	if( STARFLOOD_SUCCESS != initcond_generate(sim.mas, sim.rad, sim.pos, sim.vel, sim.N) ) {
-		fprintf(stderr, "fatal error: initcond_generate() failed.\n");
+	if(enable_sim) {
+		if( STARFLOOD_SUCCESS != initcond_generate(sim.mas, sim.rad, sim.pos, sim.vel, sim.N) ) {
+			fprintf(stderr, "fatal error: initcond_generate() failed.\n");
 
-		if(enable_vis) {
-			visualization_free(&vis);
+			if(enable_vis) {
+				visualization_free(&vis);
+			}
+
+			simulation_free(&sim);
+			free(filename_mem);
+			return EXIT_FAILURE;
 		}
 
-		simulation_free(&sim);
-		free(filename_mem);
-		return EXIT_FAILURE;
-	}
+		// An initial solver step is needed for the first leapfrog "kick" in the "kick-drift-kick" form, since acceleration is only updated after "drift"
+		if( STARFLOOD_SUCCESS != solver_run(sim.acc, sim.pot, sim.rho, sim.prs, sim.mas, sim.rad, sim.pos, sim.vel, sim.N, 0u) ) {
+			fprintf(stderr, "fatal error: solver_run() failed.\n");
 
-	// An initial solver step is needed for the first leapfrog "kick" in the "kick-drift-kick" form, since acceleration is only updated after "drift"
-	if( STARFLOOD_SUCCESS != solver_run(sim.acc, sim.pot, sim.rho, sim.prs, sim.mas, sim.rad, sim.pos, sim.vel, sim.N, 0u) ) {
-		fprintf(stderr, "fatal error: solver_run() failed.\n");
+			if(enable_vis) {
+				visualization_free(&vis);
+			}
 
-		if(enable_vis) {
-			visualization_free(&vis);
+			simulation_free(&sim);
+			free(filename_mem);
+			return EXIT_FAILURE;
 		}
-
-		simulation_free(&sim);
-		free(filename_mem);
-		return EXIT_FAILURE;
 	}
 	#endif
 
-	if( STARFLOOD_SUCCESS != ply_write(OUTPUT_DIR "/initcond.ply", sim.pos, sim.N) ) {
-		fprintf(stderr, "error: ply_write(\"%s\", &sim.pos, %u) failed.\n", OUTPUT_DIR "/initcond.ply", sim.N);
-	}
+	unsigned int step_inc = 1u;
 
-	#ifdef ENABLE_SIM
-	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num++) {
-	#else
-	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num += (unsigned int)OUTPUT_INTERVAL) {
+	#ifdef OUTPUT_INTERVAL
+	if(!enable_sim) {
+		step_inc = OUTPUT_INTERVAL;
+	}
 	#endif
+
+	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num += step_inc) {
 		printf("Step #%u (run is %6.03f%% complete)\n", step_num, 100.0 * (0 < num_timesteps ? (double)step_num / (double)num_timesteps : 1.0) );
 		printf("t = %.06f\n", (double)TIMESTEP_SIZE * (double)step_num);
 
@@ -413,8 +444,14 @@ int main(int argc, char** argv) {
 		sim_file_num /= (unsigned int)OUTPUT_INTERVAL;
 		#endif
 
-		if( 0 >= snprintf(sim_filename, filename_max, sim_filename_pattern, sim_file_num) ) {
-			fprintf(stderr, "fatal error: snprintf(sim_filename, filename_max, \"%s\", %u) ", sim_filename_pattern, step_num);
+		if( 0 >= snprintf(sim_read_file_name, filename_max, sim_read_file_pattern, sim_file_num) ) {
+			fprintf(stderr, "fatal error: snprintf(%s, filename_max, \"%s\", %u) ", "sim_read_file_name", sim_read_file_pattern, step_num);
+			perror("failed");
+			break;
+		}
+
+		if( 0 >= snprintf(sim_save_file_name, filename_max, sim_save_file_pattern, sim_file_num) ) {
+			fprintf(stderr, "fatal error: snprintf(%s, filename_max, \"%s\", %u) ", "sim_save_file_name", sim_save_file_pattern, step_num);
 			perror("failed");
 			break;
 		}
@@ -427,8 +464,8 @@ int main(int argc, char** argv) {
 		vis_file_num /= (unsigned int)OUTPUT_INTERVAL;
 		#endif
 
-		if( 0 >= snprintf(vis_filename, filename_max, vis_filename_pattern, vis_file_num) ) {
-			fprintf(stderr, "fatal error: snprintf(vis_filename, filename_max, \"%s\", %u) ", vis_filename_pattern, step_num);
+		if( 0 >= snprintf(vis_save_file_name, filename_max, vis_save_file_pattern, vis_file_num) ) {
+			fprintf(stderr, "fatal error: snprintf(%s, filename_max, \"%s\", %u) ", "vis_save_file_name", vis_save_file_pattern, step_num);
 			perror("failed");
 			break;
 		}
@@ -440,14 +477,20 @@ int main(int argc, char** argv) {
 		if(enable_sim_io) {
 		#endif
 			if(enable_sim) {
-				if( STARFLOOD_SUCCESS != simulation_save(&sim, sim_filename) ) {
-					fprintf(stderr, "error: simulation_save(&sim, \"%s\") failed.\n", sim_filename);
+				if( STARFLOOD_SUCCESS != simulation_save(&sim, sim_save_file_name) ) {
+					fprintf(stderr, "error: simulation_save(&sim, \"%s\") failed.\n", sim_save_file_name);
 				}
 			} else {
-				if( STARFLOOD_SUCCESS != simulation_read(&sim, sim_filename) ) {
-					fprintf(stderr, "fatal error: simulation_read(&sim, \"%s\") failed.\n", sim_filename);
+				if( STARFLOOD_SUCCESS != simulation_read(&sim, sim_read_file_name) ) {
+					fprintf(stderr, "fatal error: simulation_read(&sim, \"%s\") failed.\n", sim_read_file_name);
 					break;
 				}
+
+				#if (SIM_FILE_FORMAT_READ != SIM_FILE_FORMAT_SAVE)
+				if( STARFLOOD_SUCCESS != simulation_save(&sim, sim_save_file_name) ) {
+					fprintf(stderr, "error: simulation_save(&sim, \"%s\") failed.\n", sim_save_file_name);
+				}
+				#endif
 			}
 		}
 
@@ -461,8 +504,8 @@ int main(int argc, char** argv) {
 			}
 
 			if(enable_vis_io) {
-				if( STARFLOOD_SUCCESS != visualization_save(&vis, vis_filename) ) {
-					fprintf(stderr, "error: visualization_save(&vis, \"%s\") failed.\n", vis_filename);
+				if( STARFLOOD_SUCCESS != visualization_save(&vis, vis_save_file_name) ) {
+					fprintf(stderr, "error: visualization_save(&vis, \"%s\") failed.\n", vis_save_file_name);
 				}
 			}
 		}

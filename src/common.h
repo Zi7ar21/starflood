@@ -28,18 +28,5 @@
 // 1 / pow(PI,3/2) or pow(PI,-3/2)
 #define INV_POW_PI_3_2 5.5683279968317078452848179821188357020136243902832439107536758188297455336477957022121776873847084941
 
-// Maximum length for filename arrays
-// (FILENAME_MAX is usually 4096 which is a bit absurd)
-//#define STARFLOOD_FILENAME_MAX FILENAME_MAX
-#define STARFLOOD_FILENAME_MAX 256u
-
 #define STARFLOOD_SUCCESS 0
 #define STARFLOOD_FAILURE -1
-
-// Repository information (--help/--version)
-#define STARFLOOD_REPOSITORY "https://github.com/Zi7ar21/starflood"
-
-// Semantic versioning
-#define STARFLOOD_VERSION_MAJOR 0
-#define STARFLOOD_VERSION_MINOR 0
-#define STARFLOOD_VERSION_PATCH 1
