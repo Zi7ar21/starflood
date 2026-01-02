@@ -347,8 +347,8 @@ int main(int argc, char** argv) {
 	}
 
 	// initialize the simulation
-	if( STARFLOOD_SUCCESS != simulation_init(&sim, num_bodies) ) {
-		fprintf(stderr, "fatal error: simulation_init(&sim, %u) failed.\n", num_bodies);
+	if( STARFLOOD_SUCCESS != sim_init(&sim, num_bodies) ) {
+		fprintf(stderr, "fatal error: sim_init(&sim, %u) failed.\n", num_bodies);
 
 		if(enable_vis) {
 			visualization_free(&vis);
@@ -360,40 +360,40 @@ int main(int argc, char** argv) {
 
 	// simulation initial conditions
 	#ifdef INIT_COND_FILE
-	if( STARFLOOD_SUCCESS != simulation_read(&sim, INIT_COND_FILE) ) {
-		fprintf(stderr, "fatal error: simulation_read(&sim, \"%s\") failed.\n", INIT_COND_FILE);
+	if( STARFLOOD_SUCCESS != sim_read(&sim, INIT_COND_FILE) ) {
+		fprintf(stderr, "fatal error: sim_read(&sim, \"%s\") failed.\n", INIT_COND_FILE);
 
 		if(enable_vis) {
 			visualization_free(&vis);
 		}
 
-		simulation_free(&sim);
+		sim_free(&sim);
 		free(filename_mem);
 		return EXIT_FAILURE;
 	}
 	#else
 	if(enable_sim) {
-		if( STARFLOOD_SUCCESS != initcond_generate(sim.mas, sim.rad, sim.pos, sim.vel, sim.N) ) {
+		if( STARFLOOD_SUCCESS != initcond_generate(&sim) ) {
 			fprintf(stderr, "fatal error: initcond_generate() failed.\n");
 
 			if(enable_vis) {
 				visualization_free(&vis);
 			}
 
-			simulation_free(&sim);
+			sim_free(&sim);
 			free(filename_mem);
 			return EXIT_FAILURE;
 		}
 
 		// An initial solver step is needed for the first leapfrog "kick" in the "kick-drift-kick" form, since acceleration is only updated after "drift"
-		if( STARFLOOD_SUCCESS != solver_run(sim.acc, sim.pot, sim.rho, sim.prs, sim.mas, sim.rad, sim.pos, sim.vel, sim.N, 0u) ) {
+		if( STARFLOOD_SUCCESS != solver_run(&sim, 0u) ) {
 			fprintf(stderr, "fatal error: solver_run() failed.\n");
 
 			if(enable_vis) {
 				visualization_free(&vis);
 			}
 
-			simulation_free(&sim);
+			sim_free(&sim);
 			free(filename_mem);
 			return EXIT_FAILURE;
 		}
@@ -478,18 +478,18 @@ int main(int argc, char** argv) {
 		if(enable_sim_io) {
 		#endif
 			if(enable_sim) {
-				if( STARFLOOD_SUCCESS != simulation_save(&sim, sim_save_file_name) ) {
-					fprintf(stderr, "error: simulation_save(&sim, \"%s\") failed.\n", sim_save_file_name);
+				if( STARFLOOD_SUCCESS != sim_save(&sim, sim_save_file_name) ) {
+					fprintf(stderr, "error: sim_save(&sim, \"%s\") failed.\n", sim_save_file_name);
 				}
 			} else {
-				if( STARFLOOD_SUCCESS != simulation_read(&sim, sim_read_file_name) ) {
-					fprintf(stderr, "fatal error: simulation_read(&sim, \"%s\") failed.\n", sim_read_file_name);
+				if( STARFLOOD_SUCCESS != sim_read(&sim, sim_read_file_name) ) {
+					fprintf(stderr, "fatal error: sim_read(&sim, \"%s\") failed.\n", sim_read_file_name);
 					break;
 				}
 
 				#if (SIM_FILE_FORMAT_READ != SIM_FILE_FORMAT_SAVE)
-				if( STARFLOOD_SUCCESS != simulation_save(&sim, sim_save_file_name) ) {
-					fprintf(stderr, "error: simulation_save(&sim, \"%s\") failed.\n", sim_save_file_name);
+				if( STARFLOOD_SUCCESS != sim_save(&sim, sim_save_file_name) ) {
+					fprintf(stderr, "error: sim_save(&sim, \"%s\") failed.\n", sim_save_file_name);
 				}
 				#endif
 			}
@@ -512,8 +512,8 @@ int main(int argc, char** argv) {
 		}
 
 		if( (step_num < num_timesteps) && enable_sim) {
-			if( STARFLOOD_SUCCESS != simulation_step(&sim) ) {
-				fprintf(stderr, "error: simulation_step(&sim) failed.\n");
+			if( STARFLOOD_SUCCESS != sim_step(&sim) ) {
+				fprintf(stderr, "error: sim_step(&sim) failed.\n");
 			}
 		}
 
@@ -524,8 +524,8 @@ int main(int argc, char** argv) {
 
 	fflush(stdout);
 
-	if( STARFLOOD_SUCCESS != simulation_free(&sim) ) {
-		fprintf(stderr, "error: simulation_free(&sim) failed.\n");
+	if( STARFLOOD_SUCCESS != sim_free(&sim) ) {
+		fprintf(stderr, "error: sim_free(&sim) failed.\n");
 	}
 
 	if(enable_vis) {

@@ -28,12 +28,35 @@ log_t log_statistics;
 log_t log_timings_sim_step;
 #endif
 
-int simulation_init(sim_t* restrict simulation, unsigned int N) {
+// Locates a simulation parameter
+real* sim_find(const sim_t* restrict sim_ptr, enum sim_conf parameter_enum) {
+	sim_t sim = *sim_ptr;
+
+	if(SIM_DOF <= parameter_enum) {
+		return (real*)NULL;
+	}
+
+	if(_SIM_POS_0 == parameter_enum || _SIM_POS_1 == parameter_enum || _SIM_POS_2 == parameter_enum) {
+		parameter_enum = SIM_POS;
+	}
+
+	if(_SIM_VEL_0 == parameter_enum || _SIM_VEL_1 == parameter_enum || _SIM_VEL_2 == parameter_enum) {
+		parameter_enum = SIM_VEL;
+	}
+
+	if(_SIM_ACC_0 == parameter_enum || _SIM_ACC_1 == parameter_enum || _SIM_ACC_2 == parameter_enum) {
+		parameter_enum = SIM_ACC;
+	}
+
+	return &( (real*)sim.mem )[(size_t)sim.N * (size_t)parameter_enum];
+}
+
+int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 	TIMING_INIT();
 
 	#ifdef LOG_STATISTICS
 	if( STARFLOOD_SUCCESS != log_init(&log_statistics, OUTPUT_DIR "/" LOG_STATISTICS) ) {
-		fprintf(stderr, "%s error: %s failed!\n", "simulation_init()", "log_init(&log_statistics)");
+		fprintf(stderr, "%s error: %s failed!\n", "sim_init()", "log_init(&log_statistics)");
 		return STARFLOOD_FAILURE;
 	}
 
@@ -43,7 +66,7 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 
 	#ifdef LOG_TIMINGS_SIM_STEP
 	if( STARFLOOD_SUCCESS != log_init(&log_timings_sim_step, OUTPUT_DIR "/" LOG_TIMINGS_SIM_STEP) ) {
-		fprintf(stderr, "%s error: %s failed!\n", "simulation_init()", "log_init(&log_timings_sim_step)");
+		fprintf(stderr, "%s error: %s failed!\n", "sim_init()", "log_init(&log_timings_sim_step)");
 		return STARFLOOD_FAILURE;
 	}
 
@@ -51,81 +74,13 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 	fflush(log_timings_sim_step.file);
 	#endif
 
-	sim_t sim = *simulation;
+	sim_t sim = *sim_ptr;
 
 	void* mem = NULL;
 
-	real* mas = (real*)NULL;
-	real* rad = (real*)NULL;
-	real* pos = (real*)NULL;
-	real* vel = (real*)NULL;
-
-	real* acc = (real*)NULL;
-
-	real* pot = (real*)NULL;
-
-	real* rho = (real*)NULL;
-	real* prs = (real*)NULL;
-
-	real* ken = (real*)NULL;
-	real* pen = (real*)NULL;
+	size_t mem_size = sizeof(real) * (size_t)SIM_DOF * (size_t)N;
 
 	printf("Simulation Memory Addresses:\n");
-
-	// calculate buffer lengths
-	size_t mas_length = (size_t)1u * (size_t)N;
-	#ifdef ENABLE_SPH
-	size_t rad_length = (size_t)1u * (size_t)N;
-	#endif
-	size_t pos_length = (size_t)3u * (size_t)N;
-	size_t vel_length = (size_t)3u * (size_t)N;
-	size_t acc_length = (size_t)3u * (size_t)N;
-	size_t pot_length = (size_t)1u * (size_t)N;
-	#ifdef ENABLE_SPH
-	size_t rho_length = (size_t)1u * (size_t)N;
-	size_t prs_length = (size_t)1u * (size_t)N;
-	#endif
-	size_t ken_length = (size_t)1u * (size_t)N;
-	size_t pen_length = (size_t)1u * (size_t)N;
-
-	// calculate buffer offsets
-	size_t mem_length = (size_t)0u;
-
-	size_t mas_offset = mem_length;
-	mem_length += mas_length;
-
-	#ifdef ENABLE_SPH
-	size_t rad_offset = mem_length;
-	mem_length += rad_length;
-	#endif
-
-	size_t pos_offset = mem_length;
-	mem_length += pos_length;
-
-	size_t vel_offset = mem_length;
-	mem_length += vel_length;
-
-	size_t acc_offset = mem_length;
-	mem_length += acc_length;
-
-	size_t pot_offset = mem_length;
-	mem_length += pot_length;
-
-	#ifdef ENABLE_SPH
-	size_t rho_offset = mem_length;
-	mem_length += rho_length;
-
-	size_t prs_offset = mem_length;
-	mem_length += prs_length;
-	#endif
-
-	size_t ken_offset = mem_length;
-	mem_length += ken_length;
-
-	size_t pen_offset = mem_length;
-	mem_length += pen_length;
-
-	size_t mem_size = sizeof(real) * mem_length;
 
 	TIMING_START();
 
@@ -138,16 +93,16 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 	TIMING_STOP();
 
 	#ifdef STARFLOOD_ALIGNMENT
-	TIMING_PRINT("simulation_init()", "posix_memalign()");
+	TIMING_PRINT("sim_init()", "posix_memalign()");
 	#else
-	TIMING_PRINT("simulation_init()", "malloc()");
+	TIMING_PRINT("sim_init()", "malloc()");
 	#endif
 
 	if(NULL == mem) {
 		#ifdef STARFLOOD_ALIGNMENT
-		fprintf(stderr, "%s error: mem is NULL after posix_memalign(&mem, %zu, %zu", "simulation_init()", (size_t)STARFLOOD_ALIGNMENT, mem_size);
+		fprintf(stderr, "%s error: mem is NULL after posix_memalign(&mem, %zu, %zu", "sim_init()", (size_t)STARFLOOD_ALIGNMENT, mem_size);
 		#else
-		fprintf(stderr, "%s error: mem is NULL after malloc(%zu", "simulation_init()", mem_size);
+		fprintf(stderr, "%s error: mem is NULL after malloc(%zu", "sim_init()", mem_size);
 		#endif
 
 		perror(")");
@@ -162,27 +117,15 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 	memset(mem, 0, mem_size);
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_init()", "memset()");
+	TIMING_PRINT("sim_init()", "memset()");
 
-	{
-		mas = &( (real*)mem )[mas_offset];
-		#ifdef ENABLE_SPH
-		rad = &( (real*)mem )[rad_offset];
-		#endif
-		pos = &( (real*)mem )[pos_offset];
-		vel = &( (real*)mem )[vel_offset];
-
-		acc = &( (real*)mem )[acc_offset];
-
-		pot = &( (real*)mem )[pot_offset];
-
-		#ifdef ENABLE_SPH
-		rho = &( (real*)mem )[rho_offset];
-		prs = &( (real*)mem )[prs_offset];
-		#endif
-
-		ken = &( (real*)mem )[ken_offset];
-		pen = &( (real*)mem )[pen_offset];
+	/*
+	for(int i = 0; i < SIM_DOF; i++) {
+		if(i 
+		switch(i) {
+			case(SIM_POS) {
+			}
+		}
 	}
 
 	printf("  mas: %p (%zu bytes)\n", (void*)mas, sizeof(real)*(size_t)mas_length);
@@ -200,6 +143,7 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 	printf("  ken: %p (%zu bytes)\n", (void*)ken, sizeof(real)*(size_t)ken_length);
 	printf("  pen: %p (%zu bytes)\n", (void*)pen, sizeof(real)*(size_t)pen_length);
 	printf("\n");
+	*/
 
 	{
 		sim.step_number = 0u;
@@ -207,51 +151,36 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 		sim.N   = N;
 
 		sim.mem = mem;
-
-		sim.mas = mas;
-		sim.rad = rad;
-		sim.pos = pos;
-		sim.vel = vel;
-
-		sim.acc = acc;
-
-		sim.pot = pot;
-
-		sim.rho = rho;
-		sim.prs = prs;
-
-		sim.ken = ken;
-		sim.pen = pen;
 	}
 
-	*simulation = sim;
+	*sim_ptr = sim;
 
 	return STARFLOOD_SUCCESS;
 }
 
-int simulation_free(sim_t* restrict simulation) {
+int sim_free(sim_t* restrict sim_ptr) {
 	TIMING_INIT();
 
 	#ifdef LOG_STATISTICS
 	if( STARFLOOD_SUCCESS != log_free(&log_statistics) ) {
-		fprintf(stderr, "%s error: %s failed!\n", "simulation_free()", "log_free(&log_statistics)");
+		fprintf(stderr, "%s error: %s failed!\n", "sim_free()", "log_free(&log_statistics)");
 	}
 	#endif
 
 	#ifdef LOG_TIMINGS_SIM_STEP
 	if( STARFLOOD_SUCCESS != log_free(&log_timings_sim_step) ) {
-		fprintf(stderr, "%s error: %s failed!\n", "simulation_free()", "log_free(&log_timings_sim_step)");
+		fprintf(stderr, "%s error: %s failed!\n", "sim_free()", "log_free(&log_timings_sim_step)");
 	}
 	#endif
 
-	sim_t sim = *simulation;
+	sim_t sim = *sim_ptr;
 
 	TIMING_START();
 
 	free(sim.mem);
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_free()", "free()");
+	TIMING_PRINT("sim_free()", "free()");
 
 	{
 		sim.step_number = 0u;
@@ -259,51 +188,27 @@ int simulation_free(sim_t* restrict simulation) {
 		sim.N = 0u;
 
 		sim.mem = NULL;
-
-		sim.mas = (real*)NULL;
-		sim.rad = (real*)NULL;
-		sim.pos = (real*)NULL;
-		sim.vel = (real*)NULL;
-
-		sim.acc = (real*)NULL;
-
-		sim.pot = (real*)NULL;
-
-		sim.rho = (real*)NULL;
-		sim.prs = (real*)NULL;
-
-		sim.ken = (real*)NULL;
-		sim.pen = (real*)NULL;
 	}
 
-	*simulation = sim;
+	*sim_ptr = sim;
 
 	return STARFLOOD_SUCCESS;
 }
 
-int simulation_step(sim_t* restrict simulation) {
+int sim_step(sim_t* restrict sim_ptr) {
 	TIMING_INIT();
 
-	sim_t sim = *simulation;
+	sim_t sim = *sim_ptr;
 
 	unsigned int step_number = sim.step_number;
-
 	unsigned int N = sim.N;
-
-	real* mas = sim.mas;
-	real* rad = sim.rad;
-	real* pos = sim.pos;
-	real* vel = sim.vel;
-
-	real* acc = sim.acc;
-
-	real* pot = sim.pot;
-
-	real* rho = sim.rho;
-	real* prs = sim.prs;
-
-	real* ken = sim.ken;
-	real* pen = sim.pen;
+	real* pos = sim_find(&sim, SIM_POS);
+	real* vel = sim_find(&sim, SIM_VEL);
+	real* acc = sim_find(&sim, SIM_ACC);
+	real* mas = sim_find(&sim, SIM_MAS);
+	real* pot = sim_find(&sim, SIM_POT);
+	real* ken = sim_find(&sim, SIM_KEN);
+	real* pen = sim_find(&sim, SIM_PEN);
 
 	const real dt = (real)TIMESTEP_SIZE;
 
@@ -323,7 +228,7 @@ int simulation_step(sim_t* restrict simulation) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_step()", "kick_0");
+	TIMING_PRINT("sim_step()", "kick_0");
 	#ifdef LOG_TIMINGS_SIM_STEP
 	LOG_TIMING(log_timings_sim_step);
 	#endif
@@ -335,19 +240,19 @@ int simulation_step(sim_t* restrict simulation) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_step()", "drift");
+	TIMING_PRINT("sim_step()", "drift");
 	#ifdef LOG_TIMINGS_SIM_STEP
 	LOG_TIMING(log_timings_sim_step);
 	#endif
 	TIMING_START();
 
 	// run the solver
-	if( STARFLOOD_SUCCESS != solver_run(acc, pot, rho, prs, mas, rad, pos, vel, N, step_number) ) {
-		fprintf(stderr, "%s error: %s failed.\n", "simulation_step()", "solver_run()");
+	if( STARFLOOD_SUCCESS != solver_run(&sim, step_number) ) {
+		fprintf(stderr, "%s error: %s failed.\n", "sim_step()", "solver_run()");
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_step()", "solver_run");
+	TIMING_PRINT("sim_step()", "solver_run");
 	#ifdef LOG_TIMINGS_SIM_STEP
 	LOG_TIMING(log_timings_sim_step);
 	#endif
@@ -359,7 +264,7 @@ int simulation_step(sim_t* restrict simulation) {
 	}
 
 	TIMING_STOP();	
-	TIMING_PRINT("simulation_step()", "kick_1");
+	TIMING_PRINT("sim_step()", "kick_1");
 	#ifdef LOG_TIMINGS_SIM_STEP
 	LOG_TIMING(log_timings_sim_step);
 	#endif
@@ -405,7 +310,7 @@ int simulation_step(sim_t* restrict simulation) {
 		}
 
 		TIMING_STOP();
-		TIMING_PRINT("simulation_step()", "ken_sum");
+		TIMING_PRINT("sim_step()", "ken_sum");
 		#ifdef LOG_TIMINGS_SIM_STEP
 		LOG_TIMING(log_timings_sim_step);
 		#endif
@@ -425,7 +330,7 @@ int simulation_step(sim_t* restrict simulation) {
 		}
 
 		TIMING_STOP();
-		TIMING_PRINT("simulation_step()", "pen_sum");
+		TIMING_PRINT("sim_step()", "pen_sum");
 		#ifdef LOG_TIMINGS_SIM_STEP
 		LOG_TIMING(log_timings_sim_step);
 		#endif
@@ -447,7 +352,7 @@ int simulation_step(sim_t* restrict simulation) {
 	fflush(log_timings_sim_step.file);
 	#endif
 
-	*simulation = sim;
+	*sim_ptr = sim;
 
 	return STARFLOOD_SUCCESS;
 }

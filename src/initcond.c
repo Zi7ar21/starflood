@@ -5,9 +5,20 @@
 #include "common.h"
 #include "config.h"
 #include "rng.h"
+#include "simulation.h"
 #include "types.h"
 
-int initcond_generate(real* restrict mas, real* restrict rad, real* restrict pos, real* restrict vel, unsigned int N) {
+int initcond_generate(sim_t* restrict sim_ptr) {
+	sim_t sim = *sim_ptr;
+
+	unsigned int N = sim.N;
+	real* mas = sim_find(&sim, SIM_MAS);
+	real* pos = sim_find(&sim, SIM_POS);
+	real* vel = sim_find(&sim, SIM_VEL);
+	#ifdef ENABLE_SPH
+	real* rad = sim_find(&sim, SIM_RAD);
+	#endif
+
 	//double     body_mass = 1.000e0 / (double)N;
 	//double inv_body_mass = 1.000e0 * (double)N;
 

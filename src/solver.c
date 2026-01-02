@@ -11,7 +11,21 @@
 #include "timing.h"
 #include "types.h"
 
-int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real* restrict prs, const real* restrict mas, const real* restrict rad, const real* restrict pos, const real* restrict vel, unsigned int N, unsigned int step_number) {
+int solver_run(sim_t* restrict sim_ptr, unsigned int step_number) {
+	sim_t sim = *sim_ptr;
+
+	unsigned int N = sim.N;
+	real* pos = sim_find(&sim, SIM_POS);
+	real* vel = sim_find(&sim, SIM_VEL);
+	real* acc = sim_find(&sim, SIM_ACC);
+	real* mas = sim_find(&sim, SIM_MAS);
+	real* pot = sim_find(&sim, SIM_POT);
+	#ifdef ENABLE_SPH
+	real* rad = sim_find(&sim, SIM_RAD);
+	real* rho = sim_find(&sim, SIM_RHO);
+	real* prs = sim_find(&sim, SIM_PRS);
+	#endif
+
 	TIMING_INIT();
 
 	#ifdef PAIRWISE_SOLVER_DECIMATION
@@ -29,7 +43,7 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			#pragma omp target teams distribute parallel for map(tofrom: acc[:3u*N], pot[:N]) map(to: mas[:N], pos[:3u*N]) 
 			#endif
 		#else
-		#pragma omp parallel for schedule(dynamic, 128)
+		#pragma omp parallel for schedule(dynamic, 256)
 		#endif
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
@@ -218,7 +232,7 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 		#ifdef ENABLE_OFFLOAD_SIM
 		#pragma omp target teams distribute parallel for map(tofrom: acc[:3u*N]) map(to: mas[:N], rad[:N], pos[:3u*N], rho[:N], prs[:N]) 
 		#else
-		#pragma omp parallel for schedule(dynamic, 128)
+		#pragma omp parallel for schedule(dynamic, 256)
 		#endif
 	#endif
 	for(unsigned int i = 0u; i < N; i++) {
@@ -292,8 +306,8 @@ int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real*
 			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
 			#endif
 
-			real n_i = (real)-2.0 * real_exp( -r2 / (h_i * h_i) ) / (INV_POW_PI_3_2 * h_i * h_i * h_i * h_i * h_i);
-			real n_j = (real)-2.0 * real_exp( -r2 / (h_j * h_j) ) / (INV_POW_PI_3_2 * h_j * h_j * h_j * h_j * h_j);
+			real n_i = (real)-2.0 * real_exp( -r2 / (h_i * h_i) ) / ( (real)INV_POW_PI_3_2 * h_i * h_i * h_i * h_i * h_i );
+			real n_j = (real)-2.0 * real_exp( -r2 / (h_j * h_j) ) / ( (real)INV_POW_PI_3_2 * h_j * h_j * h_j * h_j * h_j );
 
 			real W_ij_grad[3] = {
 				(real)0.5 * (n_i + n_j) * r_ij[0],

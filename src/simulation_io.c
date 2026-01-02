@@ -5,47 +5,47 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "common.h"
 #include "config.h"
 #include "timing.h"
 #include "types.h"
 
-struct ply_properties {
-	// pos
-	real x;
-	real y;
-	real z;
+// Maximum property name length
+#define PLY_MAX_PROPERTY_LEN 32
 
-	real mas;
+// Maximum number of properties
+#define PLY_MAX_PROPERTY_NUM 32
 
-	#ifdef ENABLE_SPH
-	real rad;
-	#endif
-
-	real vel_x;
-	real vel_y;
-	real vel_z;
-
-	real acc_x;
-	real acc_y;
-	real acc_z;
-
-	real pot;
-
-	#ifdef ENABLE_SPH
-	real rho;
-	real prs;
-	#endif
-
-	real ken;
-	real pen;
+/*
+// Enumeration of PLY format types
+enum ply_format_t {
+	PLY_FORMAT_ASCII,
+	PLY_FORMAT_BINARY_LE,
+	PLY_FORMAT_BINARY_BE
 };
+*/
 
-int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
+// ply property type
+typedef struct {
+	char name[PLY_MAX_PROPERTY_LEN];
+	enum sim_conf sim_parameter;
+	real* data;
+} ply_property_t;
+
+// ply header type
+typedef struct {
+	//enum ply_format_t;
+	size_t num_vertices;
+	size_t num_property;
+	ply_property_t property[PLY_MAX_PROPERTY_NUM];
+} ply_header_t;
+
+int sim_read(sim_t* restrict sim_ptr, const char* restrict filename) {
 	TIMING_INIT();
 
-	sim_t sim = *simulation;
+	sim_t sim = *sim_ptr;
 
 	#ifdef STARFLOOD_DOUBLE_PRECISION
 	if( sizeof(real) != sizeof(double) ) {
@@ -86,7 +86,7 @@ int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
 	#endif
 
 	if( (!byte_order_is_le && !byte_order_is_be) || (byte_order_is_be && byte_order_is_le) ) {
-		fprintf(stderr, "%s error: Unable to detect host byte order (non-standard endianess).\n", "simulation_read()");
+		fprintf(stderr, "%s error: Unable to detect host byte order (non-standard endianess).\n", "sim_read()");
 		return STARFLOOD_FAILURE;
 	}
 
@@ -95,10 +95,10 @@ int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
 	FILE* file = fopen(filename, "rb");
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_read()", "fopen()");
+	TIMING_PRINT("sim_read()", "fopen()");
 
 	if(NULL == (void*)file) {
-		fprintf(stderr, "%s error: fopen(\"%s\", \"%s\") ", "simulation_read()", filename, "rb");
+		fprintf(stderr, "%s error: fopen(\"%s\", \"%s\") ", "sim_read()", filename, "rb");
 		perror("failed");
 		return STARFLOOD_FAILURE;
 	}
@@ -107,7 +107,7 @@ int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
 
 	#if ( (1 == SIM_FILE_FORMAT_READ) || (2 == SIM_FILE_FORMAT_READ) )
 	if( 0 != fseek(file, 0l, SEEK_END) ) {
-		fprintf(stderr, "%s error: fseek(file, 0l, SEEK_END) ", "simulation_read()");
+		fprintf(stderr, "%s error: fseek(file, 0l, SEEK_END) ", "sim_read()");
 		perror("failed");
 		fclose(file);
 		return STARFLOOD_FAILURE;
@@ -116,7 +116,7 @@ int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
 	long file_length = ftell(file);
 
 	if(0l > file_length) {
-		fprintf(stderr, "%s error: ftell(file) ", "simulation_read()");
+		fprintf(stderr, "%s error: ftell(file) ", "sim_read()");
 		perror("failed");
 		fclose(file);
 		return STARFLOOD_FAILURE;
@@ -160,15 +160,11 @@ int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
 	*/
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_read()", "parse_header");
+	TIMING_PRINT("sim_read()", "parse_header");
 	TIMING_START();
 	#endif
 
-	#ifdef ENABLE_SPH
-	size_t mem_length = (size_t)sim.N * (size_t)(1u+0u+3u+3u+3u+1u+0u+0u+1u+1u);
-	#else
-	size_t mem_length = (size_t)sim.N * (size_t)(1u+1u+3u+3u+3u+1u+1u+1u+1u+1u);
-	#endif
+	size_t mem_length = (size_t)sim.N * (size_t)SIM_DOF;
 
 	#if (0 == SIM_FILE_FORMAT_READ)
 	
@@ -176,7 +172,7 @@ int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_read()", "fread()");
+	TIMING_PRINT("sim_read()", "fread()");
 	TIMING_START();
 	#endif
 
@@ -184,7 +180,7 @@ int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
 	fread(sim.pos, sizeof(real), (size_t)3u * (size_t)sim.N, file);
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_read()", "fwrite()");
+	TIMING_PRINT("sim_read()", "fwrite()");
 	TIMING_START();
 	#endif
 
@@ -207,26 +203,26 @@ int simulation_read(sim_t* restrict simulation, const char* restrict filename) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_read()", "loop_fread");
+	TIMING_PRINT("sim_read()", "loop_fread");
 	TIMING_START();
 	#endif
 
 	if( 0 != fclose(file) ) {
-		fprintf(stderr, "%s error: fclose(file) ", "simulation_read()");
+		fprintf(stderr, "%s error: fclose(file) ", "sim_read()");
 		perror("failed");
 		return STARFLOOD_FAILURE;
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_read()", "fclose()");
+	TIMING_PRINT("sim_read()", "fclose()");
 
 	return STARFLOOD_SUCCESS;
 }
 
-int simulation_save(const sim_t* restrict simulation, const char* restrict filename) {
+int sim_save(const sim_t* restrict sim_ptr, const char* restrict filename) {
 	TIMING_INIT();
 
-	sim_t sim = *simulation;
+	sim_t sim = *sim_ptr;
 
 	#ifdef STARFLOOD_DOUBLE_PRECISION
 	if( sizeof(real) != sizeof(double) ) {
@@ -267,7 +263,7 @@ int simulation_save(const sim_t* restrict simulation, const char* restrict filen
 	#endif
 
 	if( (!byte_order_is_le && !byte_order_is_be) || (byte_order_is_be && byte_order_is_le) ) {
-		fprintf(stderr, "%s error: Unable to detect host byte order (non-standard endianess).\n", "simulation_save()");
+		fprintf(stderr, "%s error: Unable to detect host byte order (non-standard endianess).\n", "sim_save()");
 		return STARFLOOD_FAILURE;
 	}
 
@@ -276,10 +272,10 @@ int simulation_save(const sim_t* restrict simulation, const char* restrict filen
 	FILE* file = fopen(filename, "wb");
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_save()", "fopen()");
+	TIMING_PRINT("sim_save()", "fopen()");
 
 	if(NULL == (void*)file) {
-		fprintf(stderr, "%s error: fopen(\"%s\", \"%s\") ", "simulation_save()", filename, "wb");
+		fprintf(stderr, "%s error: fopen(\"%s\", \"%s\") ", "sim_save()", filename, "wb");
 		perror("failed");
 		return STARFLOOD_FAILURE;
 	}
@@ -287,114 +283,157 @@ int simulation_save(const sim_t* restrict simulation, const char* restrict filen
 	TIMING_START();
 
 	#if ( (1 == SIM_FILE_FORMAT_SAVE) || (2 == SIM_FILE_FORMAT_SAVE) )
+	ply_header_t ply_header;
+
+	ply_header.num_vertices = (size_t)sim.N;
+
+	#if (1 == SIM_FILE_FORMAT_SAVE)
+	ply_header.num_property = (size_t)3u;
+	#else
+	ply_header.num_property = (size_t)SIM_DOF;
+	#endif
+
+	for(size_t i = (size_t)0u; i < ply_header.num_property; i++) {
+		char property_name[PLY_MAX_PROPERTY_LEN];
+
+		switch(i) {
+			case _SIM_POS_0:
+				strcpy(property_name, "x");
+				break;
+			case _SIM_POS_1:
+				strcpy(property_name, "y");
+				break;
+			case _SIM_POS_2:
+				strcpy(property_name, "z");
+				break;
+			case _SIM_VEL_0:
+				strcpy(property_name, "vel_x");
+				break;
+			case _SIM_VEL_1:
+				strcpy(property_name, "vel_y");
+				break;
+			case _SIM_VEL_2:
+				strcpy(property_name, "vel_z");
+				break;
+			case _SIM_ACC_0:
+				strcpy(property_name, "acc_x");
+				break;
+			case _SIM_ACC_1:
+				strcpy(property_name, "acc_y");
+				break;
+			case _SIM_ACC_2:
+				strcpy(property_name, "acc_z");
+				break;
+			case SIM_MAS:
+				strcpy(property_name, "mas");
+				break;
+			case SIM_POT:
+				strcpy(property_name, "pot");
+				break;
+			case SIM_KEN:
+				strcpy(property_name, "ken");
+				break;
+			case SIM_PEN:
+				strcpy(property_name, "pen");
+				break;
+			#ifdef ENABLE_SPH
+			case SIM_RAD:
+				strcpy(property_name, "rad");
+				break;
+			case SIM_RHO:
+				strcpy(property_name, "rho");
+				break;
+			case SIM_PRS:
+				strcpy(property_name, "prs");
+				break;
+			#endif
+			default:
+				break;
+		}
+
+		strcpy(ply_header.property[i].name, property_name);
+		ply_header.property[i].sim_parameter = (enum sim_conf)i;
+		ply_header.property[i].data = sim_find(&sim, (enum sim_conf)i);
+	}
+
 	fprintf(file,
 		"ply\n"
 		"format %s 1.0\n"
 		"comment Created by Starflood version %d.%d.%d\n"
-		"element vertex %zu\n"
-		"property " REAL_TYPE_STRING " x\n"
-		"property " REAL_TYPE_STRING " y\n"
-		"property " REAL_TYPE_STRING " z\n"
-		#if (2 == SIM_FILE_FORMAT_SAVE)
-		"property " REAL_TYPE_STRING " mas\n"
-		#ifdef ENABLE_SPH
-		"property " REAL_TYPE_STRING " rad\n"
-		#endif
-		"property " REAL_TYPE_STRING " vel_x\n"
-		"property " REAL_TYPE_STRING " vel_y\n"
-		"property " REAL_TYPE_STRING " vel_z\n"
-		"property " REAL_TYPE_STRING " acc_x\n"
-		"property " REAL_TYPE_STRING " acc_y\n"
-		"property " REAL_TYPE_STRING " acc_z\n"
-		"property " REAL_TYPE_STRING " pot\n"
-		#ifdef ENABLE_SPH
-		"property " REAL_TYPE_STRING " rho\n"
-		"property " REAL_TYPE_STRING " prs\n"
-		#endif
-		"property " REAL_TYPE_STRING " pen\n"
-		"property " REAL_TYPE_STRING " ken\n"
-		#endif
-		"end_header\n",
+		"element vertex %zu\n",
 		(byte_order_is_le ? "binary_little_endian" : "binary_big_endian"),
 		STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH,
 		(size_t)sim.N
 	);
 
+	for(size_t i = (size_t)0u; i < ply_header.num_property; i++) {
+		fprintf(file, "property " REAL_TYPE_STRING " %s\n", ply_header.property[i].name);
+	}
+
+	fprintf(file, "end_header\n");
+
 	TIMING_STOP();
-	TIMING_PRINT("simulation_save()", "print_header");
+	TIMING_PRINT("sim_save()", "print_header");
 	TIMING_START();
 	#endif
 
 	if( 0 != fflush(file) ) {
-		fprintf(stderr, "%s error: fflush(file) ", "simulation_save()");
+		fprintf(stderr, "%s error: fflush(file) ", "sim_save()");
 		perror("failed");
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_save()", "fflush()");
+	TIMING_PRINT("sim_save()", "fflush()");
 	TIMING_START();
 
 	#if (0 == SIM_FILE_FORMAT_SAVE)
-	#ifdef ENABLE_SPH
-	fwrite(sim.mem, sizeof(real), (size_t)sim.N * (size_t)(1u+0u+3u+3u+3u+1u+0u+0u+1u+1u), file);
-	#else
-	fwrite(sim.mem, sizeof(real), (size_t)sim.N * (size_t)(1u+1u+3u+3u+3u+1u+1u+1u+1u+1u), file);
-	#endif
+	fwrite(sim.mem, sizeof(real), (size_t)sim.N * (size_t)SIM_DOF, file);
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_save()", "fwrite()");
+	TIMING_PRINT("sim_save()", "fwrite()");
 	TIMING_START();
 	#endif
 
 	#if (1 == SIM_FILE_FORMAT_SAVE)
-	fwrite(sim.pos, sizeof(real), (size_t)3u * (size_t)sim.N, file);
+	real* pos = sim_find(&sim, SIM_POS);
+
+	fwrite(pos, sizeof(real), ply_header.num_vertices * ply_header.num_property, file);
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_save()", "fwrite()");
+	TIMING_PRINT("sim_save()", "fwrite()");
 	TIMING_START();
 	#endif
 
 	#if (2 == SIM_FILE_FORMAT_SAVE)
-	for(unsigned int i = 0u; i < sim.N; i++) {
-		struct ply_properties ply_prop = {
-			sim.pos[3u*i+0u],
-			sim.pos[3u*i+1u],
-			sim.pos[3u*i+2u],
-			sim.mas[   i   ],
-			#ifdef ENABLE_SPH
-			sim.rad[   i   ],
-			#endif
-			sim.vel[3u*i+0u],
-			sim.vel[3u*i+1u],
-			sim.vel[3u*i+2u],
-			sim.acc[3u*i+0u],
-			sim.acc[3u*i+1u],
-			sim.acc[3u*i+2u],
-			sim.pot[   i   ],
-			#ifdef ENABLE_SPH
-			sim.rho[   i   ],
-			sim.prs[   i   ],
-			#endif
-			sim.ken[   i   ],
-			sim.pen[   i   ]
-		};
+	for(unsigned int i = 0u; i < ply_header.num_vertices; i++) {
+		for(unsigned int j = 0u; j < ply_header.num_property; j++) {
+			enum sim_conf sim_parameter = ply_header.property[j].sim_parameter;
 
-		fwrite(&ply_prop, sizeof(ply_prop), (size_t)1u, file);
+			real property = (real)0.0;
+
+			if(9u > j) {
+				property = ply_header.property[j].data[3u*i+(j%3u)];
+			} else {
+				property = ply_header.property[j].data[i];
+			}
+
+			fwrite(&property, sizeof(real), (size_t)1u, file);
+		}
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_save()", "loop_fwrite");
+	TIMING_PRINT("sim_save()", "loop_fwrite");
 	TIMING_START();
 	#endif
 
 	if( 0 != fclose(file) ) {
-		fprintf(stderr, "%s error: fclose(file) ", "simulation_save()");
+		fprintf(stderr, "%s error: fclose(file) ", "sim_save()");
 		perror("failed");
 		return STARFLOOD_FAILURE;
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("simulation_save()", "fclose()");
+	TIMING_PRINT("sim_save()", "fclose()");
 
 	return STARFLOOD_SUCCESS;
 }

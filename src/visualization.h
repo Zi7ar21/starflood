@@ -30,7 +30,7 @@ int visualization_free(vis_t* restrict visualization);
 
 int visualization_save(const vis_t* restrict visualization, const char* restrict filename);
 
-int visualization_draw(const vis_t* restrict visualization, const sim_t* restrict simulation);
+int visualization_draw(const vis_t* restrict visualization, const sim_t* restrict sim_ptr);
 
 struct image_write_param {
 	unsigned int image_w;

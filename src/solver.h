@@ -1,5 +1,6 @@
 #pragma once
 
+#include "simulation.h"
 #include "types.h"
 
-int solver_run(real* restrict acc, real* restrict pot, real* restrict rho, real* restrict prs, const real* restrict mas, const real* restrict rad, const real* restrict pos, const real* restrict vel, unsigned int N, unsigned int step_number);
+int solver_run(sim_t* sim_ptr, unsigned int step_number);

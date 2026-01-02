@@ -230,10 +230,10 @@ int visualization_free(vis_t* restrict visualization) {
 	return STARFLOOD_SUCCESS;
 }
 
-int visualization_draw(const vis_t* restrict visualization, const sim_t* restrict simulation) {
+int visualization_draw(const vis_t* restrict visualization, const sim_t* restrict sim_ptr) {
 	TIMING_INIT();
 
-	sim_t sim = *simulation;
+	sim_t sim = *sim_ptr;
 
 	vis_t vis = *visualization;
 
@@ -244,14 +244,12 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	f32* render_buffer = vis.render_buffer;
 
 	unsigned int step_number = sim.step_number;
+	unsigned int           N = sim.N;
 
-	unsigned int N = sim.N;
-
-	real* mas = sim.mas;
-	real* pos = sim.pos;
-	real* vel = sim.vel; // for motion blur
-
-	real* pot = sim.pot; // for color
+	real* pos = sim_find(&sim, SIM_POS);
+	real* vel = sim_find(&sim, SIM_VEL);
+	real* mas = sim_find(&sim, SIM_MAS);
+	real* pot = sim_find(&sim, SIM_POT);
 
 	double average_radius;
 
@@ -463,7 +461,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		#ifdef ENABLE_OFFLOAD_VIS
 		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pos[:3u*N], vel[:3u*N], pot[:N])
 		#else
-		#pragma omp parallel for schedule(dynamic, 1024)
+		#pragma omp parallel for schedule(dynamic, 256)
 		#endif
 	#endif
 	for(unsigned int idx = 0u; idx < N; idx++) {
@@ -660,7 +658,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		#ifdef ENABLE_OFFLOAD_VIS
 		#pragma omp target teams distribute parallel for collapse(2) map(tofrom: render_buffer[:4u*w*h]) map(to: mas[:N], pos[:3u*N])
 		#else
-		#pragma omp parallel for schedule(dynamic, 256) collapse(2)
+		#pragma omp parallel for collapse(2) schedule(dynamic, 256)
 		#endif
 		//#pragma omp tile sizes(16,16)
 	#endif

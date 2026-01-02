@@ -18,14 +18,14 @@
 /* === General === */
 
 // Default number of simulation timesteps to run
-#define NUM_TIMESTEPS 10000
+#define NUM_TIMESTEPS 10
 
 // Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
 // If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed
 #define ENABLE_SIM
 
 // Uncomment to enable visualization
-//#define ENABLE_VIS
+#define ENABLE_VIS
 
 /* === File I/O === */
 
@@ -33,7 +33,7 @@
 #define OUTPUT_DIR "./out"
 
 // Uncomment to only output files every OUTPUT_INTERVAL steps
-#define OUTPUT_INTERVAL 100
+//#define OUTPUT_INTERVAL 10
 
 // Uncomment to load initial conditions from a snapshot
 // Otherwise, initcond_generate() will be used
@@ -54,7 +54,7 @@
 // and SIM_FILE_FORMAT_READ != SIM_FILE_FORMAT_SAVE, then snapshots will be read and
 // immediately saved in the format specified by SIM_FILE_FORMAT_SAVE.
 #define SIM_FILE_FORMAT_READ 0
-#define SIM_FILE_FORMAT_SAVE 2
+#define SIM_FILE_FORMAT_SAVE 0
 
 // Format to use for writing visualization image files
 // 0: PFM (RGB, 32-bit floating-point,     linear       )
@@ -65,7 +65,7 @@
 // Uncomment to log statistics to a CSV file (OUTPUT_DIR/LOG_STATISTICS)
 #define LOG_STATISTICS "statistics.csv"
 
-// Uncomment to log    simulation_step() timings to a CSV file (OUTPUT_DIR/LOG_TIMINGS_SIM_STEP), if ENABLE_TIMING is defined
+// Uncomment to log    sim_step() timings to a CSV file (OUTPUT_DIR/LOG_TIMINGS_SIM_STEP), if ENABLE_TIMING is defined
 #define LOG_TIMINGS_SIM_STEP "timings_sim_step.csv"
 
 // Uncomment to log visualization_draw() timings to a CSV file (OUTPUT_DIR/LOG_TIMINGS_VIS_DRAW), if ENABLE_TIMING is defined
@@ -97,9 +97,9 @@
 //#define NUM_BODIES 2048
 //#define NUM_BODIES 4096
 //#define NUM_BODIES 8192
-//#define NUM_BODIES 16384
+#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-#define NUM_BODIES 65536
+//#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
 //#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
