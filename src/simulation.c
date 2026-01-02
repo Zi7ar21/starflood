@@ -47,7 +47,7 @@ int simulation_init(sim_t* restrict simulation, unsigned int N) {
 		return STARFLOOD_FAILURE;
 	}
 
-	fprintf(log_timings_sim_step.file, "%s,%s,%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "solver_run", "ken_sum", "pen_sum", "kick_1");
+	fprintf(log_timings_sim_step.file, "%s,%s,%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "solver_run", "kick_1", "ken_sum", "pen_sum");
 	fflush(log_timings_sim_step.file);
 	#endif
 
@@ -351,6 +351,18 @@ int simulation_step(sim_t* restrict simulation) {
 	#ifdef LOG_TIMINGS_SIM_STEP
 	LOG_TIMING(log_timings_sim_step);
 	#endif
+	TIMING_START();
+
+	// kick_1
+	for(unsigned int i = 0u; i < 3u * N; i++) {
+		vel[i] += (real)0.5 * dt * acc[i];
+	}
+
+	TIMING_STOP();	
+	TIMING_PRINT("simulation_step()", "kick_1");
+	#ifdef LOG_TIMINGS_SIM_STEP
+	LOG_TIMING(log_timings_sim_step);
+	#endif
 
 	// update kinetic energy
 	for(unsigned int i = 0u; i < N; i++) {
@@ -424,19 +436,6 @@ int simulation_step(sim_t* restrict simulation) {
 
 		printf("E (tot) = % .015f\nV (pot) = % .015f\nT (kin) = % .015f\n", V_sum + T_sum, V_sum, T_sum);
 	}
-
-	TIMING_START();
-
-	// kick_1
-	for(unsigned int i = 0u; i < 3u * N; i++) {
-		vel[i] += (real)0.5 * dt * acc[i];
-	}
-
-	TIMING_STOP();	
-	TIMING_PRINT("simulation_step()", "kick_1");
-	#ifdef LOG_TIMINGS_SIM_STEP
-	LOG_TIMING(log_timings_sim_step);
-	#endif
 
 	#ifdef LOG_STATISTICS
 	fprintf(log_statistics.file, "\n");

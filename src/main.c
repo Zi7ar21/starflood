@@ -154,6 +154,7 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
+	// Parse arguments
 	for(int i = 0; i < argc; i++) {
 		if(0 >= i) {
 			continue;
