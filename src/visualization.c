@@ -62,7 +62,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 
 	fprintf(log_timings_vis_draw.file, "%s,%s,%s,%s,%s\n", "step_number", "clear_atomic_buffer", "calc_matMVP", "rasterize_atomic", "finalize");
 
-	fflush(log_timings_vis_draw.file);
+	log_sync(&log_timings_vis_draw);
 	#endif
 
 	vis_t vis = *visualization;
@@ -77,10 +77,6 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	#else
 	unsigned char* binary_buffer = (unsigned char*)NULL;
 	#endif
-
-	if( sizeof(i32) != sizeof(f32) ) {
-		return STARFLOOD_FAILURE;
-	}
 
 	printf("Visualization Memory Addresses:\n");
 
@@ -251,7 +247,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	real* mas = sim_find(&sim, SIM_MAS);
 	real* pot = sim_find(&sim, SIM_POT);
 
-	double average_radius;
+	double average_radius = 1.0;
 
 	{
 		average_radius = 0.0;
@@ -656,7 +652,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOAD_VIS
-		#pragma omp target teams distribute parallel for collapse(2) map(tofrom: render_buffer[:4u*w*h]) map(to: mas[:N], pos[:3u*N])
+		#pragma omp target teams distribute parallel for collapse(2) map(tofrom: render_buffer[:4u*w*h]) map(to: pos[:3u*N], mas[:N])
 		#else
 		#pragma omp parallel for collapse(2) schedule(dynamic, 256)
 		#endif
@@ -925,7 +921,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	#ifdef LOG_TIMINGS_VIS_DRAW
 	LOG_TIMING(log_timings_vis_draw);
 	fprintf(log_timings_vis_draw.file, "\n");
-	fflush(log_timings_vis_draw.file);
+	log_sync(&log_timings_vis_draw);
 	#endif
 
 	return STARFLOOD_SUCCESS;

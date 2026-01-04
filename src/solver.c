@@ -38,9 +38,9 @@ int solver_run(sim_t* restrict sim_ptr, unsigned int step_number) {
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOAD_SIM
 			#ifdef ENABLE_SPH
-			#pragma omp target teams distribute parallel for map(tofrom: acc[:3u*N], pot[:N], rho[:N]) map(to: mas[:N], rad[:N], pos[:3u*N]) 
+			#pragma omp target teams distribute parallel for map(tofrom: acc[:3u*N], pot[:N], rho[:N]) map(to: pos[:3u*N], mas[:N], rad[:N]) 
 			#else
-			#pragma omp target teams distribute parallel for map(tofrom: acc[:3u*N], pot[:N]) map(to: mas[:N], pos[:3u*N]) 
+			#pragma omp target teams distribute parallel for map(tofrom: acc[:3u*N], pot[:N]) map(to: pos[:3u*N], mas[:N]) 
 			#endif
 		#else
 		#pragma omp parallel for schedule(dynamic, 256)
@@ -230,7 +230,7 @@ int solver_run(sim_t* restrict sim_ptr, unsigned int step_number) {
 
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOAD_SIM
-		#pragma omp target teams distribute parallel for map(tofrom: acc[:3u*N]) map(to: mas[:N], rad[:N], pos[:3u*N], rho[:N], prs[:N]) 
+		#pragma omp target teams distribute parallel for map(tofrom: acc[:3u*N]) map(to: pos[:3u*N], mas[:N], rad[:N], rho[:N], prs[:N]) 
 		#else
 		#pragma omp parallel for schedule(dynamic, 256)
 		#endif

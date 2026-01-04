@@ -47,10 +47,13 @@
 
 // Format to use for reading/writing simulation snapshot files
 // 0: RAW (no header, just a dump of sim.mem)
-// 1: PLY (simple)
+// 1: PLY (simple), position stored only
 // 2: PLY (custom), includes custom properties
-// CAUTION: reading ply files is not finished yet, do not change SIM_FILE_FORMAT_READ
-// It is safe to convert old runs in RAW binary format to PLY, if !enable_sim (in main.c)
+//
+// CAUTION: The code for reading PLY files isn't finished yet, don't change SIM_FILE_FORMAT_READ
+// from 0 (raw binary format) yet.
+//
+// Instead, you should convert snapshots from the raw binary format. If !enable_sim (in main.c)
 // and SIM_FILE_FORMAT_READ != SIM_FILE_FORMAT_SAVE, then snapshots will be read and
 // immediately saved in the format specified by SIM_FILE_FORMAT_SAVE.
 #define SIM_FILE_FORMAT_READ 0

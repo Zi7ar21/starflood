@@ -61,7 +61,7 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 	}
 
 	fprintf(log_statistics.file, "%s,%s,%s,%s\n", "step_number", "total_energy", "potential_energy", "kinetic_energy");
-	fflush(log_statistics.file);
+	log_sync(&log_statistics);
 	#endif
 
 	#ifdef LOG_TIMINGS_SIM_STEP
@@ -71,7 +71,7 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 	}
 
 	fprintf(log_timings_sim_step.file, "%s,%s,%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "solver_run", "kick_1", "ken_sum", "pen_sum");
-	fflush(log_timings_sim_step.file);
+	log_sync(&log_timings_sim_step);
 	#endif
 
 	sim_t sim = *sim_ptr;
@@ -344,12 +344,12 @@ int sim_step(sim_t* restrict sim_ptr) {
 
 	#ifdef LOG_STATISTICS
 	fprintf(log_statistics.file, "\n");
-	fflush(log_statistics.file);
+	log_sync(&log_statistics);
 	#endif
 
 	#ifdef LOG_TIMINGS_SIM_STEP
 	fprintf(log_timings_sim_step.file, "\n");
-	fflush(log_timings_sim_step.file);
+	log_sync(&log_timings_sim_step);
 	#endif
 
 	*sim_ptr = sim;

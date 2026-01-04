@@ -56,11 +56,17 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N);
 // Free a simulation
 int sim_free(sim_t* restrict sim_ptr);
 
-// Read a simulation state from a file
-int sim_read(sim_t* restrict sim_ptr, const char* restrict filename);
+// Read a snapshot of the simulation state (raw binary format)
+int sim_read_raw(sim_t* restrict sim_ptr, const char* restrict filename);
 
-// Save a simulation state to a file
-int sim_save(const sim_t* restrict sim_ptr, const char* restrict filename);
+// Read a snapshot of the simulation state (PLY Polygon File Format)
+int sim_read_ply(sim_t* restrict sim_ptr, const char* restrict filename);
+
+// Save a snapshot of the simulation state (raw binary format)
+int sim_save_raw(const sim_t* restrict sim_ptr, const char* restrict filename);
+
+// Save a snapshot of the simulation state (PLY Polygon File Format)
+int sim_save_ply(const sim_t* restrict sim_ptr, const char* restrict filename);
 
 // Updates a simulation (runs a timestep)
 int sim_step(sim_t* restrict sim_ptr);

@@ -360,8 +360,8 @@ int main(int argc, char** argv) {
 
 	// simulation initial conditions
 	#ifdef INIT_COND_FILE
-	if( STARFLOOD_SUCCESS != sim_read(&sim, INIT_COND_FILE) ) {
-		fprintf(stderr, "fatal error: sim_read(&sim, \"%s\") failed.\n", INIT_COND_FILE);
+	if( STARFLOOD_SUCCESS != sim_read_raw(&sim, INIT_COND_FILE) ) {
+		fprintf(stderr, "fatal error: sim_read_raw(&sim, \"%s\") failed.\n", INIT_COND_FILE);
 
 		if(enable_vis) {
 			visualization_free(&vis);
@@ -478,19 +478,38 @@ int main(int argc, char** argv) {
 		if(enable_sim_io) {
 		#endif
 			if(enable_sim) {
-				if( STARFLOOD_SUCCESS != sim_save(&sim, sim_save_file_name) ) {
-					fprintf(stderr, "error: sim_save(&sim, \"%s\") failed.\n", sim_save_file_name);
+				#if (0 == SIM_FILE_FORMAT_SAVE)
+				if( STARFLOOD_SUCCESS != sim_save_raw(&sim, sim_save_file_name) ) {
+					fprintf(stderr, "error: sim_save_raw(&sim, \"%s\") failed.\n", sim_save_file_name);
 				}
+				#else
+				if( STARFLOOD_SUCCESS != sim_save_ply(&sim, sim_save_file_name) ) {
+					fprintf(stderr, "error: sim_save_ply(&sim, \"%s\") failed.\n", sim_save_file_name);
+				}
+				#endif
 			} else {
-				if( STARFLOOD_SUCCESS != sim_read(&sim, sim_read_file_name) ) {
-					fprintf(stderr, "fatal error: sim_read(&sim, \"%s\") failed.\n", sim_read_file_name);
+				#if (0 == SIM_FILE_FORMAT_READ)
+				if( STARFLOOD_SUCCESS != sim_read_raw(&sim, sim_read_file_name) ) {
+					fprintf(stderr, "fatal error: sim_read_raw(&sim, \"%s\") failed.\n", sim_read_file_name);
 					break;
 				}
+				#else
+				if( STARFLOOD_SUCCESS != sim_read_ply(&sim, sim_read_file_name) ) {
+					fprintf(stderr, "fatal error: sim_read_ply(&sim, \"%s\") failed.\n", sim_read_file_name);
+					break;
+				}
+				#endif
 
 				#if (SIM_FILE_FORMAT_READ != SIM_FILE_FORMAT_SAVE)
-				if( STARFLOOD_SUCCESS != sim_save(&sim, sim_save_file_name) ) {
-					fprintf(stderr, "error: sim_save(&sim, \"%s\") failed.\n", sim_save_file_name);
+				#if (0 == SIM_FILE_FORMAT_SAVE)
+				if( STARFLOOD_SUCCESS != sim_save_raw(&sim, sim_save_file_name) ) {
+					fprintf(stderr, "error: sim_save_raw(&sim, \"%s\") failed.\n", sim_save_file_name);
 				}
+				#else
+				if( STARFLOOD_SUCCESS != sim_save_ply(&sim, sim_save_file_name) ) {
+					fprintf(stderr, "error: sim_save_ply(&sim, \"%s\") failed.\n", sim_save_file_name);
+				}
+				#endif
 				#endif
 			}
 		}

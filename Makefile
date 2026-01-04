@@ -84,11 +84,11 @@ CFLAGS := $(CFLAGS) -Wno-unused-parameter -Wno-unused-variable
 # (so that the compiler doesn't generate errors for stb_image_write.h)
 #CFLAGS := $(CFLAGS) -isystem stb
 
-# Link the standard math library
+# Link standard math library (needed for math.h functions)
 LDFLAGS := -lm
 
-# Link POSIX Threads library
-# (only for visualization threaded I/O)
+# Link POSIX threads (only required for separate visualization I/O thread)
+# ENABLE_VIS_IO_THREAD must also be defined in src/config.h
 LDFLAGS := $(LDFLAGS) -lpthread
 
 # Enable debug flags
