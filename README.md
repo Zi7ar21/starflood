@@ -89,15 +89,9 @@ Before compiling, there are a few parameters at the top of [src/config.h](src/co
 
 ### Building the Code
 
-First, create a directory for the build. The recommended default is `build` (already in the [.gitignore](.gitignore)). You can create it now (if it doesn't already exist):
-
-```sh
-mkdir -p build
-```
-
 #### GNU Make
 
-First, make any desired changes to the [Makefile](Makefile). Some lines are commented/uncommented near the top of the file that you might want to tweak.
+First, make any desired changes to the [Makefile](Makefile). Some lines are commented/uncommented near the top of the file that you might want to tweak (such as setting the C compiler with `CC` any other relevant flags with `CFLAGS`).
 
 For parallel compilation, use `-j` to specify the number of jobs:
 
@@ -122,6 +116,12 @@ make clean
 
 Starflood supports offloading to devices (i.e. coprocessors, GPUs, etc.) using OpenMP `target` directives.
 
+##### AMD ROCm
+
+> **Tip**: On x86_64 Arch Linux, the ROCm Clang/LLVM has a package ([`extra/rocm-llvm`](https://archlinux.org/packages/extra/x86_64/rocm-llvm/)).
+
+For more information, consult AMD's documentation for [ROCm OpenMP Support](https://rocm.docs.amd.com/projects/llvm-project/en/latest/conceptual/openmp.html).
+
 ##### [Intel oneAPI DPC++/C++ Compiler](https://www.intel.com/content/www/us/en/developer/tools/oneapi/dpc-compiler-documentation.html)
 
 ```sh
@@ -136,7 +136,7 @@ icx -fiopenmp -fopenmp-targets=spir64 -march=native -O3 -pedantic -std=c99 -Wall
 
 ##### [NVIDIA HPC SDK](https://developer.nvidia.com/hpc-sdk)
 
-> **Tip**: On Arch Linux, the NVIDIA HPC SDK has a package ([`extra/nvhpc`](https://archlinux.org/packages/extra/x86_64/nvhpc/)).
+> **Tip**: On x86_64 Arch Linux, the NVIDIA HPC SDK has a package ([`extra/nvhpc`](https://archlinux.org/packages/extra/x86_64/nvhpc/)).
 
 For OpenMP offloading using the [NVIDIA HPC Compilers](https://docs.nvidia.com/hpc-sdk/compilers/):
 

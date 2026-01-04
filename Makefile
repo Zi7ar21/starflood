@@ -1,5 +1,13 @@
 # ===== Starflood Makefile =====
 
+# === Environment Variables ===
+
+# AMD ROCm install directory (only if compiling for AMDGPU)
+ROCM_PATH ?= /opt/rocm
+
+# === Compiler Selection ===
+
+#CC := $(ROCM_PATH)/bin/amdclang
 #CC := clang
 #CC := gcc
 #CC := icx
@@ -17,6 +25,11 @@ CFLAGS := -Og
 # GCC flag to enable auto-vectorization (GCC doesn't enable this unless using -O3, and Clang uses its own auto-vectorization by default)
 ifeq ($(CC),gcc)
 #CFLAGS := -ftree-vectorize $(CFLAGS)
+endif
+
+# AMD ROCm Clang/LLVM Compiler
+ifeq ($(CC),$(ROCM_PATH)/bin/amdclang)
+CFLAGS := -fopenmp --offload-arch= -march=native -O2
 endif
 
 # Intel oneAPI DPC++/C++ Compiler tuned for performance on compiler host machine with offloading
