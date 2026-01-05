@@ -341,7 +341,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		//gam = (real)TAU * (real)0.0025;
 		//gam = (real)TAU * (real)0.0625;
 		//gam = (real)TAU * (real)0.1250;
-		//gam = (real)TAU * (real)0.2500;
+		gam = (real)TAU * (real)0.2500;
 		//gam = (real)TAU * (real)0.0625 * cos( (real)1.000e-2 * time * (real)TAU );
 		//gam = (real)TAU * (real)1.000e-3 * time;
 
@@ -502,7 +502,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			}
 		}
 
-		real palette_phase = (real)1.000e0 * potential;
+		real palette_phase = (real)1.000e-1 * potential;
 
 		real color[3] = {
 			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (0.0/3.0) ) )+(real)0.5,
@@ -641,7 +641,69 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 			}
 		}
 	}
-	#else
+
+	TIMING_STOP();
+	TIMING_PRINT("visualization_draw()", "rasterize_atomic");
+	#ifdef LOG_TIMINGS_VIS_DRAW
+	LOG_TIMING(log_timings_vis_draw);
+	#endif
+	TIMING_START();
+
+	// floating-point scaling factor for integer atomic_buffer
+	double pixel_value_scale = 0.01 / (double)SPATIAL_SAMPLES;
+
+	#ifdef EXPOSURE
+	pixel_value_scale *= exp2(EXPOSURE);
+	#endif
+
+	TIMING_START();
+
+		// read the atomic buffer and finish rendering the visualization
+	for(unsigned int i = 0u; i < w * h; i++) {
+		double pixel[4] = {
+			(double)0.250,
+			(double)0.250,
+			(double)0.250,
+			(double)1.000
+		};
+
+		i32 accum[4];
+
+		for(unsigned int j = 0u; j < 4u; j++) {
+			i32 val = (i32)0;
+
+			#ifdef _OPENMP
+			#pragma omp atomic read
+			#endif
+			val = atomic_buffer[4u*i+j];
+
+			accum[j] = val;
+		}
+
+		for(int j = 0; j < 4; j++) {
+			pixel[j] = pixel_value_scale * (double)accum[j];
+		}
+
+		#if (0 < VIS_FILE_FORMAT)
+		// tonemapping
+		for(int j = 0; j < 4; j++) {
+			pixel[j] = tanh(pixel[j]);
+		}
+		#endif
+
+		// set alpha channel to 1.000
+		pixel[3] = (double)1.000;
+
+		for(unsigned int j = 0u; j < 4u; j++) {
+			render_buffer[4u*i+j] = (f32)pixel[j];
+		}
+	}
+
+	TIMING_STOP();
+	TIMING_PRINT("visualization_draw()", "finalize");
+	#endif
+
+	#if 0
 	real uv_normalization_factor = (real)(0.5 / (double)h);
 
 	#ifdef ORTHO_SCALE
@@ -857,67 +919,47 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	}
 	#endif
 
-	TIMING_STOP();
-	TIMING_PRINT("visualization_draw()", "rasterize_atomic");
-	#ifdef LOG_TIMINGS_VIS_DRAW
-	LOG_TIMING(log_timings_vis_draw);
-	#endif
-	TIMING_START();
+	#if 0
+	grid_t grid = sim.grid;
 
-	// floating-point scaling factor for integer atomic_buffer
-	double pixel_value_scale = 0.01 / (double)SPATIAL_SAMPLES;
+	unsigned int grid_dim[3] = {grid.dim[0], grid.dim[1], grid.dim[2]};
 
-	#ifdef EXPOSURE
-	pixel_value_scale *= exp2(EXPOSURE);
-	#endif
+	unsigned int grid_size = grid_dim[2] * grid_dim[1] * grid_dim[0];
 
-	TIMING_START();
+	real grid_bounds_min[3] = {grid.bounds_min[0], grid.bounds_min[1], grid.bounds_min[2]};
+	real grid_bounds_max[3] = {grid.bounds_max[0], grid.bounds_max[1], grid.bounds_max[2]};
 
-	#ifdef VISUALIZATION_RASTERIZATION
-	// read the atomic buffer and finish rendering the visualization
-	for(unsigned int i = 0u; i < w * h; i++) {
-		double pixel[4] = {
-			(double)0.250,
-			(double)0.250,
-			(double)0.250,
-			(double)1.000
-		};
+	real grid_bounds_wid[3] = {
+		grid_bounds_max[0] - grid_bounds_min[0],
+		grid_bounds_max[1] - grid_bounds_min[1],
+		grid_bounds_max[2] - grid_bounds_min[2]
+	};
 
-		i32 accum[4];
+	f32* grid_poten = (f32*)grid.mem;
+	//i32* grid_accum = (i32*)&grid_poten[grid_size];
 
-		for(unsigned int j = 0u; j < 4u; j++) {
-			i32 val = (i32)0;
+	for(unsigned int idx = 0u; idx < w; idx++) {
+		for(unsigned int idy = 0u; idy < h; idy++) {
+			real value = (real)0.0;
+			
+			for(unsigned int i = 0u; i < grid_dim[2u]; i++) {
+				unsigned int coord[3u] = {idx, idy,   i};
 
-			#ifdef _OPENMP
-			#pragma omp atomic read
-			#endif
-			val = atomic_buffer[4u*i+j];
+				if(0u <= coord[0u] && coord[0u] < grid_dim[0u]
+				&& 0u <= coord[1u] && coord[1u] < grid_dim[1u]
+				&& 0u <= coord[2u] && coord[2u] < grid_dim[2u]) {
+					value += (real)grid_poten[grid_dim[1]*grid_dim[0]*coord[2]+grid_dim[0]*coord[1]+coord[0]];
+				}
+			}
 
-			accum[j] = val;
-		}
-
-		for(int j = 0; j < 4; j++) {
-			pixel[j] = pixel_value_scale * (double)accum[j];
-		}
-
-		#if (0 < VIS_FILE_FORMAT)
-		// tonemapping
-		for(int j = 0; j < 4; j++) {
-			pixel[j] = tanh(pixel[j]);
-		}
-		#endif
-
-		// set alpha channel to 1.000
-		pixel[3] = (double)1.000;
-
-		for(unsigned int j = 0u; j < 4u; j++) {
-			render_buffer[4u*i+j] = (f32)pixel[j];
+			render_buffer[4u*(w*idy+idx)+0u] = (f32)value;
+			render_buffer[4u*(w*idy+idx)+1u] = (f32)value;
+			render_buffer[4u*(w*idy+idx)+2u] = (f32)value;
+			render_buffer[4u*(w*idy+idx)+3u] = (f32)1.000;
 		}
 	}
 	#endif
 
-	TIMING_STOP();
-	TIMING_PRINT("visualization_draw()", "finalize");
 	#ifdef LOG_TIMINGS_VIS_DRAW
 	LOG_TIMING(log_timings_vis_draw);
 	fprintf(log_timings_vis_draw.file, "\n");

@@ -122,6 +122,9 @@ $(OUT_DIR)/starflood: $(OBJS) | $(OUT_DIR)/src
 $(OUT_DIR)/src/main.c.o: $(SRC_DIR)/main.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 
+#$(OUT_DIR)/src/grid.c.o: $(SRC_DIR)/grid.c | $(OUT_DIR)/src
+#	$(CC) $(CFLAGS) -c $< -o $@
+
 $(OUT_DIR)/src/initcond.c.o: $(SRC_DIR)/initcond.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 

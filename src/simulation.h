@@ -5,6 +5,10 @@
 #include "config.h"
 #include "types.h"
 
+#ifdef ENABLE_GRID
+#include "grid.h"
+#endif
+
 // Enumeration of simulation parameters (configuration space)
 enum sim_conf {
 	_SIM_POS_0,
@@ -45,6 +49,10 @@ typedef struct {
 	unsigned int N; // Number of bodies in the simulation
 
 	void* mem; // Shared memory for the simulation
+
+	#ifdef ENABLE_GRID
+	grid_t grid;
+	#endif
 } sim_t;
 
 // Locates a simulation parameter

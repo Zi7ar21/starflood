@@ -14,6 +14,7 @@
 
 #include "common.h"
 #include "config.h"
+#include "grid.h"
 #include "initcond.h"
 #include "log.h"
 #include "rng.h"
@@ -145,10 +146,32 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 	printf("\n");
 	*/
 
+	#if 0
+	TIMING_START();
+
+	real grid_bounds_min[3] = {
+		(real)(-1.000e0),
+		(real)(-1.000e0),
+		(real)(-1.000e0)
+	};
+
+	real grid_bounds_max[3] = {
+		(real)( 1.000e0),
+		(real)( 1.000e0),
+		(real)( 1.000e0)
+	};
+
+	if( STARFLOOD_SUCCESS != grid_init(&sim.grid, 2u << 7u, grid_bounds_min, grid_bounds_max) ) {
+	}
+
+	TIMING_STOP();
+	TIMING_PRINT("sim_init()", "grid_init()");
+	#endif
+
 	{
 		sim.step_number = 0u;
 
-		sim.N   = N;
+		sim.N = N;
 
 		sim.mem = mem;
 	}

@@ -27,6 +27,12 @@
 // Uncomment to enable visualization
 #define ENABLE_VIS
 
+// Uncomment to enable grid calculations
+//#define ENABLE_GRID
+
+// Uncomment to enable FFT calculations on the grid (requires fftw3)
+//#define ENABLE_FFT
+
 /* === File I/O === */
 
 // Output directory prefix
@@ -147,7 +153,7 @@
 
 // Uncomment to visualize the simulation using accumulation rasterization
 // Otherwise, the gravitational potential across space is probed and plotted
-#define VISUALIZATION_RASTERIZATION
+//#define VISUALIZATION_RASTERIZATION
 
 // Decimate the number of bodies used for probe calculation
 //#define PROBE_DECIMATION 16
