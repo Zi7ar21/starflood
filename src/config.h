@@ -8,6 +8,7 @@
 #define ENABLE_OFFLOAD_SIM
 #define ENABLE_OFFLOAD_VIS
 
+// CAUTION: Experimental
 // Uncomment to create a separate thread for visualization file output (requires pthreads)
 // If the visualization I/O thread is not finished by the time the next frame is ready,
 // the main thread will wait for it to finish. Note that this is experimental, and if, for
@@ -18,7 +19,7 @@
 /* === General === */
 
 // Default number of simulation timesteps to run
-#define NUM_TIMESTEPS 10
+#define NUM_TIMESTEPS 100
 
 // Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
 // If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed
@@ -27,11 +28,17 @@
 // Uncomment to enable visualization
 #define ENABLE_VIS
 
+// CAUTION: Experimental
 // Uncomment to enable grid calculations
 //#define ENABLE_GRID
 
+// CAUTION: Experimental
 // Uncomment to enable FFT calculations on the grid (requires fftw3)
 //#define ENABLE_FFT
+
+// CAUTION: Experimental
+// Number of samples to use when distributing mass on the grid (if enabled)
+//#define GRID_SAMPLES 1024
 
 /* === File I/O === */
 
@@ -46,7 +53,7 @@
 //#define INIT_COND_FILE "/scratch/Simulations/ICs/starflood_expanding_sphere_1.raw"
 
 // Uncomment to write simulation snapshots to OUTPUT_DIR/SIM_FILENAME(          .raw), if ENABLE_SIM is defined
-#define SIM_FILENAME "sim/step_%04u"
+//#define SIM_FILENAME "sim/step_%04u"
 
 // Uncomment to write visualization frames to OUTPUT_DIR/VIS_FILENAME(.pfm/.ppm/.png), if ENABLE_VIS is defined
 #define VIS_FILENAME "vis/step_%04u"
@@ -106,9 +113,9 @@
 //#define NUM_BODIES 2048
 //#define NUM_BODIES 4096
 //#define NUM_BODIES 8192
-#define NUM_BODIES 16384
+//#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-//#define NUM_BODIES 65536
+#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
 //#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
@@ -119,7 +126,7 @@
 //#define PAIRWISE_SOLVER_DECIMATION 4
 
 // Simulation timestep size (dt)
-#define TIMESTEP_SIZE 1.000e-2
+#define TIMESTEP_SIZE 1.000e-1
 
 // Gravitational potential softening parameter
 #define EPSILON 1.000e-3
@@ -153,7 +160,7 @@
 
 // Uncomment to visualize the simulation using accumulation rasterization
 // Otherwise, the gravitational potential across space is probed and plotted
-//#define VISUALIZATION_RASTERIZATION
+#define VISUALIZATION_RASTERIZATION
 
 // Decimate the number of bodies used for probe calculation
 //#define PROBE_DECIMATION 16

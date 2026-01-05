@@ -8,6 +8,7 @@
 
 #include "common.h"
 #include "config.h"
+#include "rng.h"
 #include "timing.h"
 #include "types.h"
 
@@ -33,28 +34,35 @@ int solver_run(sim_t* restrict sim_ptr, unsigned int step_number) {
 
 	unsigned int grid_dim[3] = {grid.dim[0], grid.dim[1], grid.dim[2]};
 
-	unsigned int grid_size = grid_dim[2] * grid_dim[1] * grid_dim[0];
+	real bounds_min[3] = {grid.bounds_min[0], grid.bounds_min[1], grid.bounds_min[2]};
+	real bounds_max[3] = {grid.bounds_max[0], grid.bounds_max[1], grid.bounds_max[2]};
 
-	real grid_bounds_min[3] = {grid.bounds_min[0], grid.bounds_min[1], grid.bounds_min[2]};
-	real grid_bounds_max[3] = {grid.bounds_max[0], grid.bounds_max[1], grid.bounds_max[2]};
-
-	real grid_bounds_wid[3] = {
-		grid_bounds_max[0] - grid_bounds_min[0],
-		grid_bounds_max[1] - grid_bounds_min[1],
-		grid_bounds_max[2] - grid_bounds_min[2]
+	real bounds_wid[3] = {
+		bounds_max[0] - bounds_min[0],
+		bounds_max[1] - bounds_min[1],
+		bounds_max[2] - bounds_min[2]
 	};
 
 	f32* grid_poten = (f32*)grid.mem;
-	i32* grid_accum = (i32*)&grid_poten[grid_size];
+	i32* grid_accum = (i32*)&grid_poten[grid_dim[2] * grid_dim[1] * grid_dim[0]];
 
-	for(unsigned int i = 0u; i < grid.dim[2u] * grid.dim[1u] * grid.dim[0u]; i++) {
+	TIMING_START();
+
+	for(unsigned int i = 0u; i < grid.dim[2] * grid.dim[1] * grid.dim[0]; i++) {
 		#ifdef _OPENMP
 		#pragma omp atomic write
 		#endif
 		grid_accum[i] = (i32)0;
 	}
 
-	for(unsigned int i = 0u; i < sim.N; i++) {
+	TIMING_STOP();
+	TIMING_PRINT("solver_run()", "grid_clear");
+	TIMING_START();
+
+	#ifdef _OPENMP
+	#pragma omp parallel for schedule(dynamic, 256)
+	#endif
+	for(unsigned int i = 0u; i < N; i++) {
 		real pos_world[3] = {
 			pos[3u*i+0u],
 			pos[3u*i+1u],
@@ -62,28 +70,62 @@ int solver_run(sim_t* restrict sim_ptr, unsigned int step_number) {
 		};
 
 		real pos_local[3] = {
-			(pos_world[0] - grid_bounds_min[0]) / grid_bounds_wid[0],
-			(pos_world[1] - grid_bounds_min[1]) / grid_bounds_wid[1],
-			(pos_world[2] - grid_bounds_min[2]) / grid_bounds_wid[2]
+			(pos_world[0] - bounds_min[0]) / bounds_wid[0],
+			(pos_world[1] - bounds_min[1]) / bounds_wid[1],
+			(pos_world[2] - bounds_min[2]) / bounds_wid[2]
 		};
 
-		int coord[3] = {
-			(int)( (real)grid_dim[0] * pos_local[0] + (real)0.5 ),
-			(int)( (real)grid_dim[1] * pos_local[1] + (real)0.5 ),
-			(int)( (real)grid_dim[2] * pos_local[2] + (real)0.5 )
-		};
+		for(unsigned int j = 0u; j < (unsigned int)GRID_SAMPLES; j++) {
+			u32 s[4] = {
+				(u32)0xB79ABC95u + (u32)j,
+				(u32)0xE0DA3F84u + (u32)i,
+				(u32)0xAB75F07Bu + (u32)step_number,
+				(u32)0xCF52CA01u
+			};
 
-		if(0 <= coord[0] && coord[0] < (int)grid_dim[0]
-		&& 0 <= coord[1] && coord[1] < (int)grid_dim[1]
-		&& 0 <= coord[2] && coord[2] < (int)grid_dim[2]) {
-			unsigned int index = grid_dim[1]*grid_dim[0]*(unsigned int)coord[2]+grid_dim[0]*(unsigned int)coord[1]+(unsigned int)coord[0];
+			pcg4d(s);
+			pcg4d(s); // second round for better statistical quality
 
-			#ifdef _OPENMP
-			#pragma omp atomic update
-			#endif
-			grid_accum[index] += (i32)1;
+			real r[4] = {
+				(real)INV_PCG32_MAX * (real)s[0],
+				(real)INV_PCG32_MAX * (real)s[1],
+				(real)INV_PCG32_MAX * (real)s[2],
+				(real)INV_PCG32_MAX * (real)s[3]
+			};
+
+			// Box-Muller Transform
+			// https://en.wikipedia.org/wiki/Box–Muller_transform
+			real n[4] = {
+				real_sqrt( (real)(-2.0) * real_log(r[0]) ) * real_cos( (real)TAU * r[1] ),
+				real_sqrt( (real)(-2.0) * real_log(r[0]) ) * real_sin( (real)TAU * r[1] ),
+				real_sqrt( (real)(-2.0) * real_log(r[2]) ) * real_cos( (real)TAU * r[3] ),
+				real_sqrt( (real)(-2.0) * real_log(r[2]) ) * real_sin( (real)TAU * r[3] )
+			};
+
+			int coord[3] = {
+				(int)( (real)0.500 * n[0] + (real)grid_dim[0] * pos_local[0] + (real)0.5),
+				(int)( (real)0.500 * n[1] + (real)grid_dim[1] * pos_local[1] + (real)0.5),
+				(int)( (real)0.500 * n[2] + (real)grid_dim[2] * pos_local[2] + (real)0.5)
+			};
+
+			if(0 <= coord[0] && coord[0] < (int)grid_dim[0]
+			&& 0 <= coord[1] && coord[1] < (int)grid_dim[1]
+			&& 0 <= coord[2] && coord[2] < (int)grid_dim[2]) {
+				unsigned int index = grid_dim[1]*grid_dim[0]*(unsigned int)coord[2]+grid_dim[0]*(unsigned int)coord[1]+(unsigned int)coord[0];
+
+				#ifdef _OPENMP
+				#pragma omp atomic update
+				#endif
+				grid_accum[index] += (i32)1;
+			}
 		}
 	}
+
+	TIMING_STOP();
+	TIMING_PRINT("solver_run()", "grid_dist");
+	TIMING_START();
+
+	double inv_grid_samples = 1.0 / (double)GRID_SAMPLES;
 
 	for(unsigned int i = 0u; i < grid.dim[2u] * grid.dim[1u] * grid.dim[0u]; i++) {
 		i32 val = (i32)0;
@@ -93,8 +135,17 @@ int solver_run(sim_t* restrict sim_ptr, unsigned int step_number) {
 		#endif
 		val = grid_accum[i];
 
-		grid_poten[i] = (f32)val;
+		grid_poten[i] = (f32)(inv_grid_samples * (double)val);
 	}
+
+	TIMING_STOP();
+	TIMING_PRINT("solver_run()", "grid_read");
+	TIMING_START();
+
+	grid_solve_fft(&grid);
+
+	TIMING_STOP();
+	TIMING_PRINT("solver_run()", "solve_fft");
 	#endif
 
 	#ifdef PAIRWISE_SOLVER_DECIMATION

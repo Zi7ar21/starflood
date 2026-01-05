@@ -310,7 +310,6 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 		#endif
 		atomic_buffer[i] = (i32)0;
 	}
-	#endif
 
 	TIMING_STOP();
 	TIMING_PRINT("visualization_draw()", "clear_atomic_buffer");
@@ -452,7 +451,6 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	#endif
 	TIMING_START();
 
-	#ifdef VISUALIZATION_RASTERIZATION
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOAD_VIS
 		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pos[:3u*N], vel[:3u*N], pot[:N])
@@ -926,35 +924,71 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 
 	unsigned int grid_size = grid_dim[2] * grid_dim[1] * grid_dim[0];
 
-	real grid_bounds_min[3] = {grid.bounds_min[0], grid.bounds_min[1], grid.bounds_min[2]};
-	real grid_bounds_max[3] = {grid.bounds_max[0], grid.bounds_max[1], grid.bounds_max[2]};
+	real bounds_min[3] = {grid.bounds_min[0], grid.bounds_min[1], grid.bounds_min[2]};
+	real bounds_max[3] = {grid.bounds_max[0], grid.bounds_max[1], grid.bounds_max[2]};
 
 	real grid_bounds_wid[3] = {
-		grid_bounds_max[0] - grid_bounds_min[0],
-		grid_bounds_max[1] - grid_bounds_min[1],
-		grid_bounds_max[2] - grid_bounds_min[2]
+		bounds_max[0] - bounds_min[0],
+		bounds_max[1] - bounds_min[1],
+		bounds_max[2] - bounds_min[2]
 	};
 
-	f32* grid_poten = (f32*)grid.mem;
-	//i32* grid_accum = (i32*)&grid_poten[grid_size];
+	real* grid_potential = grid_samp(&grid);
 
 	for(unsigned int idx = 0u; idx < w; idx++) {
 		for(unsigned int idy = 0u; idy < h; idy++) {
 			real value = (real)0.0;
-			
-			for(unsigned int i = 0u; i < grid_dim[2u]; i++) {
-				unsigned int coord[3u] = {idx, idy,   i};
 
-				if(0u <= coord[0u] && coord[0u] < grid_dim[0u]
-				&& 0u <= coord[1u] && coord[1u] < grid_dim[1u]
-				&& 0u <= coord[2u] && coord[2u] < grid_dim[2u]) {
-					value += (real)grid_poten[grid_dim[1]*grid_dim[0]*coord[2]+grid_dim[0]*coord[1]+coord[0]];
+			/*
+			for(unsigned int i = 0u; i < grid_dim[2]; i++) {
+				int coord[3] = {(int)(idx / 4u), (int)(idy / 4u), (int)i};
+
+				if(0 <= coord[0] && coord[0] < grid_dim[0]
+				&& 0 <= coord[1] && coord[1] < grid_dim[1]
+				&& 0 <= coord[2] && coord[2] < grid_dim[2]) {
+					value += grid_potential[grid_dim[1]*grid_dim[0]*coord[2]+grid_dim[0]*coord[1]+coord[0]];
+				}
+			}
+			*/
+
+			{
+				//int coord[3] = {(int)idx, (int)idy, (int)(grid.dim[2] / 2u)};
+				int coord[3] = {(int)idx, (int)(grid.dim[1] / 2u), (int)idy};
+
+				if(0 <= coord[0] && coord[0] < grid_dim[0]
+				&& 0 <= coord[1] && coord[1] < grid_dim[1]
+				&& 0 <= coord[2] && coord[2] < grid_dim[2]) {
+					value += grid_potential[grid_dim[1]*grid_dim[0]*coord[2]+grid_dim[0]*coord[1]+coord[0]];
 				}
 			}
 
-			render_buffer[4u*(w*idy+idx)+0u] = (f32)value;
-			render_buffer[4u*(w*idy+idx)+1u] = (f32)value;
-			render_buffer[4u*(w*idy+idx)+2u] = (f32)value;
+			//value *= -1.000e-14;
+			//value *= -1.000e-12;
+
+			real palette_phase = (real)(-1.000e-11) * value;
+
+			real color[3] = {
+				(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (0.0/3.0) ) )+(real)0.5,
+				(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (1.0/3.0) ) )+(real)0.5,
+				(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (2.0/3.0) ) )+(real)0.5
+			};
+
+			for(int i = 0; i < 3; i++) {
+				color[i] = (real)1.000;
+			}
+
+			for(int i = 0; i < 3; i++) {
+				color[i] *= (real)(-1.000e-13) * value;
+			}
+
+			for(int i = 0; i < 3; i++) {
+				color[i] = (real)0.0 <= color[i] ? color[i] : (real)0.0;
+				color[i] = (real)1.0 >= color[i] ? color[i] : (real)1.0;
+			}
+
+			render_buffer[4u*(w*idy+idx)+0u] = (f32)color[0];
+			render_buffer[4u*(w*idy+idx)+1u] = (f32)color[1];
+			render_buffer[4u*(w*idy+idx)+2u] = (f32)color[2];
 			render_buffer[4u*(w*idy+idx)+3u] = (f32)1.000;
 		}
 	}

@@ -92,6 +92,9 @@ int main(int argc, char** argv) {
 	//unsigned int visualization_dimensions[2] = {2048u, 1080u}; // DCI 2K
 	//unsigned int visualization_dimensions[2] = {4096u, 2160u}; // DCI 4K
 
+	// Powers of Two
+	//unsigned int visualization_dimensions[2] = {1u << 8u, 1u << 8u}; // 256
+
 	sim_t sim;
 	vis_t vis;
 

@@ -91,6 +91,15 @@ LDFLAGS := -lm
 # ENABLE_VIS_IO_THREAD must also be defined in src/config.h
 LDFLAGS := $(LDFLAGS) -lpthread
 
+# Link FFTW3 (only required for grid solver)
+# ENABLE_FFT must also be defined in src/config.h
+#LDFLAGS := -lfftw3 $(LDFLAGS)
+#LDFLAGS := -lfftw3f $(LDFLAGS)
+#LDFLAGS := -lfftw3_threads -lfftw3 $(LDFLAGS)
+#LDFLAGS := -lfftw3f_threads -lfftw3f $(LDFLAGS)
+#LDFLAGS := -lfftw3_omp -lfftw3 $(LDFLAGS)
+#LDFLAGS := -lfftw3f_omp -lfftw3f $(LDFLAGS)
+
 # Enable debug flags
 CFLAGS := $(DEBUG_CFLAGS) $(CFLAGS)
 
@@ -100,7 +109,7 @@ OUT_DIR := ./build
 
 SRC_DIR := ./src
 
-SRCS := main.c initcond.c log.c simulation.c simulation_io.c solver.c visualization.c visualization_io.c
+SRCS := main.c grid.c initcond.c log.c simulation.c simulation_io.c solver.c visualization.c visualization_io.c
 
 OBJS := $(addprefix $(OUT_DIR)/src/,$(addsuffix .o,$(SRCS)))
 
@@ -122,8 +131,8 @@ $(OUT_DIR)/starflood: $(OBJS) | $(OUT_DIR)/src
 $(OUT_DIR)/src/main.c.o: $(SRC_DIR)/main.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 
-#$(OUT_DIR)/src/grid.c.o: $(SRC_DIR)/grid.c | $(OUT_DIR)/src
-#	$(CC) $(CFLAGS) -c $< -o $@
+$(OUT_DIR)/src/grid.c.o: $(SRC_DIR)/grid.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUT_DIR)/src/initcond.c.o: $(SRC_DIR)/initcond.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@

@@ -146,22 +146,22 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 	printf("\n");
 	*/
 
-	#if 0
+	#ifdef ENABLE_GRID
 	TIMING_START();
 
 	real grid_bounds_min[3] = {
-		(real)(-1.000e0),
-		(real)(-1.000e0),
-		(real)(-1.000e0)
+		(real)(-2.000e0),
+		(real)(-2.000e0),
+		(real)(-2.000e0)
 	};
 
 	real grid_bounds_max[3] = {
-		(real)( 1.000e0),
-		(real)( 1.000e0),
-		(real)( 1.000e0)
+		(real)( 2.000e0),
+		(real)( 2.000e0),
+		(real)( 2.000e0)
 	};
 
-	if( STARFLOOD_SUCCESS != grid_init(&sim.grid, 2u << 7u, grid_bounds_min, grid_bounds_max) ) {
+	if( STARFLOOD_SUCCESS != grid_init(&sim.grid, 1u << 8u, grid_bounds_min, grid_bounds_max) ) {
 	}
 
 	TIMING_STOP();
@@ -204,6 +204,10 @@ int sim_free(sim_t* restrict sim_ptr) {
 
 	TIMING_STOP();
 	TIMING_PRINT("sim_free()", "free()");
+
+	#ifdef ENABLE_GRID
+	grid_free(&sim.grid);
+	#endif
 
 	{
 		sim.step_number = 0u;
