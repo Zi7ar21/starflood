@@ -23,15 +23,13 @@
 
 #ifdef ENABLE_VIS_IO_THREAD
 #include <pthread.h>
-pthread_t vis_io_thread;
-pthread_mutex_t vis_io_mutex;
+extern pthread_t vis_io_thread;
+extern pthread_mutex_t vis_io_mutex;
 
 void* dummy_function(void* arg) {
 	return arg;
 }
 #endif
-
-struct image_write_param image_write_params;
 
 #ifdef LOG_TIMINGS_VIS_DRAW
 log_t log_timings_vis_draw;
@@ -46,7 +44,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	}
 
 	if( 0 != pthread_mutex_init(&vis_io_mutex, NULL) ) {
-		fprintf(stderr, "%s error: pthread_create(&vis_io_thread, NULL, dummy_function, NULL) ", "visualization_init()");
+		fprintf(stderr, "%s error: pthread_mutex_init(&vis_io_mutex, NULL) ", "visualization_init()");
 		perror("failed");
 		pthread_join(vis_io_thread, NULL);
 		return STARFLOOD_FAILURE;

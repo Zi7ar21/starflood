@@ -245,6 +245,12 @@ int solver_run(sim_t* restrict sim_ptr, unsigned int step_number) {
 			// (G and m_i are taken into account later)
 			real pot_j = m_j * inv_r1;
 
+			real F[3] = {
+				pot_j * inv_r2 * r_ij[0],
+				pot_j * inv_r2 * r_ij[1],
+				pot_j * inv_r2 * r_ij[2]
+			};
+
 			#ifdef ENABLE_SPH
 			real a_i = (real)INV_SQRT_PI / h_i;
 			real a_j = (real)INV_SQRT_PI / h_j;
@@ -254,12 +260,6 @@ int solver_run(sim_t* restrict sim_ptr, unsigned int step_number) {
 
 			real rho_j = (real)0.5 * (W_i + W_j) * m_j;
 			#endif
-
-			real F[3] = {
-				pot_j * inv_r2 * r_ij[0],
-				pot_j * inv_r2 * r_ij[1],
-				pot_j * inv_r2 * r_ij[2]
-			};
 
 			for(unsigned int k = 0u; k < 3u; k++) {
 				#ifdef ENABLE_KAHAN_SUMMATION_SOLVER

@@ -63,6 +63,11 @@ DEBUG_CFLAGS := -g
 # Clang/GCC generate debugging information with extensions for GNU Project Debugger (GDB)
 #DEBUG_CFLAGS := -ggdb
 
+ifeq ($(CC),nvc)
+# NVIDIA HPC Compiler generate debugging information without disabling optimizations
+DEBUG_CFLAGS := -gopt
+endif
+
 # === Profiling Guided Optimization ===
 
 #CFLAGS := -fprofile-instr-generate $(CFLAGS)
@@ -96,7 +101,7 @@ LDFLAGS := $(LDFLAGS) -lpthread
 #LDFLAGS := -lfftw3 $(LDFLAGS)
 #LDFLAGS := -lfftw3f $(LDFLAGS)
 #LDFLAGS := -lfftw3_threads -lfftw3 $(LDFLAGS)
-#LDFLAGS := -lfftw3f_threads -lfftw3f $(LDFLAGS)
+LDFLAGS := -lfftw3f_threads -lfftw3f $(LDFLAGS)
 #LDFLAGS := -lfftw3_omp -lfftw3 $(LDFLAGS)
 #LDFLAGS := -lfftw3f_omp -lfftw3f $(LDFLAGS)
 

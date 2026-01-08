@@ -26,19 +26,30 @@
 #define ENABLE_SIM
 
 // Uncomment to enable visualization
-#define ENABLE_VIS
+//#define ENABLE_VIS
 
 // CAUTION: Experimental
 // Uncomment to enable grid calculations
-//#define ENABLE_GRID
+#define ENABLE_GRID
 
 // CAUTION: Experimental
 // Uncomment to enable FFT calculations on the grid (requires fftw3)
-//#define ENABLE_FFT
+#define ENABLE_FFT
+
+// CAUTION: Experimental
+// Uncomment to enable FFT mulithreading (requires ENABLE_FFT and linking the appropriate fftw3 lib)
+// If OpenMP is enabled, FFTW will use (at most) omp_get_max_threads() threads.
+// Otherwise, FFTW will use (at most) ENABLE_FFTW_MULTITHREADING threads.
+// NOTE: It appears that (with the NVIDIA HPC Compiler's libgomp, at least) fftw3_omp is
+// incompatible with code that also has target (offloading) regions
+#define ENABLE_FFTW_MULTITHREADING 8
+
+// Uncomment to use an FFTW wisdomfile (FFTW will read/save OUTPUT_DIR/fftw_wisdom)
+#define ENABLE_FFTW_WISDOMFILE
 
 // CAUTION: Experimental
 // Number of samples to use when distributing mass on the grid (if enabled)
-//#define GRID_SAMPLES 1024
+#define GRID_SAMPLES 128
 
 /* === File I/O === */
 
@@ -75,8 +86,12 @@
 // Format to use for writing visualization image files
 // 0: PFM (RGB, 32-bit floating-point,     linear       )
 // 1: PPM (RGB,  8-bit        integer, non-linear BT.709)
-// 2: PNG (RGB,  8-bit        integer, non-linear   sRGB) (requires stb submodule for stb_image_write.h)
+// 2: PNG (RGB,  8-bit        integer, non-linear   sRGB) (requires ENABLE_STB_IMAGE_WRITE)
 #define VIS_FILE_FORMAT 2
+
+// Uncomment to enable PNG file I/O (requires stb submodule)
+// may signifigantly increase compile times
+//#define ENABLE_STB_IMAGE_WRITE
 
 // Uncomment to log statistics to a CSV file (OUTPUT_DIR/LOG_STATISTICS)
 #define LOG_STATISTICS "statistics.csv"
@@ -86,6 +101,9 @@
 
 // Uncomment to log visualization_draw() timings to a CSV file (OUTPUT_DIR/LOG_TIMINGS_VIS_DRAW), if ENABLE_TIMING is defined
 #define LOG_TIMINGS_VIS_DRAW "timings_vis_draw.csv"
+
+// Uncomment to log grid_fft_solve() timings to a CSV file (OUTPUT_DIR/LOG_TIMINGS_VIS_DRAW), if ENABLE_TIMING and ENABLE_FFT is defined
+#define LOG_TIMINGS_FFT_EXEC "timings_fft_exec.csv"
 
 // Uncomment to log statistics to a CSV file (OUTPUT_DIR/LOG_STATISTICS)
 #define LOG_STATISTICS "statistics.csv"

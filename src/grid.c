@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "common.h"
+#include "log.h"
 #include "timing.h"
 
 #ifdef _OPENMP
@@ -16,6 +17,10 @@
 
 #ifdef ENABLE_FFT
 #include <fftw3.h>
+
+#ifdef LOG_TIMINGS_FFT_EXEC
+log_t log_timings_fft_exec;
+#endif
 #endif
 
 int grid_init(grid_t* restrict grid_ptr, unsigned int side_length, const real* restrict bounds_min, const real* restrict bounds_max) {
@@ -52,13 +57,43 @@ int grid_init(grid_t* restrict grid_ptr, unsigned int side_length, const real* r
 	}
 
 	#ifdef ENABLE_FFT
+	#ifdef LOG_TIMINGS_FFT_EXEC
+	if( STARFLOOD_SUCCESS != log_init(&log_timings_fft_exec, OUTPUT_DIR "/" LOG_TIMINGS_FFT_EXEC) ) {
+		fprintf(stderr, "%s error: %s failed!\n", "grid_init()", "log_init(&log_timings_fft_exec)");
+		return STARFLOOD_FAILURE;
+	}
+
+	fprintf(log_timings_fft_exec.file, "%s,%s,%s,%s\n", "step_number", "stencil", "grid_in", "fourier");
+	log_sync(&log_timings_fft_exec);
+	#endif
+
+		#ifdef ENABLE_FFTW_MULTITHREADING
+			#ifdef STARFLOOD_DOUBLE_PRECISION
+			fftw_init_threads();
+				#ifdef _OPENMP
+				fftw_plan_with_nthreads(omp_get_max_threads());
+				#else
+				fftw_plan_with_nthreads(ENABLE_FFTW_MULTITHREADING);
+				#endif
+			#else
+			fftwf_init_threads();
+				#ifdef _OPENMP
+				fftwf_plan_with_nthreads(omp_get_max_threads());
+				#else
+				fftwf_plan_with_nthreads(ENABLE_FFTW_MULTITHREADING);
+				#endif
+			#endif
+		#endif
+
 		#ifdef STARFLOOD_DOUBLE_PRECISION
-		//fftw_init_threads();
-		fftw_import_wisdom_from_filename(OUTPUT_DIR "/fftw_wisdom");
+			#ifdef ENABLE_FFTW_WISDOMFILE
+			fftw_import_wisdom_from_filename(OUTPUT_DIR "/fftw_wisdom");
+			#endif
 		void* mem_fft0 = fftw_malloc(sizeof(fftw_complex) * (size_t)grid.dim[0] * (size_t)grid.dim[1] * (size_t)grid.dim[2]);
 		#else
-		//fftwf_init_threads();
-		fftwf_import_wisdom_from_filename(OUTPUT_DIR "/fftw_wisdom");
+			#ifdef ENABLE_FFTW_WISDOMFILE
+			fftwf_import_wisdom_from_filename(OUTPUT_DIR "/fftw_wisdom");
+			#endif
 		void* mem_fft0 = fftwf_malloc(sizeof(fftwf_complex) * (size_t)grid.dim[0] * (size_t)grid.dim[1] * (size_t)grid.dim[2]);
 		#endif
 
@@ -96,18 +131,44 @@ int grid_free(grid_t* restrict grid_ptr) {
 	free(grid.mem);
 
 	#ifdef ENABLE_FFT
+		#ifdef LOG_TIMINGS_FFT_EXEC
+		if( STARFLOOD_SUCCESS != log_free(&log_timings_fft_exec) ) {
+			fprintf(stderr, "%s error: %s failed!\n", "grid_free()", "log_free(&log_timings_fft_exec)");
+		}
+		#endif
+
 		#ifdef STARFLOOD_DOUBLE_PRECISION
 		fftw_free(grid.mem_fft2);
 		fftw_free(grid.mem_fft1);
 		fftw_free(grid.mem_fft0);
-		//fftw_cleanup_threads();
+
+		#ifdef ENABLE_FFTW_WISDOMFILE
 		fftw_export_wisdom_to_filename(OUTPUT_DIR "/fftw_wisdom");
+		#endif
+
 		#else
 		fftwf_free(grid.mem_fft2);
 		fftwf_free(grid.mem_fft1);
 		fftwf_free(grid.mem_fft0);
-		//fftwf_cleanup_threads();
+
+		#ifdef ENABLE_FFTW_WISDOMFILE
 		fftwf_export_wisdom_to_filename(OUTPUT_DIR "/fftw_wisdom");
+		#endif
+
+		#endif
+
+		#ifdef ENABLE_FFTW_MULTITHREADING
+			#ifdef STARFLOOD_DOUBLE_PRECISION
+			fftw_cleanup_threads();
+			#else
+			fftwf_cleanup_threads();
+			#endif
+		#endif
+
+		#ifdef STARFLOOD_DOUBLE_PRECISION
+		fftw_cleanup();
+		#else
+		fftwf_cleanup();
 		#endif
 	#endif
 
@@ -153,6 +214,10 @@ int grid_solve_fft(const grid_t* restrict grid_ptr) {
 
 	real* samp = grid_samp(&grid);
 
+	#ifdef LOG_TIMINGS_FFT_EXEC
+	fprintf(log_timings_fft_exec.file, "%u", 0u);
+	#endif
+
 	#ifdef STARFLOOD_DOUBLE_PRECISION
 	fftw_plan p;
 
@@ -166,6 +231,26 @@ int grid_solve_fft(const grid_t* restrict grid_ptr) {
 	fftwf_complex* fourier = (fftwf_complex*)grid.mem_fft1;
 	fftwf_complex* stencil = (fftwf_complex*)grid.mem_fft2;
 	#endif
+
+	/*
+	#ifdef ENABLE_FFTW_MULTITHREADING
+		#ifdef STARFLOOD_DOUBLE_PRECISION
+		fftw_init_threads();
+			#ifdef _OPENMP
+			fftw_plan_with_nthreads(omp_get_max_threads());
+			#else
+			fftw_plan_with_nthreads(ENABLE_FFTW_MULTITHREADING);
+			#endif
+		#else
+		fftwf_init_threads();
+			#ifdef _OPENMP
+			fftwf_plan_with_nthreads(omp_get_max_threads());
+			#else
+			fftwf_plan_with_nthreads(ENABLE_FFTW_MULTITHREADING);
+			#endif
+		#endif
+	#endif
+	*/
 
 	TIMING_START();
 
@@ -231,14 +316,8 @@ int grid_solve_fft(const grid_t* restrict grid_ptr) {
 	TIMING_START();
 
 	#ifdef STARFLOOD_DOUBLE_PRECISION
-	//#ifdef _OPENMP
-	//fftw_plan_with_nthreads(omp_get_max_threads());
-	//#endif
 	p =  fftw_plan_dft_3d(grid.dim[0], grid.dim[1], grid.dim[2], grid_in, stencil, FFTW_FORWARD, FFTW_MEASURE);
 	#else
-	//#ifdef _OPENMP
-	//fftwf_plan_with_nthreads(omp_get_max_threads());
-	//#endif
 	p = fftwf_plan_dft_3d(grid.dim[0], grid.dim[1], grid.dim[2], grid_in, stencil, FFTW_FORWARD, FFTW_MEASURE);
 	#endif
 
@@ -254,6 +333,9 @@ int grid_solve_fft(const grid_t* restrict grid_ptr) {
 
 	TIMING_STOP();
 	TIMING_PRINT("grid_solve_fft()", "stenctil_fftw_execute_plan");
+	#ifdef LOG_TIMINGS_FFT_EXEC
+	LOG_TIMING(log_timings_fft_exec);
+	#endif
 	TIMING_START();
 
 	#ifdef STARFLOOD_DOUBLE_PRECISION
@@ -298,14 +380,8 @@ int grid_solve_fft(const grid_t* restrict grid_ptr) {
 	TIMING_START();
 
 	#ifdef STARFLOOD_DOUBLE_PRECISION
-	//#ifdef _OPENMP
-	//fftw_plan_with_nthreads(omp_get_max_threads());
-	//#endif
 	p =  fftw_plan_dft_3d(grid.dim[0], grid.dim[1], grid.dim[2], grid_in, fourier, FFTW_FORWARD, FFTW_MEASURE);
 	#else
-	//#ifdef _OPENMP
-	//fftwf_plan_with_nthreads(omp_get_max_threads());
-	//#endif
 	p = fftwf_plan_dft_3d(grid.dim[0], grid.dim[1], grid.dim[2], grid_in, fourier, FFTW_FORWARD, FFTW_MEASURE);
 	#endif
 
@@ -321,6 +397,9 @@ int grid_solve_fft(const grid_t* restrict grid_ptr) {
 
 	TIMING_STOP();
 	TIMING_PRINT("grid_solve_fft()", "grid_in_fftw_execute_plan");
+	#ifdef LOG_TIMINGS_FFT_EXEC
+	LOG_TIMING(log_timings_fft_exec);
+	#endif
 	TIMING_START();
 
 	#ifdef STARFLOOD_DOUBLE_PRECISION
@@ -375,14 +454,8 @@ int grid_solve_fft(const grid_t* restrict grid_ptr) {
 	TIMING_START();
 
 	#ifdef STARFLOOD_DOUBLE_PRECISION
-	//#ifdef _OPENMP
-	//fftw_plan_with_nthreads(omp_get_max_threads());
-	//#endif
 	p =  fftw_plan_dft_3d(grid.dim[0], grid.dim[1], grid.dim[2], fourier, grid_in, FFTW_BACKWARD, FFTW_MEASURE);
 	#else
-	//#ifdef _OPENMP
-	//fftwf_plan_with_nthreads(omp_get_max_threads());
-	//#endif
 	p = fftwf_plan_dft_3d(grid.dim[0], grid.dim[1], grid.dim[2], fourier, grid_in, FFTW_BACKWARD, FFTW_MEASURE);
 	#endif
 
@@ -398,6 +471,9 @@ int grid_solve_fft(const grid_t* restrict grid_ptr) {
 
 	TIMING_STOP();
 	TIMING_PRINT("grid_solve_fft()", "fourier_fftw_execute_plan");
+	#ifdef LOG_TIMINGS_FFT_EXEC
+	LOG_TIMING(log_timings_fft_exec);
+	#endif
 	TIMING_START();
 
 	#ifdef STARFLOOD_DOUBLE_PRECISION
@@ -441,7 +517,21 @@ int grid_solve_fft(const grid_t* restrict grid_ptr) {
 
 	TIMING_STOP();
 	TIMING_PRINT("grid_solve_fft()", "finish");
-	TIMING_START();
+
+	/*
+	#ifdef ENABLE_FFTW_MULTITHREADING
+		#ifdef STARFLOOD_DOUBLE_PRECISION
+		fftw_cleanup_threads();
+		#else
+		fftwf_cleanup_threads();
+		#endif
+	#endif
+	*/
+
+	#ifdef LOG_TIMINGS_FFT_EXEC
+	fprintf(log_timings_fft_exec.file, "\n");
+	log_sync(&log_timings_fft_exec);
+	#endif
 
 	return STARFLOOD_SUCCESS;
 }

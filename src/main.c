@@ -157,6 +157,8 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
+	image_filetype_t vis_save_file_type = (image_filetype_t)VIS_FILE_FORMAT;
+
 	// Parse arguments
 	for(int i = 0; i < argc; i++) {
 		if(0 >= i) {
@@ -527,7 +529,7 @@ int main(int argc, char** argv) {
 			}
 
 			if(enable_vis_io) {
-				if( STARFLOOD_SUCCESS != visualization_save(&vis, vis_save_file_name) ) {
+				if( STARFLOOD_SUCCESS != visualization_save(&vis, vis_save_file_name, vis_save_file_type) ) {
 					fprintf(stderr, "error: visualization_save(&vis, \"%s\") failed.\n", vis_save_file_name);
 				}
 			}
