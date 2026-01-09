@@ -18,7 +18,7 @@
 #include "initcond.h"
 #include "log.h"
 #include "rng.h"
-#include "solver.h"
+#include "solvers.h"
 #include "timing.h"
 
 #ifdef LOG_STATISTICS
@@ -71,7 +71,7 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 		return STARFLOOD_FAILURE;
 	}
 
-	fprintf(log_timings_sim_step.file, "%s,%s,%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "solver_run", "kick_1", "ken_sum", "pen_sum");
+	fprintf(log_timings_sim_step.file, "%s,%s,%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "solvers_run", "kick_1", "ken_sum", "pen_sum");
 	log_sync(&log_timings_sim_step);
 	#endif
 
@@ -274,12 +274,12 @@ int sim_step(sim_t* restrict sim_ptr) {
 	TIMING_START();
 
 	// run the solver
-	if( STARFLOOD_SUCCESS != solver_run(&sim, step_number) ) {
-		fprintf(stderr, "%s error: %s failed.\n", "sim_step()", "solver_run()");
+	if( STARFLOOD_SUCCESS != solvers_run(&sim) ) {
+		fprintf(stderr, "%s error: %s failed.\n", "sim_step()", "solvers_run()");
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("sim_step()", "solver_run");
+	TIMING_PRINT("sim_step()", "solvers_run");
 	#ifdef LOG_TIMINGS_SIM_STEP
 	LOG_TIMING(log_timings_sim_step);
 	#endif

@@ -19,7 +19,7 @@
 /* === General === */
 
 // Default number of simulation timesteps to run
-#define NUM_TIMESTEPS 100
+#define NUM_TIMESTEPS 10
 
 // Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
 // If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed
@@ -27,6 +27,13 @@
 
 // Uncomment to enable visualization
 #define ENABLE_VIS
+
+#define ENABLE_TREE
+
+#define TREE_MAX_BODIES_PER_NODE 4
+
+//#define TREE_MAX_DEPTH
+//#define TREE_MAX_NODES
 
 // CAUTION: Experimental
 // Uncomment to enable grid calculations
@@ -99,7 +106,7 @@
 // Uncomment to override stb_image_write zlib compression level (higher: longer compression time, smaller files)
 // 5 is the internal minimum, setting this any lower will have no additional benefit.
 // Commenting this will leave the internal default (8).
-#define IO_PNG_COMPRESSION_LEVEL 1
+#define IO_PNG_COMPRESSION_LEVEL 14
 
 // Uncomment to log statistics to a CSV file (OUTPUT_DIR/LOG_STATISTICS)
 #define LOG_STATISTICS "statistics.csv"
@@ -172,7 +179,7 @@
 /* === Solver === */
 
 // Uncomment to enable smoothed-particle hydrodynamics
-//#define ENABLE_SPH
+#define ENABLE_SPH
 
 // Uncomment to use Kahan Summation in the solver for higher simulation accuracy
 // Useful for single-precision floating-point calculations

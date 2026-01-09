@@ -17,7 +17,7 @@
 #include "log.h"
 #include "rng.h"
 #include "simulation.h"
-#include "solver.h"
+#include "solvers.h"
 #include "types.h"
 #include "timing.h"
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stdint.h>
-
 #include "config.h"
+
+#include <stdint.h>
 
 typedef int16_t i16;
 typedef int32_t i32;

@@ -21,7 +21,7 @@
 #include "config.h"
 #include "initcond.h"
 #include "simulation.h"
-#include "solver.h"
+#include "solvers.h"
 #include "timing.h"
 #include "types.h"
 #include "visualization.h"
@@ -395,8 +395,8 @@ int main(int argc, char** argv) {
 		}
 
 		// An initial solver step is needed for the first leapfrog "kick" in the "kick-drift-kick" form, since acceleration is only updated after "drift"
-		if( STARFLOOD_SUCCESS != solver_run(&sim, 0u) ) {
-			fprintf(stderr, "fatal error: solver_run() failed.\n");
+		if( STARFLOOD_SUCCESS != solvers_run(&sim) ) {
+			fprintf(stderr, "fatal error: solvers_run() failed.\n");
 
 			if(enable_vis) {
 				visualization_free(&vis);

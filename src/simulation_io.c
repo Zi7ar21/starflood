@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "byte_order.h"
 #include "common.h"
 #include "config.h"
 #include "timing.h"
@@ -153,20 +154,38 @@ int sim_save_raw(const sim_t* restrict sim_ptr, const char* restrict filename) {
 // Maximum number of properties
 #define IO_PLY_MAX_PROPERTY_NUM 32
 
+#define IO_PLY_HEADER_MAX_LINE_LEN 256
+#define IO_PLY_HEADER_MAX_LINE_NUM 256
+
+typedef enum {
+	IO_PLY_HEADER_LINE_PLY,
+	IO_PLY_HEADER_LINE_COMMENT,
+	IO_PLY_HEADER_LINE_FORMAT,
+	IO_PLY_HEADER_LINE_ELEMENT,
+	IO_PLY_HEADER_LINE_PROPERTY,
+	IO_PLY_HEADER_LINE_END,
+} io_ply_header_line_t;
+
 // Enumeration of format types
-enum io_ply_format_t {
+typedef enum {
 	IO_PLY_FORMAT_ASCII,
 	IO_PLY_FORMAT_BINARY_LE,
 	IO_PLY_FORMAT_BINARY_BE
-};
+} io_ply_format_t;
+
+typedef enum {
+	IO_PLY_DATATYPE_FLOAT,
+	IO_PLY_DATATYPE_DOUBLE,
+} io_ply_datatype_t;
 
 typedef struct {
-	enum sim_conf sim_parameter;
+	io_ply_datatype_t datatype;
 	char name[IO_PLY_MAX_PROPERTY_LEN];
+	enum sim_conf sim_parameter;
 } io_ply_property_t;
 
 typedef struct {
-	enum io_ply_format_t format;
+	io_ply_format_t format;
 	size_t num_vertices;
 	size_t num_property;
 	io_ply_property_t property[IO_PLY_MAX_PROPERTY_NUM];
@@ -185,34 +204,180 @@ int sim_read_ply(sim_t* restrict sim_ptr, const char* restrict filename) {
 	}
 	#endif
 
+	fprintf(stderr, "%s error: PLY file reader implementation is incomplete.\n", "sim_read_ply()");
+
+	return STARFLOOD_FAILURE;
+
 	if(NULL == (void*)filename) {
 		fprintf(stderr, "%s error: filename is NULL!\n", "sim_read_ply()");
 		return STARFLOOD_FAILURE;
 	}
 
-	#ifdef STARFLOOD_DOUBLE_PRECISION
-	volatile uint64_t magic_number = (uint32_t)0x401921FB54442D18u;
+	byte_order_t host_byte_order = detect_host_byte_order();
 
-	uint64_t accumulator = (uint64_t)0u;
-
-	for(size_t i = (size_t)0u; i < sizeof(magic_number); i++) {
-		accumulator |= (uint64_t)( (uint8_t*)&magic_number )[i] << (uint64_t)(i * (size_t)8u);
+	if(BYTE_ORDER_LE != host_byte_order && BYTE_ORDER_BE != host_byte_order) {
+		fprintf(stderr, "%s error: PLY file I/O only works on machines standard byte ordering (little/big endian), but detect_host_byte_order returned %d.\n", "sim_read_ply()", (int)host_byte_order);
+		return STARFLOOD_FAILURE;
 	}
 
-	int byte_order_is_le = (uint64_t)0x401921FB54442D18u == accumulator;
-	int byte_order_is_be = (uint64_t)0x182D4454FB211940u == accumulator;
-	#else
-	volatile uint32_t magic_number = (uint32_t)0x40C90FDBu;
+	TIMING_START();
 
-	uint32_t accumulator = (uint32_t)0u;
+	FILE* file = fopen(filename, "wb");
 
-	for(size_t i = (size_t)0u; i < sizeof(magic_number); i++) {
-		accumulator |= (uint32_t)( (uint8_t*)&magic_number )[i] << (uint32_t)(i * (size_t)8u);
+	TIMING_STOP();
+	TIMING_PRINT("sim_read_ply()", "fopen()");
+
+	if(NULL == (void*)file) {
+		fprintf(stderr, "%s error: fopen(\"%s\", \"%s\") ", "sim_read_ply()", filename, "wb");
+		perror("failed");
+		return STARFLOOD_FAILURE;
 	}
 
-	int byte_order_is_le = (uint32_t)0x40C90FDBu == accumulator;
-	int byte_order_is_be = (uint32_t)0xDB0FC940u == accumulator;
-	#endif
+	if( 0 != fseek(file, 0l, SEEK_END) ) {
+		fprintf(stderr, "%s error: fseek(file, 0l, SEEK_END) ", "sim_read_ply()");
+		perror("failed");
+		fclose(file);
+		return STARFLOOD_FAILURE;
+	}
+
+	long file_size = ftell(file);
+
+	if(0l >= file_size) {
+	}
+
+	rewind(file);
+
+	io_ply_header_t ply_header;
+
+	int num_ply = 0;
+	int num_form = 0;
+	int num_elem = 0;
+	int num_end = 0;
+
+	TIMING_START();
+
+	for(int line_num = 0; line_num < IO_PLY_HEADER_MAX_LINE_NUM; line_num++) {
+		char header_line[IO_PLY_HEADER_MAX_LINE_LEN];
+
+		fgets(header_line, IO_PLY_HEADER_MAX_LINE_LEN, file);
+
+		if( ferror(file) ) {
+			fprintf(stderr, "%s error: %s(file) set the file stream %s ", "sim_read_ply()", "ferror", "error");
+			perror("indicator");
+			fclose(file);
+			return STARFLOOD_FAILURE;
+		}
+
+		if( feof(file) ) {
+			fprintf(stderr, "%s error: %s(file) set the file stream %s ", "sim_read_ply()", "feof", "end");
+			perror("indicator");
+			fclose(file);
+			return STARFLOOD_FAILURE;
+		}
+
+		char header_line_keyword[11];
+
+		// "end_header" () is the longest first word of a line
+		if( 1 != sscanf(header_line, "%10s", header_line_keyword) ) {
+			fprintf(stderr, "%s error: sscanf(..., header_line_keyword) ", "sim_read_ply()");
+			perror("failed");
+			fclose(file);
+			return STARFLOOD_FAILURE;
+		}
+
+		if( 0 == strcmp(header_line, "ply") ) {
+			num_ply++;
+
+			if(1 < num_ply) {
+				fprintf(stderr, "%s error parsing PLY file header: \"ply\" found more than once.\n", "sim_read_ply()");
+				fclose(file);
+				return STARFLOOD_FAILURE;
+			}
+
+			continue;
+		}
+
+		if(1 > num_ply) {
+			fprintf(stderr, "%s error parsing PLY file header: \"ply\" not found at the beginning of the file.\n", "sim_read_ply()");
+			fclose(file);
+			return STARFLOOD_FAILURE;
+		}
+
+		if( 0 == strcmp(header_line, "comment") ) {
+			continue;
+		}
+
+		if( 0 == strcmp(header_line, "format") ) {
+			num_form++;
+
+			if(1 < num_form) {
+				fprintf(stderr, "%s error parsing PLY file header: \"format\" found more than once.\n", "sim_read_ply()");
+				fclose(file);
+				return STARFLOOD_FAILURE;
+			}
+
+			continue;
+		}
+
+		if( 0 == strcmp(header_line, "element") ) {
+			num_elem++;
+
+			if(1 < num_elem) {
+				fprintf(stderr, "%s error reading PLY file: Support for PLY files with multiple elements is not implemented yet.\n", "sim_read_ply()");
+				fclose(file);
+				return STARFLOOD_FAILURE;
+			}
+
+			char element_type[7];
+
+			if( 1 != sscanf(header_line, "%*10s %6s", element_type) ) {
+				fclose(file);
+				return STARFLOOD_FAILURE;
+			}
+
+			unsigned int vertex_count;
+
+			if( 0 != strcmp(element_type, "vertex") ) {
+				fprintf(stderr, "%s error reading PLY file: Support for PLY files with non-vertex elements implemented yet.\n", "sim_read_ply()");
+				fclose(file);
+				return STARFLOOD_FAILURE;
+			}
+
+			continue;
+		}
+
+		if( 0 == strcmp(header_line, "property") ) {
+			continue;
+		}
+
+		if( 0 == strcmp(header_line, "end_header") ) {
+			num_end++;
+			break;
+		}
+
+		fprintf(stderr, "%s error parsing PLY file header: Error while parsing line #%ld.\n", "sim_read_ply()", line_num);
+		fclose(file);
+		return STARFLOOD_FAILURE;
+	}
+
+	if(1 != num_end) {
+		fprintf(stderr, "%s error parsing PLY file header: Exceeded max number of header lines (%d).\n", "sim_read_ply()", IO_PLY_HEADER_MAX_LINE_NUM);
+		fclose(file);
+		return STARFLOOD_FAILURE;
+	}
+
+	TIMING_STOP();
+	TIMING_PRINT("sim_read_ply()", "parse_header");
+	TIMING_START();
+
+	if( 0 != fclose(file) ) {
+		fprintf(stderr, "%s error: fclose(file) ", "sim_read_ply()");
+		perror("failed");
+		return STARFLOOD_FAILURE;
+	}
+
+	TIMING_STOP();
+	TIMING_PRINT("sim_read_ply()", "fclose()");
 
 	return STARFLOOD_FAILURE;
 }
@@ -237,32 +402,10 @@ int sim_save_ply(const sim_t* restrict sim_ptr, const char* restrict filename) {
 		return STARFLOOD_FAILURE;
 	}
 
-	#ifdef STARFLOOD_DOUBLE_PRECISION
-	volatile uint64_t magic_number = (uint32_t)0x401921FB54442D18u;
+	byte_order_t host_byte_order = detect_host_byte_order();
 
-	uint64_t accumulator = (uint64_t)0u;
-
-	for(size_t i = (size_t)0u; i < sizeof(magic_number); i++) {
-		accumulator |= (uint64_t)( (uint8_t*)&magic_number )[i] << (uint64_t)(i * (size_t)8u);
-	}
-
-	int byte_order_is_le = (uint64_t)0x401921FB54442D18u == accumulator;
-	int byte_order_is_be = (uint64_t)0x182D4454FB211940u == accumulator;
-	#else
-	volatile uint32_t magic_number = (uint32_t)0x40C90FDBu;
-
-	uint32_t accumulator = (uint32_t)0u;
-
-	for(size_t i = (size_t)0u; i < sizeof(magic_number); i++) {
-		accumulator |= (uint32_t)( (uint8_t*)&magic_number )[i] << (uint32_t)(i * (size_t)8u);
-	}
-
-	int byte_order_is_le = (uint32_t)0x40C90FDBu == accumulator;
-	int byte_order_is_be = (uint32_t)0xDB0FC940u == accumulator;
-	#endif
-
-	if( (!byte_order_is_le && !byte_order_is_be) || (byte_order_is_be && byte_order_is_le) ) {
-		fprintf(stderr, "%s error: Unable to detect host byte order (non-standard endianess).\n", "sim_save_ply()");
+	if(BYTE_ORDER_LE != host_byte_order && BYTE_ORDER_BE != host_byte_order) {
+		fprintf(stderr, "%s error: PLY file I/O only works on machines standard byte ordering (little/big endian), but detect_host_byte_order returned %d.\n", "sim_save_ply()", (int)host_byte_order);
 		return STARFLOOD_FAILURE;
 	}
 
@@ -359,7 +502,7 @@ int sim_save_ply(const sim_t* restrict sim_ptr, const char* restrict filename) {
 		"format %s 1.0\n"
 		"comment Created by Starflood version %d.%d.%d\n"
 		"element vertex %zu\n",
-		(byte_order_is_le ? "binary_little_endian" : "binary_big_endian"),
+		(BYTE_ORDER_LE == host_byte_order ? "binary_little_endian" : "binary_big_endian"),
 		STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH,
 		(size_t)sim.N
 	);

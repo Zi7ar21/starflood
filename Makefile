@@ -114,7 +114,7 @@ OUT_DIR := ./build
 
 SRC_DIR := ./src
 
-SRCS := main.c grid.c initcond.c log.c simulation.c simulation_io.c solver.c visualization.c visualization_io.c
+SRCS := main.c gravity.c grid.c initcond.c log.c simulation.c simulation_io.c solvers.c sph.c tree.c visualization.c visualization_io.c
 
 OBJS := $(addprefix $(OUT_DIR)/src/,$(addsuffix .o,$(SRCS)))
 
@@ -123,8 +123,9 @@ all: $(OUT_DIR)/starflood
 
 .PHONY: clean
 clean:
-	rm -fdv $(OUT_DIR)/starflood $(OBJS)
-	rm -fdv $(OUT_DIR)/src
+	rm -rfv $(OUT_DIR)/*
+#	rm -fdv $(OUT_DIR)/starflood $(OBJS)
+#	rm -fdv $(OUT_DIR)/src
 #	rm -fdv $(OUT_DIR)
 
 $(OUT_DIR)/src:
@@ -134,6 +135,9 @@ $(OUT_DIR)/starflood: $(OBJS) | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -isystem stb $^ -o $@ $(LDFLAGS)
 
 $(OUT_DIR)/src/main.c.o: $(SRC_DIR)/main.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OUT_DIR)/src/gravity.c.o: $(SRC_DIR)/gravity.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUT_DIR)/src/grid.c.o: $(SRC_DIR)/grid.c | $(OUT_DIR)/src
@@ -151,7 +155,13 @@ $(OUT_DIR)/src/simulation.c.o: $(SRC_DIR)/simulation.c | $(OUT_DIR)/src
 $(OUT_DIR)/src/simulation_io.c.o: $(SRC_DIR)/simulation_io.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OUT_DIR)/src/solver.c.o: $(SRC_DIR)/solver.c | $(OUT_DIR)/src
+$(OUT_DIR)/src/solvers.c.o: $(SRC_DIR)/solvers.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OUT_DIR)/src/sph.c.o: $(SRC_DIR)/sph.c | $(OUT_DIR)/src
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OUT_DIR)/src/tree.c.o: $(SRC_DIR)/tree.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUT_DIR)/src/visualization.c.o: $(SRC_DIR)/visualization.c | $(OUT_DIR)/src

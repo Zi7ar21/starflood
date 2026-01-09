@@ -68,7 +68,7 @@ else:
 #ax.plot(df['timestamp'], df['potential_energy'])
 
 #ax.plot(df['step_number'], df["drift"])
-#ax.plot(df['step_number'], df["solver_run()"])
+#ax.plot(df['step_number'], df["solvers_run()"])
 #ax.plot(df['step_number'], df["kick_1"])
 
 plt.title(log_name)
