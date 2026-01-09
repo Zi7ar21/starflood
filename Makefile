@@ -101,7 +101,7 @@ LDFLAGS := $(LDFLAGS) -lpthread
 #LDFLAGS := -lfftw3 $(LDFLAGS)
 #LDFLAGS := -lfftw3f $(LDFLAGS)
 #LDFLAGS := -lfftw3_threads -lfftw3 $(LDFLAGS)
-LDFLAGS := -lfftw3f_threads -lfftw3f $(LDFLAGS)
+#LDFLAGS := -lfftw3f_threads -lfftw3f $(LDFLAGS)
 #LDFLAGS := -lfftw3_omp -lfftw3 $(LDFLAGS)
 #LDFLAGS := -lfftw3f_omp -lfftw3f $(LDFLAGS)
 

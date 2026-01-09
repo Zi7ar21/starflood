@@ -89,9 +89,11 @@ int image_write_png(const void* restrict data, size_t w, size_t h, const char* r
 
 	stbi_flip_vertically_on_write(0);
 
+	#ifdef IO_PNG_COMPRESSION_LEVEL
 	// the default value is 8
 	// stbi_zlib_compress() forces quality to be a minimum of 5
-	stbi_write_png_compression_level = 1;
+	stbi_write_png_compression_level = IO_PNG_COMPRESSION_LEVEL;
+	#endif
 
 	int stride = (int)(sizeof(unsigned char) * (size_t)3u * w);
 

@@ -161,7 +161,7 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 		(real)( 2.000e0)
 	};
 
-	if( STARFLOOD_SUCCESS != grid_init(&sim.grid, 1u << 8u, grid_bounds_min, grid_bounds_max) ) {
+	if( STARFLOOD_SUCCESS != grid_init(&sim.grid, 1u << (unsigned int)GRID_SIZE, grid_bounds_min, grid_bounds_max) ) {
 	}
 
 	TIMING_STOP();

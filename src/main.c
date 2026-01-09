@@ -161,10 +161,12 @@ int main(int argc, char** argv) {
 
 	// Parse arguments
 	for(int i = 0; i < argc; i++) {
+		// argv[0] should be the program name, so we skip it
 		if(0 >= i) {
 			continue;
 		}
 
+		// This shouldn't happen
 		if(NULL == (void*)argv[i]) {
 			fprintf(stderr, "%s: error: argv[%d] is NULL!\n", argv[0], i);
 
@@ -176,6 +178,7 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 		}
 
+		// Help information
 		if( 0 == strcmp("-h", argv[i]) || 0 == strcmp("--help", argv[i]) ) {
 			printf(
 				"Usage: %s [options]...\n"
@@ -197,6 +200,7 @@ int main(int argc, char** argv) {
 			continue;
 		}
 
+		// Version information
 		if( 0 == strcmp("-V", argv[i]) || 0 == strcmp("--version", argv[i]) ) {
 			printf(
 				"Starflood version %d.%d.%d\n"
@@ -216,8 +220,8 @@ int main(int argc, char** argv) {
 			continue;
 		}
 
+		// The argument does not match any known option
 		fprintf(stderr, "%s: error: unrecognized option \'%s\'\nTry \'%s --help\' for more information.\n", argv[0], argv[1], argv[0]);
-
 		free(filename_mem);
 		return EXIT_FAILURE;
 	}
@@ -407,6 +411,7 @@ int main(int argc, char** argv) {
 
 	unsigned int step_inc = 1u;
 
+	// If the simulation is disabled, we can increment step_num by OUTPUT_INTERVAL
 	#ifdef OUTPUT_INTERVAL
 	if(!enable_sim) {
 		step_inc = OUTPUT_INTERVAL;

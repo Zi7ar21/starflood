@@ -2,10 +2,14 @@
 
 #include <stdint.h>
 
-// https://float.exposed/0x2F7FFFFF
+// The closest (but still less than) IEEE-754 binary32 value to 1 / exp2(32)
+// Multiplying a random, uniformly distributed unsigned 32-bit integer by
+// this value should produce a random real number in the range [0.0, 1.0).
+// See: https://float.exposed/0x2F7FFFFF
 #define INV_PCG32_MAX 2.3283062977608182109179324470460414886474609375e-10
 
-// https://www.jcgt.org/published/0009/03/02/
+// Permuted congruential generator 4-dimensional hash function
+// See: https://www.jcgt.org/published/0009/03/02/
 static inline void pcg4d(uint32_t* restrict s) {
 	uint32_t v[4] = {s[0], s[1], s[2], s[3]};
 
@@ -35,10 +39,13 @@ static inline void pcg4d(uint32_t* restrict s) {
 	s[3] = v[3];
 }
 
-// https://nullprogram.com/blog/2018/07/31/
+// 3-round multiply-xorshift 1-dimensional hash function
+// Bias: ~0.020888578919738908 (theoretical limit for a hash of this kind)
+// Note: Chris Wellons has since updated his article with links explaining
+// caveats to this kind of hashing.
+// See: https://nullprogram.com/blog/2018/07/31/
 static inline void triple32(uint32_t* restrict s) {
 	uint32_t x = *s;
-
 	x ^= x >> (uint32_t)17u;
 	x *= (uint32_t)0xED5AD4BBu;
 	x ^= x >> (uint32_t)11u;
@@ -46,6 +53,5 @@ static inline void triple32(uint32_t* restrict s) {
 	x ^= x >> (uint32_t)15u;
 	x *= (uint32_t)0x31848BABu;
 	x ^= x >> (uint32_t)14u;
-
 	*s = x;
 }

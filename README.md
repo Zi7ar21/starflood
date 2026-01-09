@@ -11,7 +11,8 @@ Starflood is an open-source astrophysical simulation code written in C.
   - Device/GPU acceleration (when using a toolchain with offloading support)
 - [N-body gravitational simulation](https://en.wikipedia.org/wiki/N-body_simulation)
   - O(N²) brute-force solver a.k.a. [particle-particle method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pp)
-  - O(Ng log Ng) FFT-based poisson equation solver a.k.a. [particle-mesh method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pm)
+  - O(Ng log Ng) FFT-based poisson equation solver a.k.a. [particle-mesh method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pm)\
+    - TODO: Implement physics using the grid
 - [Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
   - O(N²) brute-force solver
 - [Leapfrog integration](https://en.wikipedia.org/wiki/Leapfrog_integration)
@@ -190,7 +191,7 @@ To safely stop a run prematurely, create a file named `stop` in the output direc
 touch out/stop
 ```
 
-#### Running with Nice
+#### Niceness
 
 [`nice`](https://en.wikipedia.org/wiki/Nice_(Unix)) is a \*NIX command that can be used to run a program with a higher/lower niceness (userspace priority).
 
@@ -205,6 +206,14 @@ A higher niceness value tells the scheduler to select a lower priority, which en
 There shouldn't be any problems just running `starflood` by itself, but if parallelization is enabled (using all available processors) it helps ensure you can still control the system (or do other tasks) during runs.
 
 For the most accurate profiling however, you shouldn't use too high of a niceness value (or else you run the risk of overly frequent [context switching](https://en.wikipedia.org/wiki/Context_switch) causing high variability in execution timing).
+
+#### OpenMP Processor Binding (Pinning)
+
+If using OpenMP, processor binding (also called thread pinning) may not be enabled by default. The environment variable `OMP_PROC_BIND` can be set to `true` to enable automatic processor binding:
+
+```sh
+OMP_PROC_BIND=true ./build/starflood
+```
 
 #### Viewing the Visualization
 

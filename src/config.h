@@ -26,15 +26,18 @@
 #define ENABLE_SIM
 
 // Uncomment to enable visualization
-//#define ENABLE_VIS
+#define ENABLE_VIS
 
 // CAUTION: Experimental
 // Uncomment to enable grid calculations
-#define ENABLE_GRID
+//#define ENABLE_GRID
+
+// exp2(GRID_SIZE)^3
+#define GRID_SIZE 8
 
 // CAUTION: Experimental
 // Uncomment to enable FFT calculations on the grid (requires fftw3)
-#define ENABLE_FFT
+//#define ENABLE_FFT
 
 // CAUTION: Experimental
 // Uncomment to enable FFT mulithreading (requires ENABLE_FFT and linking the appropriate fftw3 lib)
@@ -91,7 +94,12 @@
 
 // Uncomment to enable PNG file I/O (requires stb submodule)
 // may signifigantly increase compile times
-//#define ENABLE_STB_IMAGE_WRITE
+#define ENABLE_STB_IMAGE_WRITE
+
+// Uncomment to override stb_image_write zlib compression level (higher: longer compression time, smaller files)
+// 5 is the internal minimum, setting this any lower will have no additional benefit.
+// Commenting this will leave the internal default (8).
+#define IO_PNG_COMPRESSION_LEVEL 1
 
 // Uncomment to log statistics to a CSV file (OUTPUT_DIR/LOG_STATISTICS)
 #define LOG_STATISTICS "statistics.csv"
