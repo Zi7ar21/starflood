@@ -9,9 +9,9 @@ ROCM_PATH ?= /opt/rocm
 
 #CC := $(ROCM_PATH)/bin/amdclang
 #CC := clang
-#CC := gcc
+CC := gcc
 #CC := icx
-CC := nvc
+#CC := nvc
 
 # === Basic Optimization Flags ===
 
@@ -58,13 +58,16 @@ CFLAGS := -fopenmp $(CFLAGS)
 #CFLAGS := -ffast-math $(CFLAGS)
 
 # Generate debugging information (regular)
-DEBUG_CFLAGS := -g
+#DEBUG_CFLAGS := -g
 
 # Clang/GCC generate debugging information with extensions for GNU Project Debugger (GDB)
-#DEBUG_CFLAGS := -ggdb
+DEBUG_CFLAGS := -ggdb
 
+# NVIDIA HPC Compiler
 ifeq ($(CC),nvc)
-# NVIDIA HPC Compiler generate debugging information without disabling optimizations
+DEBUG_CFLAGS := -g
+
+# generate debugging information without disabling optimizations
 DEBUG_CFLAGS := -gopt
 endif
 
@@ -114,7 +117,7 @@ OUT_DIR := ./build
 
 SRC_DIR := ./src
 
-SRCS := main.c gravity.c grid.c initcond.c log.c simulation.c simulation_io.c solvers.c sph.c tree.c visualization.c visualization_io.c
+SRCS := main.c gravity.c grid.c initcond.c log.c simulation.c simulation_io.c sph.c tree.c visualization.c visualization_io.c
 
 OBJS := $(addprefix $(OUT_DIR)/src/,$(addsuffix .o,$(SRCS)))
 
@@ -153,9 +156,6 @@ $(OUT_DIR)/src/simulation.c.o: $(SRC_DIR)/simulation.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUT_DIR)/src/simulation_io.c.o: $(SRC_DIR)/simulation_io.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OUT_DIR)/src/solvers.c.o: $(SRC_DIR)/solvers.c | $(OUT_DIR)/src
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUT_DIR)/src/sph.c.o: $(SRC_DIR)/sph.c | $(OUT_DIR)/src

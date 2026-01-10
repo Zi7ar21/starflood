@@ -14,11 +14,12 @@
 
 #include "common.h"
 #include "config.h"
+#include "gravity.h"
 #include "grid.h"
 #include "initcond.h"
 #include "log.h"
 #include "rng.h"
-#include "solvers.h"
+#include "sph.h"
 #include "timing.h"
 
 #ifdef LOG_STATISTICS
@@ -71,7 +72,7 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 		return STARFLOOD_FAILURE;
 	}
 
-	fprintf(log_timings_sim_step.file, "%s,%s,%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "solvers_run", "kick_1", "ken_sum", "pen_sum");
+	fprintf(log_timings_sim_step.file, "%s,%s,%s,%s,%s,%s,%s\n", "step_number", "kick_0", "drift", "sim_solv", "kick_1", "ken_sum", "pen_sum");
 	log_sync(&log_timings_sim_step);
 	#endif
 
@@ -79,7 +80,7 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 
 	void* mem = NULL;
 
-	size_t mem_size = sizeof(real) * (size_t)SIM_DOF * (size_t)N;
+	size_t mem_size = sizeof(real) * (size_t)N * (size_t)SIM_DOF;
 
 	printf("Simulation Memory Addresses:\n");
 
@@ -120,31 +121,24 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 	TIMING_STOP();
 	TIMING_PRINT("sim_init()", "memset()");
 
-	/*
-	for(int i = 0; i < SIM_DOF; i++) {
-		if(i 
-		switch(i) {
-			case(SIM_POS) {
-			}
-		}
-	}
+	printf("  pos: %p (%zu bytes)\n", (void*)sim_find(&sim, SIM_POS), sizeof(real) * (size_t)N * (size_t)3u);
+	printf("  vel: %p (%zu bytes)\n", (void*)sim_find(&sim, SIM_VEL), sizeof(real) * (size_t)N * (size_t)3u);
+	printf("  acc: %p (%zu bytes)\n", (void*)sim_find(&sim, SIM_ACC), sizeof(real) * (size_t)N * (size_t)3u);
 
-	printf("  mas: %p (%zu bytes)\n", (void*)mas, sizeof(real)*(size_t)mas_length);
+	printf("  mas: %p (%zu bytes)\n", (void*)sim_find(&sim, SIM_MAS), sizeof(real) * (size_t)N * (size_t)1u);
+
+	printf("  pot: %p (%zu bytes)\n", (void*)sim_find(&sim, SIM_POT), sizeof(real) * (size_t)N * (size_t)1u);
+
+	printf("  ken: %p (%zu bytes)\n", (void*)sim_find(&sim, SIM_KEN), sizeof(real) * (size_t)N * (size_t)1u);
+	printf("  pen: %p (%zu bytes)\n", (void*)sim_find(&sim, SIM_PEN), sizeof(real) * (size_t)N * (size_t)1u);
+
 	#ifdef ENABLE_SPH
-	printf("  rad: %p (%zu bytes)\n", (void*)rad, sizeof(real)*(size_t)rad_length);
+	printf("  rad: %p (%zu bytes)\n", (void*)sim_find(&sim, SIM_RAD), sizeof(real) * (size_t)N * (size_t)1u);
+	printf("  rho: %p (%zu bytes)\n", (void*)sim_find(&sim, SIM_RHO), sizeof(real) * (size_t)N * (size_t)1u);
+	printf("  prs: %p (%zu bytes)\n", (void*)sim_find(&sim, SIM_PRS), sizeof(real) * (size_t)N * (size_t)1u);
 	#endif
-	printf("  pos: %p (%zu bytes)\n", (void*)pos, sizeof(real)*(size_t)pos_length);
-	printf("  vel: %p (%zu bytes)\n", (void*)vel, sizeof(real)*(size_t)vel_length);
-	printf("  acc: %p (%zu bytes)\n", (void*)acc, sizeof(real)*(size_t)acc_length);
-	printf("  pot: %p (%zu bytes)\n", (void*)pot, sizeof(real)*(size_t)pot_length);
-	#ifdef ENABLE_SPH
-	printf("  rho: %p (%zu bytes)\n", (void*)rho, sizeof(real)*(size_t)rho_length);
-	printf("  prs: %p (%zu bytes)\n", (void*)prs, sizeof(real)*(size_t)prs_length);
-	#endif
-	printf("  ken: %p (%zu bytes)\n", (void*)ken, sizeof(real)*(size_t)ken_length);
-	printf("  pen: %p (%zu bytes)\n", (void*)pen, sizeof(real)*(size_t)pen_length);
+
 	printf("\n");
-	*/
 
 	#ifdef ENABLE_GRID
 	TIMING_START();
@@ -162,10 +156,22 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 	};
 
 	if( STARFLOOD_SUCCESS != grid_init(&sim.grid, 1u << (unsigned int)GRID_SIZE, grid_bounds_min, grid_bounds_max) ) {
+		fprintf(stderr, "%s error: grid_init() failed.\n", "sim_init()");
 	}
 
 	TIMING_STOP();
 	TIMING_PRINT("sim_init()", "grid_init()");
+	#endif
+
+	#ifdef ENABLE_TREE
+	TIMING_START();
+
+	if( STARFLOOD_SUCCESS != tree_init(&sim.tree, TREE_NODES_MAX) ) {
+		fprintf(stderr, "%s error: tree_init() failed.\n", "sim_init()");
+	}
+
+	TIMING_STOP();
+	TIMING_PRINT("sim_init()", "tree_init()");
 	#endif
 
 	{
@@ -222,6 +228,56 @@ int sim_free(sim_t* restrict sim_ptr) {
 	return STARFLOOD_SUCCESS;
 }
 
+// Update/run the physical solvers
+int sim_solv(sim_t* restrict sim_ptr) {
+	TIMING_INIT();
+
+	sim_t sim = *sim_ptr;
+
+	real* pos = sim_find(&sim, SIM_POS);
+
+	#ifdef ENABLE_TREE
+	{
+		for(int i = 0; i < 3; i++) {
+			sim.tree.bounds_min[i] = (real)(-5.000);
+			sim.tree.bounds_max[i] = (real)( 5.000);
+		}
+	}
+
+	TIMING_START();
+
+	tree_build(&sim.tree, sim.N, pos);
+
+	TIMING_STOP();
+	TIMING_PRINT("sim_solv()", "tree_build()");
+	TIMING_START();
+
+	solve_gravity_part_tree(&sim);
+
+	TIMING_STOP();
+	TIMING_PRINT("sim_solv()", "solve_gravity_part_tree()");
+	#else
+	TIMING_START();
+
+	solve_gravity_part_part(&sim);
+
+	TIMING_STOP();
+	TIMING_PRINT("sim_solv()", "solve_gravity_part_part()");
+	#endif
+
+	#ifdef ENABLE_SPH
+	TIMING_START();
+
+	solve_sph(&sim);
+
+	TIMING_STOP();
+	TIMING_PRINT("sim_solv()", "solve_sph()");
+	#endif
+
+	return STARFLOOD_SUCCESS;
+}
+
+// Update/run the simulation once (runs a timestep)
 int sim_step(sim_t* restrict sim_ptr) {
 	TIMING_INIT();
 
@@ -274,12 +330,12 @@ int sim_step(sim_t* restrict sim_ptr) {
 	TIMING_START();
 
 	// run the solver
-	if( STARFLOOD_SUCCESS != solvers_run(&sim) ) {
-		fprintf(stderr, "%s error: %s failed.\n", "sim_step()", "solvers_run()");
+	if( STARFLOOD_SUCCESS != sim_solv(&sim) ) {
+		fprintf(stderr, "%s error: %s failed.\n", "sim_step()", "sim_solv()");
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("sim_step()", "solvers_run");
+	TIMING_PRINT("sim_step()", "sim_solv");
 	#ifdef LOG_TIMINGS_SIM_STEP
 	LOG_TIMING(log_timings_sim_step);
 	#endif

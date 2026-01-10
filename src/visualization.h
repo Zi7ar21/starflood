@@ -27,10 +27,10 @@ typedef struct {
 	void* binary_buffer; // binary buffer for image file I/O
 } vis_t;
 
-int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned int h);
+int vis_init(vis_t* vis_ptr, unsigned int w, unsigned int h);
 
-int visualization_free(vis_t* restrict visualization);
+int vis_free(vis_t* vis_ptr);
 
-int visualization_save(const vis_t* restrict visualization, const char* restrict filename, image_filetype_t filetype);
+int vis_save(const vis_t* vis_ptr, const char* restrict filename, image_filetype_t filetype);
 
-int visualization_draw(const vis_t* restrict visualization, const sim_t* restrict sim_ptr);
+int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr);

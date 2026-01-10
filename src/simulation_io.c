@@ -208,6 +208,7 @@ int sim_read_ply(sim_t* restrict sim_ptr, const char* restrict filename) {
 
 	return STARFLOOD_FAILURE;
 
+	/*
 	if(NULL == (void*)filename) {
 		fprintf(stderr, "%s error: filename is NULL!\n", "sim_read_ply()");
 		return STARFLOOD_FAILURE;
@@ -378,6 +379,7 @@ int sim_read_ply(sim_t* restrict sim_ptr, const char* restrict filename) {
 
 	TIMING_STOP();
 	TIMING_PRINT("sim_read_ply()", "fclose()");
+	*/
 
 	return STARFLOOD_FAILURE;
 }

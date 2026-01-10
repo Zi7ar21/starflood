@@ -284,11 +284,11 @@ int initcond_generate(sim_t* restrict sim_ptr) {
 		pcg4d(s);
 		//pcg4d(s); // second round for better statistical quality
 
-		double r[4];
+		//double r[4];
 
-		for(int j = 0; j < 4; j++) {
-			r[j] = INV_PCG32_MAX * (double)s[j];
-		}
+		//for(int j = 0; j < 4; j++) {
+		//	r[j] = INV_PCG32_MAX * (double)s[j];
+		//}
 
 		// Thin disk
 		//if(0.000 <= r[0] && r[0] < 0.850) {

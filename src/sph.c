@@ -158,7 +158,7 @@ int solve_sph(const sim_t* restrict sim_ptr) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("solvers_run()", "sph_pressure");
+	TIMING_PRINT("solve_sph()", "sph_pressure");
 	TIMING_START();
 
 	#ifdef _OPENMP
@@ -276,7 +276,7 @@ int solve_sph(const sim_t* restrict sim_ptr) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("solvers_run()", "sph_conservation");
+	TIMING_PRINT("solve_sph()", "sph_conservation");
 
 	return STARFLOOD_SUCCESS;
 }

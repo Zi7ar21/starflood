@@ -11,12 +11,14 @@ Starflood is an open-source astrophysical simulation code written in C.
   - Device/GPU acceleration (when using a toolchain with offloading support)
 - [N-body gravitational simulation](https://en.wikipedia.org/wiki/N-body_simulation)
   - O(N²) brute-force solver a.k.a. [particle-particle method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pp)
+  - O(N log N) treecode (work-in-progress)
+    - TODO: Implement physics using the tree
   - O(Ng log Ng) FFT-based poisson equation solver a.k.a. [particle-mesh method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pm)\
     - TODO: Implement physics using the grid
 - [Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
   - O(N²) brute-force solver
 - [Leapfrog integration](https://en.wikipedia.org/wiki/Leapfrog_integration)
-  - is a second-order [symplectic integrator](https://en.wikipedia.org/wiki/Symplectic_integrator)
+  - Second-order [symplectic](https://en.wikipedia.org/wiki/Symplectic_integrator)
 - Visualization
   - Accumulation rasterization using [atomic](https://en.wikipedia.org/wiki/Linearizability#Primitive_atomic_instructions) operations
   - [Spatial anti-aliasing](https://en.wikipedia.org/wiki/Spatial_anti-aliasing) ([Gaussian window function](https://en.wikipedia.org/wiki/Window_function#Gaussian_window) stochastic sampling)

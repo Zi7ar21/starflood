@@ -1,6 +1,5 @@
 #pragma once
 
-#include "simulation.h"
 #include "types.h"
 
 enum tree_conf {
@@ -12,8 +11,9 @@ enum tree_conf {
 };
 
 typedef struct {
-	int child[8];
-
+	i32 parent; // parent of this node (-1: this node is, -2: this node is the tree root)
+	i32 bodies; // number of bodies in this node
+	i32 child[8]; // children of this node (8 >= bodies: children are particles, 8 < bodies: children are nodes)
 	real param[TREE_DOF];
 } node_t;
 
@@ -28,8 +28,8 @@ typedef struct {
 	node_t* node;
 } tree_t;
 
-int tree_init(tree_t* restrict tree_ptr, unsigned int max_nodes, const real* restrict bounds_min, const real* restrict bounds_max);
+int tree_init(tree_t* restrict tree_ptr, unsigned int max_nodes);
 
 int tree_free(tree_t* restrict tree_ptr);
 
-int tree_build(tree_t* restrict tree_ptr, const sim_t* restrict sim_ptr);
+int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict pos);

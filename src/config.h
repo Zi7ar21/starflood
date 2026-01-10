@@ -5,8 +5,8 @@
 /* === Compute === */
 
 // Uncomment to use OpenMP target constructs (if OpenMP is enabled)
-#define ENABLE_OFFLOAD_SIM
-#define ENABLE_OFFLOAD_VIS
+//#define ENABLE_OFFLOAD_SIM
+//#define ENABLE_OFFLOAD_VIS
 
 // CAUTION: Experimental
 // Uncomment to create a separate thread for visualization file output (requires pthreads)
@@ -26,11 +26,12 @@
 #define ENABLE_SIM
 
 // Uncomment to enable visualization
-#define ENABLE_VIS
+//#define ENABLE_VIS
 
-#define ENABLE_TREE
+// Uncomment to enable tree calculations
+//#define ENABLE_TREE
 
-#define TREE_MAX_BODIES_PER_NODE 4
+#define TREE_NODES_MAX 262144
 
 //#define TREE_MAX_DEPTH
 //#define TREE_MAX_NODES
@@ -114,7 +115,7 @@
 // Uncomment to log    sim_step() timings to a CSV file (OUTPUT_DIR/LOG_TIMINGS_SIM_STEP), if ENABLE_TIMING is defined
 #define LOG_TIMINGS_SIM_STEP "timings_sim_step.csv"
 
-// Uncomment to log visualization_draw() timings to a CSV file (OUTPUT_DIR/LOG_TIMINGS_VIS_DRAW), if ENABLE_TIMING is defined
+// Uncomment to log vis_draw() timings to a CSV file (OUTPUT_DIR/LOG_TIMINGS_VIS_DRAW), if ENABLE_TIMING is defined
 #define LOG_TIMINGS_VIS_DRAW "timings_vis_draw.csv"
 
 // Uncomment to log grid_fft_solve() timings to a CSV file (OUTPUT_DIR/LOG_TIMINGS_VIS_DRAW), if ENABLE_TIMING and ENABLE_FFT is defined
@@ -146,9 +147,9 @@
 //#define NUM_BODIES 2048
 //#define NUM_BODIES 4096
 //#define NUM_BODIES 8192
-//#define NUM_BODIES 16384
+#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-#define NUM_BODIES 65536
+////#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
 //#define NUM_BODIES 262144
 //#define NUM_BODIES 524288

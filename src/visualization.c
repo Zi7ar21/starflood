@@ -17,7 +17,6 @@
 #include "log.h"
 #include "rng.h"
 #include "simulation.h"
-#include "solvers.h"
 #include "types.h"
 #include "timing.h"
 
@@ -35,16 +34,16 @@ void* dummy_function(void* arg) {
 log_t log_timings_vis_draw;
 #endif
 
-int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned int h) {
+int vis_init(vis_t* vis_ptr, unsigned int w, unsigned int h) {
 	#ifdef ENABLE_VIS_IO_THREAD
 	if( 0 != pthread_create(&vis_io_thread, NULL, dummy_function, NULL) ) {
-		fprintf(stderr, "%s error: pthread_create(&vis_io_thread, NULL, dummy_function, NULL) ", "visualization_init()");
+		fprintf(stderr, "%s error: pthread_create(&vis_io_thread, NULL, dummy_function, NULL) ", "vis_init()");
 		perror("failed");
 		return STARFLOOD_FAILURE;
 	}
 
 	if( 0 != pthread_mutex_init(&vis_io_mutex, NULL) ) {
-		fprintf(stderr, "%s error: pthread_mutex_init(&vis_io_mutex, NULL) ", "visualization_init()");
+		fprintf(stderr, "%s error: pthread_mutex_init(&vis_io_mutex, NULL) ", "vis_init()");
 		perror("failed");
 		pthread_join(vis_io_thread, NULL);
 		return STARFLOOD_FAILURE;
@@ -63,7 +62,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	log_sync(&log_timings_vis_draw);
 	#endif
 
-	vis_t vis = *visualization;
+	vis_t vis = *vis_ptr;
 
 	void* mem = NULL;
 
@@ -99,16 +98,16 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	TIMING_STOP();
 
 	#ifdef STARFLOOD_ALIGNMENT
-	TIMING_PRINT("visualization_init()", "posix_memalign()");
+	TIMING_PRINT("vis_init()", "posix_memalign()");
 	#else
-	TIMING_PRINT("visualization_init()", "malloc()");
+	TIMING_PRINT("vis_init()", "malloc()");
 	#endif
 
 	if(NULL == mem) {
 		#ifdef STARFLOOD_ALIGNMENT
-		fprintf(stderr, "%s error: mem is NULL after posix_memalign(&mem, %zu, %zu", "visualization_init()", (size_t)STARFLOOD_ALIGNMENT, mem_size);
+		fprintf(stderr, "%s error: mem is NULL after posix_memalign(&mem, %zu, %zu", "vis_init()", (size_t)STARFLOOD_ALIGNMENT, mem_size);
 		#else
-		fprintf(stderr, "%s error: mem is NULL after malloc(%zu", "visualization_init()", mem_size);
+		fprintf(stderr, "%s error: mem is NULL after malloc(%zu", "vis_init()", mem_size);
 		#endif
 
 		perror(")");
@@ -123,7 +122,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	memset(mem, 0, mem_size);
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_init()", "memset()");
+	TIMING_PRINT("vis_init()", "memset()");
 
 	atomic_buffer = (i32*)mem;
 	render_buffer = (f32*)&atomic_buffer[atomic_buffer_length];
@@ -152,7 +151,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_init()", "initialize atomic_buffer");
+	TIMING_PRINT("vis_init()", "initialize atomic_buffer");
 	TIMING_START();
 
 	for(unsigned int i = 0u; i < 4u * w * h; i++) {
@@ -160,7 +159,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_init()", "initialize render_buffer");
+	TIMING_PRINT("vis_init()", "initialize render_buffer");
 
 	TIMING_START();
 	for(unsigned int i = 0u; i < 3u * w * h; i++) {
@@ -171,7 +170,7 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 		#endif
 	}
 	TIMING_STOP();
-	TIMING_PRINT("visualization_init()", "initialize binary_buffer");
+	TIMING_PRINT("vis_init()", "initialize binary_buffer");
 
 	vis.w = w;
 	vis.h = h;
@@ -180,12 +179,12 @@ int visualization_init(vis_t* restrict visualization, unsigned int w, unsigned i
 	vis.render_buffer = render_buffer;
 	vis.binary_buffer = binary_buffer;
 
-	*visualization = vis;
+	*vis_ptr = vis;
 
 	return STARFLOOD_SUCCESS;
 }
 
-int visualization_free(vis_t* restrict visualization) {
+int vis_free(vis_t* vis_ptr) {
 	#ifdef ENABLE_VIS_IO_THREAD
 	pthread_join(vis_io_thread, NULL);
 	pthread_mutex_destroy(&vis_io_mutex);
@@ -195,18 +194,18 @@ int visualization_free(vis_t* restrict visualization) {
 
 	#ifdef LOG_TIMINGS_VIS_DRAW
 	if( STARFLOOD_SUCCESS != log_free(&log_timings_vis_draw) ) {
-		fprintf(stderr, "%s error: %s failed!\n", "visualization_free()", "log_free(&log_timings_vis_draw)");
+		fprintf(stderr, "%s error: %s failed!\n", "vis_free()", "log_free(&log_timings_vis_draw)");
 	}
 	#endif
 
-	vis_t vis = *visualization;
+	vis_t vis = *vis_ptr;
 
 	TIMING_START();
 
 	free(vis.mem);
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_free()", "free()");
+	TIMING_PRINT("vis_free()", "free()");
 
 	vis.mem = NULL;
 
@@ -219,17 +218,17 @@ int visualization_free(vis_t* restrict visualization) {
 	vis.binary_buffer = (unsigned char*)NULL;
 	#endif
 
-	*visualization = vis;
+	*vis_ptr = vis;
 
 	return STARFLOOD_SUCCESS;
 }
 
-int visualization_draw(const vis_t* restrict visualization, const sim_t* restrict sim_ptr) {
+int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 	TIMING_INIT();
 
 	sim_t sim = *sim_ptr;
 
-	vis_t vis = *visualization;
+	vis_t vis = *vis_ptr;
 
 	unsigned int w = vis.w;
 	unsigned int h = vis.h;
@@ -310,7 +309,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_draw()", "clear_atomic_buffer");
+	TIMING_PRINT("vis_draw()", "clear_atomic_buffer");
 	#ifdef LOG_TIMINGS_VIS_DRAW
 	LOG_TIMING(log_timings_vis_draw);
 	#endif
@@ -443,7 +442,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_draw()", "calc_matMVP");
+	TIMING_PRINT("vis_draw()", "calc_matMVP");
 	#ifdef LOG_TIMINGS_VIS_DRAW
 	LOG_TIMING(log_timings_vis_draw);
 	#endif
@@ -639,7 +638,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_draw()", "rasterize_atomic");
+	TIMING_PRINT("vis_draw()", "rasterize_atomic");
 	#ifdef LOG_TIMINGS_VIS_DRAW
 	LOG_TIMING(log_timings_vis_draw);
 	#endif
@@ -696,7 +695,7 @@ int visualization_draw(const vis_t* restrict visualization, const sim_t* restric
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_draw()", "finalize");
+	TIMING_PRINT("vis_draw()", "finalize");
 	#endif
 
 	#if 0

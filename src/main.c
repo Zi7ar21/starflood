@@ -21,7 +21,6 @@
 #include "config.h"
 #include "initcond.h"
 #include "simulation.h"
-#include "solvers.h"
 #include "timing.h"
 #include "types.h"
 #include "visualization.h"
@@ -348,8 +347,8 @@ int main(int argc, char** argv) {
 
 	// initialize the visualization
 	if(enable_vis) {
-		if( STARFLOOD_SUCCESS != visualization_init(&vis, visualization_dimensions[0], visualization_dimensions[1]) ) {
-			fprintf(stderr, "fatal error: visualization_init(&vis, %u, %u) failed.\n", visualization_dimensions[0], visualization_dimensions[1]);
+		if( STARFLOOD_SUCCESS != vis_init(&vis, visualization_dimensions[0], visualization_dimensions[1]) ) {
+			fprintf(stderr, "fatal error: vis_init(&vis, %u, %u) failed.\n", visualization_dimensions[0], visualization_dimensions[1]);
 			free(filename_mem);
 			return EXIT_FAILURE;
 		}
@@ -360,7 +359,7 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "fatal error: sim_init(&sim, %u) failed.\n", num_bodies);
 
 		if(enable_vis) {
-			visualization_free(&vis);
+			vis_free(&vis);
 		}
 
 		free(filename_mem);
@@ -373,7 +372,7 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "fatal error: sim_read_raw(&sim, \"%s\") failed.\n", INIT_COND_FILE);
 
 		if(enable_vis) {
-			visualization_free(&vis);
+			vis_free(&vis);
 		}
 
 		sim_free(&sim);
@@ -386,7 +385,7 @@ int main(int argc, char** argv) {
 			fprintf(stderr, "fatal error: initcond_generate() failed.\n");
 
 			if(enable_vis) {
-				visualization_free(&vis);
+				vis_free(&vis);
 			}
 
 			sim_free(&sim);
@@ -395,11 +394,11 @@ int main(int argc, char** argv) {
 		}
 
 		// An initial solver step is needed for the first leapfrog "kick" in the "kick-drift-kick" form, since acceleration is only updated after "drift"
-		if( STARFLOOD_SUCCESS != solvers_run(&sim) ) {
-			fprintf(stderr, "fatal error: solvers_run() failed.\n");
+		if( STARFLOOD_SUCCESS != sim_solv(&sim) ) {
+			fprintf(stderr, "fatal error: sim_solv() failed.\n");
 
 			if(enable_vis) {
-				visualization_free(&vis);
+				vis_free(&vis);
 			}
 
 			sim_free(&sim);
@@ -529,13 +528,13 @@ int main(int argc, char** argv) {
 		#else
 		if(enable_vis) {
 		#endif
-			if( STARFLOOD_SUCCESS != visualization_draw(&vis, &sim) ) {
-				fprintf(stderr, "error: visualization_draw(&vis, &sim) failed.\n");
+			if( STARFLOOD_SUCCESS != vis_draw(&vis, &sim) ) {
+				fprintf(stderr, "error: vis_draw(&vis, &sim) failed.\n");
 			}
 
 			if(enable_vis_io) {
-				if( STARFLOOD_SUCCESS != visualization_save(&vis, vis_save_file_name, vis_save_file_type) ) {
-					fprintf(stderr, "error: visualization_save(&vis, \"%s\") failed.\n", vis_save_file_name);
+				if( STARFLOOD_SUCCESS != vis_save(&vis, vis_save_file_name, vis_save_file_type) ) {
+					fprintf(stderr, "error: vis_save(&vis, \"%s\") failed.\n", vis_save_file_name);
 				}
 			}
 		}
@@ -558,8 +557,8 @@ int main(int argc, char** argv) {
 	}
 
 	if(enable_vis) {
-		if( STARFLOOD_SUCCESS != visualization_free(&vis) ) {
-			fprintf(stderr, "error: visualization_free(&vis) failed.\n");
+		if( STARFLOOD_SUCCESS != vis_free(&vis) ) {
+			fprintf(stderr, "error: vis_free(&vis) failed.\n");
 		}
 	}
 

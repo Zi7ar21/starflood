@@ -163,7 +163,7 @@ void* image_write_worker(void* arg) {
 }
 #endif
 
-int visualization_save(const vis_t* restrict visualization, const char* restrict filename, image_filetype_t filetype) {
+int vis_save(const vis_t* vis_ptr, const char* restrict filename, image_filetype_t filetype) {
 	TIMING_INIT();
 
 	#ifdef ENABLE_VIS_IO_THREAD
@@ -173,17 +173,17 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_save()", "pthread_join()");
+	TIMING_PRINT("vis_save()", "pthread_join()");
 	TIMING_START();
 
 	if( 0 != pthread_mutex_lock(&vis_io_mutex) ) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_save()", "pthread_mutex_lock()");
+	TIMING_PRINT("vis_save()", "pthread_mutex_lock()");
 	#endif
 
-	vis_t vis = *visualization;
+	vis_t vis = *vis_ptr;
 
 	unsigned int image_w = vis.w;
 	unsigned int image_h = vis.h;
@@ -273,7 +273,7 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_save()", "binary_buffer");
+	TIMING_PRINT("vis_save()", "binary_buffer");
 	TIMING_START();
 
 	#ifdef ENABLE_VIS_IO_THREAD
@@ -302,28 +302,28 @@ int visualization_save(const vis_t* restrict visualization, const char* restrict
 
 	#ifdef ENABLE_VIS_IO_THREAD
 	if( 0 != pthread_create(&vis_io_thread, NULL, image_write_worker, (void*)image_write_arg) ) {
-		fprintf(stderr, "%s error: pthread_create(&vis_io_thread, NULL, image_write, image_write_arg) ", "visualization_save()");
+		fprintf(stderr, "%s error: pthread_create(&vis_io_thread, NULL, image_write, image_write_arg) ", "vis_save()");
 		perror("failed");
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_save()", "pthread_create()");
+	TIMING_PRINT("vis_save()", "pthread_create()");
 	TIMING_START();
 
 	if( 0 != pthread_mutex_unlock(&vis_io_mutex) ) {
-		fprintf(stderr, "%s error: pthread_mutex_unlock(&vis_io_mutex) ", "visualization_save()");
+		fprintf(stderr, "%s error: pthread_mutex_unlock(&vis_io_mutex) ", "vis_save()");
 		perror("failed");
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_save()", "pthread_mutex_unlock()");
+	TIMING_PRINT("vis_save()", "pthread_mutex_unlock()");
 	#else
 	if( STARFLOOD_SUCCESS != image_write(image_write_arg) ) {
-		fprintf(stderr, "%s error: image_write() failed.\n", "visualization_save()");
+		fprintf(stderr, "%s error: image_write() failed.\n", "vis_save()");
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("visualization_save()", "image_write()");
+	TIMING_PRINT("vis_save()", "image_write()");
 	#endif
 
 	return STARFLOOD_SUCCESS;

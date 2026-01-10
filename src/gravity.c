@@ -12,19 +12,14 @@
 #include "timing.h"
 #include "types.h"
 
-int solve_gravity(sim_t* restrict sim_ptr) {
+#if 0
+//#ifdef ENABLE_GRID
+// Solve gravity using the grid (particle-particle/particle-mesh)
+int solve_gravity_part_mesh(sim_t* restrict sim_ptr) {
 	TIMING_INIT();
 
 	sim_t sim = *sim_ptr;
 
-	unsigned int N = sim.N;
-	real* pos = sim_find(&sim, SIM_POS);
-	real* vel = sim_find(&sim, SIM_VEL);
-	real* acc = sim_find(&sim, SIM_ACC);
-	real* mas = sim_find(&sim, SIM_MAS);
-	real* pot = sim_find(&sim, SIM_POT);
-
-	#ifdef ENABLE_GRID
 	grid_t grid = sim.grid;
 
 	unsigned int grid_dim[3] = {grid.dim[0], grid.dim[1], grid.dim[2]};
@@ -51,7 +46,7 @@ int solve_gravity(sim_t* restrict sim_ptr) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("solvers_run()", "grid_clear");
+	TIMING_PRINT("solve_gravity()", "grid_clear");
 	TIMING_START();
 
 	#ifdef _OPENMP
@@ -117,7 +112,7 @@ int solve_gravity(sim_t* restrict sim_ptr) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("solvers_run()", "grid_dist");
+	TIMING_PRINT("solve_gravity()", "grid_dist");
 	TIMING_START();
 
 	double inv_grid_samples = 1.0 / (double)GRID_SAMPLES;
@@ -134,14 +129,36 @@ int solve_gravity(sim_t* restrict sim_ptr) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("solvers_run()", "grid_read");
+	TIMING_PRINT("solve_gravity()", "grid_read");
 	TIMING_START();
 
+	#ifdef ENABLE_FFT
 	grid_solve_fft(&grid);
+	#endif
 
 	TIMING_STOP();
-	TIMING_PRINT("solvers_run()", "solve_fft");
-	#endif
+	TIMING_PRINT("solve_gravity()", "solve_fft");
+}
+#endif
+
+#ifdef ENABLE_TREE
+// Solve gravity using the tree (particle-particle/particle-tree method)
+int solve_gravity_part_tree(sim_t* restrict sim_ptr) {
+}
+#endif
+
+// Solve gravity using brute-force method (particle-particle method)
+int solve_gravity_part_part(sim_t* restrict sim_ptr) {
+	TIMING_INIT();
+
+	sim_t sim = *sim_ptr;
+
+	unsigned int N = sim.N;
+	real* pos = sim_find(&sim, SIM_POS);
+	real* vel = sim_find(&sim, SIM_VEL);
+	real* acc = sim_find(&sim, SIM_ACC);
+	real* mas = sim_find(&sim, SIM_MAS);
+	real* pot = sim_find(&sim, SIM_POT);
 
 	#ifdef PAIRWISE_SOLVER_DECIMATION
 	unsigned int j_length = (          N / (unsigned int)PAIRWISE_SOLVER_DECIMATION);
@@ -279,7 +296,7 @@ int solve_gravity(sim_t* restrict sim_ptr) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("solvers_run()", "brute_force");
+	TIMING_PRINT("solve_gravity()", "brute_force");
 
 	return STARFLOOD_SUCCESS;
 }

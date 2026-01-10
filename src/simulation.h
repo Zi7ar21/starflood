@@ -9,25 +9,32 @@
 #include "grid.h"
 #endif
 
-// Enumeration of simulation parameters (configuration space)
+#ifdef ENABLE_TREE
+#include "tree.h"
+#endif
+
+// enumeration of simulation parameters (configuration space)
 enum sim_conf {
-	_SIM_POS_0,
-	_SIM_POS_1,
-	_SIM_POS_2,
+	// Position (for reserving 3-vector components)
+	_SIM_POS_0, // pos array beginning
+	_SIM_POS_1, // pos array (+1*N)
+	_SIM_POS_2, // pos array (+2*N)
 
-	_SIM_VEL_0,
-	_SIM_VEL_1,
-	_SIM_VEL_2,
+	// Velocity (for reserving 3-vector components)
+	_SIM_VEL_0, // vel array beginning
+	_SIM_VEL_1, // pos array (+1*N)
+	_SIM_VEL_2, // pos array (+2*N)
 
-	_SIM_ACC_0,
-	_SIM_ACC_1,
-	_SIM_ACC_2,
+	// Acceleration (for reserving 3-vector components)
+	_SIM_ACC_0, // acc array beginning
+	_SIM_ACC_1, // pos array (+1*N)
+	_SIM_ACC_2, // pos array (+2*N)
 
 	SIM_MAS, // Mass (Scalar)
 
 	SIM_POT, // Gravitational potential (scalar)
-	SIM_KEN, // Kinetic energy (Scalar)
 
+	SIM_KEN, // Kinetic energy (Scalar)
 	SIM_PEN, // Potential energy (Scalar)
 
 	#ifdef ENABLE_SPH
@@ -53,12 +60,16 @@ typedef struct {
 	#ifdef ENABLE_GRID
 	grid_t grid;
 	#endif
+
+	#ifdef ENABLE_TREE
+	tree_t tree;
+	#endif
 } sim_t;
 
 // Locates a simulation parameter
 real* sim_find(const sim_t* restrict sim_ptr, enum sim_conf parameter_enum);
 
-// Initialize a simulation
+// Initialize a simulation with N particles
 int sim_init(sim_t* restrict sim_ptr, unsigned int N);
 
 // Free a simulation
@@ -76,5 +87,8 @@ int sim_save_raw(const sim_t* restrict sim_ptr, const char* restrict filename);
 // Save a snapshot of the simulation state (PLY Polygon File Format)
 int sim_save_ply(const sim_t* restrict sim_ptr, const char* restrict filename);
 
-// Updates a simulation (runs a timestep)
+// Update/run the physical solvers
+int sim_solv(sim_t* restrict sim_ptr);
+
+// Update/run the simulation once (runs a timestep)
 int sim_step(sim_t* restrict sim_ptr);
