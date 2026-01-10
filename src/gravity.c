@@ -144,6 +144,202 @@ int solve_gravity_part_mesh(sim_t* restrict sim_ptr) {
 #ifdef ENABLE_TREE
 // Solve gravity using the tree (particle-particle/particle-tree method)
 int solve_gravity_part_tree(sim_t* restrict sim_ptr) {
+	sim_t sim = *sim_ptr;
+
+	unsigned int N = sim.N;
+	real* pos = sim_find(&sim, SIM_POS);
+	real* vel = sim_find(&sim, SIM_VEL);
+	real* acc = sim_find(&sim, SIM_ACC);
+	real* mas = sim_find(&sim, SIM_MAS);
+	real* pot = sim_find(&sim, SIM_POT);
+
+	tree_t tree = sim.tree;
+
+	//i32 curr_node = (i32)( 0);
+	i32 prev_node = (i32)(-1);
+
+	real bounds_min[3];
+	real bounds_max[3];
+
+	for(unsigned int i = 0u; i < N; i++) {
+		real acc_sum[3] = {(real)0.0, (real)0.0, (real)0.0};
+
+		#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
+		real acc_com[3] = {(real)0.0, (real)0.0, (real)0.0};
+		#endif
+
+		real pot_sum = (real)0.0;
+
+		#ifdef ENABLE_KAHAN_SUMMATION_ENERGY
+		real pot_com = (real)0.0;
+		#endif
+
+		real m_i = mas[i]; // body i's mass
+
+		// body i's position
+		real r_i[3] = {
+			pos[3u*i+0u],
+			pos[3u*i+1u],
+			pos[3u*i+2u]
+		};
+
+		for(unsigned int curr_node = 0u; curr_node < tree.num_nodes; curr_node++) {
+			//if(i == j) {
+			//	continue;
+			//}
+
+			node_t node = tree.node[curr_node];
+
+			real m_j = node.param[TREE_MAS_W]; // body j's mass
+
+			// body j's position
+			real r_j[3] = {
+				node.param[TREE_MAS_X],
+				node.param[TREE_MAS_Y],
+				node.param[TREE_MAS_Z]
+			};
+
+			// vector to body i's position from body j's position
+			real r_ij[3] = {
+				r_i[0] - r_j[0],
+				r_i[1] - r_j[1],
+				r_i[2] - r_j[2]
+			};
+
+			// squared distance between bodies i and j
+			real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
+
+			#ifdef EPSILON
+			real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
+			real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
+			#else
+			real inv_r2 = (real)0.0 < r2 ? (real)1.0 /          (r2) : (real)0.0;
+			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
+			#endif
+
+			// gravitational potential of body j
+			// (G and m_i are taken into account later)
+			real pot_j = m_j * inv_r1;
+
+			real F[3] = {
+				pot_j * inv_r2 * r_ij[0],
+				pot_j * inv_r2 * r_ij[1],
+				pot_j * inv_r2 * r_ij[2]
+			};
+
+			for(unsigned int k = 0u; k < 3u; k++) {
+				#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
+				// Kahan summation
+				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+				real y = F[k] - acc_com[k];
+				volatile real t = acc_sum[k] + y;
+				volatile real z = t - acc_sum[k];
+				acc_com[k] = z - y;
+				acc_sum[k] = t;
+				#else
+				// Naïve summation
+				acc_sum[k] += F[k];
+				#endif
+			}
+
+			{
+				#ifdef ENABLE_KAHAN_SUMMATION_ENERGY
+				// Kahan summation
+				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+				real y = pot_j - pot_com;
+				volatile real t = pot_sum + y;
+				volatile real z = t - pot_sum;
+				pot_com = z - y;
+				pot_sum = t;
+				#else
+				// Naïve summation
+				pot_sum += pot_j;
+				#endif
+			}
+		}
+
+		/*
+		for(unsigned int j = 0u; j < 0u; j++) {
+			//if(i == j) {
+			//	continue;
+			//}
+
+			real m_j = mas[j]; // body j's mass
+
+			// body j's position
+			real r_j[3] = {
+				pos[3u*j+0u],
+				pos[3u*j+1u],
+				pos[3u*j+2u]
+			};
+
+			// vector to body i's position from body j's position
+			real r_ij[3] = {
+				r_i[0] - r_j[0],
+				r_i[1] - r_j[1],
+				r_i[2] - r_j[2]
+			};
+
+			// squared distance between bodies i and j
+			real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
+
+			#ifdef EPSILON
+			real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
+			real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
+			#else
+			real inv_r2 = (real)0.0 < r2 ? (real)1.0 /          (r2) : (real)0.0;
+			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
+			#endif
+
+			// gravitational potential of body j
+			// (G and m_i are taken into account later)
+			real pot_j = m_j * inv_r1;
+
+			real F[3] = {
+				pot_j * inv_r2 * r_ij[0],
+				pot_j * inv_r2 * r_ij[1],
+				pot_j * inv_r2 * r_ij[2]
+			};
+
+			for(unsigned int k = 0u; k < 3u; k++) {
+				#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
+				// Kahan summation
+				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+				real y = F[k] - acc_com[k];
+				volatile real t = acc_sum[k] + y;
+				volatile real z = t - acc_sum[k];
+				acc_com[k] = z - y;
+				acc_sum[k] = t;
+				#else
+				// Naïve summation
+				acc_sum[k] += F[k];
+				#endif
+			}
+
+			{
+				#ifdef ENABLE_KAHAN_SUMMATION_ENERGY
+				// Kahan summation
+				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+				real y = pot_j - pot_com;
+				volatile real t = pot_sum + y;
+				volatile real z = t - pot_sum;
+				pot_com = z - y;
+				pot_sum = t;
+				#else
+				// Naïve summation
+				pot_sum += pot_j;
+				#endif
+			}
+		}
+		*/
+
+		acc[3u*i+0u] = (real)(-G) * m_i * acc_sum[0u];
+		acc[3u*i+1u] = (real)(-G) * m_i * acc_sum[1u];
+		acc[3u*i+2u] = (real)(-G) * m_i * acc_sum[2u];
+		pot[   i   ] = (real)(-G) * pot_sum;
+	}
+
+	return STARFLOOD_SUCCESS;
 }
 #endif
 

@@ -19,17 +19,17 @@
 /* === General === */
 
 // Default number of simulation timesteps to run
-#define NUM_TIMESTEPS 10
+#define NUM_TIMESTEPS 150
 
 // Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
 // If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed
 #define ENABLE_SIM
 
 // Uncomment to enable visualization
-//#define ENABLE_VIS
+#define ENABLE_VIS
 
 // Uncomment to enable tree calculations
-//#define ENABLE_TREE
+#define ENABLE_TREE
 
 #define TREE_NODES_MAX 262144
 
@@ -147,9 +147,9 @@
 //#define NUM_BODIES 2048
 //#define NUM_BODIES 4096
 //#define NUM_BODIES 8192
-#define NUM_BODIES 16384
+//#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-////#define NUM_BODIES 65536
+#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
 //#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
@@ -180,7 +180,7 @@
 /* === Solver === */
 
 // Uncomment to enable smoothed-particle hydrodynamics
-#define ENABLE_SPH
+//#define ENABLE_SPH
 
 // Uncomment to use Kahan Summation in the solver for higher simulation accuracy
 // Useful for single-precision floating-point calculations

@@ -52,7 +52,7 @@ int tree_free(tree_t* restrict tree_ptr) {
 	return STARFLOOD_SUCCESS;
 }
 
-int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict pos) {
+int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict pos, const real* restrict mas) {
 	TIMING_INIT();
 
 	tree_t tree = *tree_ptr;
@@ -94,6 +94,8 @@ int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict p
 			pos[3u*i+2u]
 		};
 
+		real body_mass = mas[i];
+
 		unsigned int cur_depth = 0u;
 
 		i32 curr_node = (i32)( 0);
@@ -105,6 +107,12 @@ int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict p
 		for(unsigned int j = 0u; j < 3u; j++) {
 			bounds_min[j] = tree.bounds_min[j];
 			bounds_max[j] = tree.bounds_max[j];
+		}
+
+		if(bounds_min[0] > body_pos[0] || body_pos[0] > bounds_max[0]
+		|| bounds_min[1] > body_pos[1] || body_pos[1] > bounds_max[1]
+		|| bounds_min[2] > body_pos[2] || body_pos[2] > bounds_max[2]) {
+			continue;
 		}
 
 		for(unsigned int depth = 0u; depth < tree.max_depth; depth++) {
@@ -158,6 +166,11 @@ int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict p
 					// Get the number of bodies in the new node
 					int new_node_bodies = node[new_node_id].bodies;
 
+					node[new_node_id].param[TREE_MAS_X] += mas[child[child_num]] * pos[3u*(unsigned int)child[child_num]+0u];
+					node[new_node_id].param[TREE_MAS_Y] += mas[child[child_num]] * pos[3u*(unsigned int)child[child_num]+1u];
+					node[new_node_id].param[TREE_MAS_Z] += mas[child[child_num]] * pos[3u*(unsigned int)child[child_num]+2u];
+					node[new_node_id].param[TREE_MAS_W] += mas[child[child_num]];
+
 					// Add the child body ID from the current node to the new node
 					node[new_node_id].child[new_node_bodies] = child[child_num];
 					node[new_node_id].bodies = new_node_bodies;
@@ -167,6 +180,13 @@ int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict p
 
 				tree.num_nodes += 8u;
 			}
+
+			node[curr_node].param[TREE_MAS_X] += body_mass * body_pos[0];
+			node[curr_node].param[TREE_MAS_Y] += body_mass * body_pos[1];
+			node[curr_node].param[TREE_MAS_Z] += body_mass * body_pos[2];
+			node[curr_node].param[TREE_MAS_W] += body_mass;
+
+			node[curr_node].bodies++;
 
 			int octant =
 				(bounds_mid[0] < body_pos[0] ? 1 : 0) +
@@ -191,6 +211,16 @@ int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict p
 
 	TIMING_STOP();
 	TIMING_PRINT("tree_build()", "insertion");
+
+	for(unsigned int i = 0u; i < tree.num_nodes; i++) {
+		int bodies = tree.node[i].bodies;
+
+		real inv_bodies = 0 < bodies ? (real)1.0 / (real)bodies : (real)0.0;
+
+		tree.node[i].param[TREE_MAS_X] *= inv_bodies;
+		tree.node[i].param[TREE_MAS_Y] *= inv_bodies;
+		tree.node[i].param[TREE_MAS_Z] *= inv_bodies;
+	}
 
 	printf("  %u\n", tree.num_nodes);
 

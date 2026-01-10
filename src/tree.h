@@ -32,4 +32,4 @@ int tree_init(tree_t* restrict tree_ptr, unsigned int max_nodes);
 
 int tree_free(tree_t* restrict tree_ptr);
 
-int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict pos);
+int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict pos, const real* restrict mas);

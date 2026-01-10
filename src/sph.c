@@ -3,6 +3,7 @@
 
 #include "sph.h"
 
+#ifdef ENABLE_SPH
 #include <math.h>
 #include <stdio.h>
 
@@ -280,3 +281,4 @@ int solve_sph(const sim_t* restrict sim_ptr) {
 
 	return STARFLOOD_SUCCESS;
 }
+#endif

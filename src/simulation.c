@@ -235,6 +235,7 @@ int sim_solv(sim_t* restrict sim_ptr) {
 	sim_t sim = *sim_ptr;
 
 	real* pos = sim_find(&sim, SIM_POS);
+	real* mas = sim_find(&sim, SIM_MAS);
 
 	#ifdef ENABLE_TREE
 	{
@@ -246,7 +247,7 @@ int sim_solv(sim_t* restrict sim_ptr) {
 
 	TIMING_START();
 
-	tree_build(&sim.tree, sim.N, pos);
+	tree_build(&sim.tree, sim.N, pos, mas);
 
 	TIMING_STOP();
 	TIMING_PRINT("sim_solv()", "tree_build()");
