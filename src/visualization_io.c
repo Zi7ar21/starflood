@@ -185,8 +185,8 @@ int vis_save(const vis_t* vis_ptr, const char* restrict filename, image_filetype
 
 	vis_t vis = *vis_ptr;
 
-	unsigned int image_w = vis.w;
-	unsigned int image_h = vis.h;
+	unsigned int image_w = vis.sizex;
+	unsigned int image_h = vis.sizey;
 
 	f32* render_buffer = vis.render_buffer;
 

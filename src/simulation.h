@@ -69,10 +69,10 @@ typedef struct {
 // Locates a simulation parameter
 real* sim_find(const sim_t* restrict sim_ptr, enum sim_conf parameter_enum);
 
-// Initialize a simulation with N particles
+// Initializes a simulation with N particles
 int sim_init(sim_t* restrict sim_ptr, unsigned int N);
 
-// Free a simulation
+// Frees resources allocated by a simulation
 int sim_free(sim_t* restrict sim_ptr);
 
 // Read a snapshot of the simulation state (raw binary format)
@@ -87,8 +87,16 @@ int sim_save_raw(const sim_t* restrict sim_ptr, const char* restrict filename);
 // Save a snapshot of the simulation state (PLY Polygon File Format)
 int sim_save_ply(const sim_t* restrict sim_ptr, const char* restrict filename);
 
+#ifdef SOLVER_VIS
+// Update/run the physical solvers
+int sim_solv(sim_t* restrict sim_ptr, f32* restrict render_buffer, unsigned int sizex, unsigned int sizey);
+
+// Update/run the simulation once (runs a timestep)
+int sim_step(sim_t* restrict sim_ptr, f32* restrict render_buffer, unsigned int sizex, unsigned int sizey);
+#else
 // Update/run the physical solvers
 int sim_solv(sim_t* restrict sim_ptr);
 
 // Update/run the simulation once (runs a timestep)
 int sim_step(sim_t* restrict sim_ptr);
+#endif

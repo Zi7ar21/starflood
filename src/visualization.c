@@ -34,7 +34,7 @@ void* dummy_function(void* arg) {
 log_t log_timings_vis_draw;
 #endif
 
-int vis_init(vis_t* vis_ptr, unsigned int w, unsigned int h) {
+int vis_init(vis_t* restrict vis_ptr, const unsigned int sizex, const unsigned int sizey) {
 	#ifdef ENABLE_VIS_IO_THREAD
 	if( 0 != pthread_create(&vis_io_thread, NULL, dummy_function, NULL) ) {
 		fprintf(stderr, "%s error: pthread_create(&vis_io_thread, NULL, dummy_function, NULL) ", "vis_init()");
@@ -57,12 +57,10 @@ int vis_init(vis_t* vis_ptr, unsigned int w, unsigned int h) {
 		return STARFLOOD_FAILURE;
 	}
 
-	fprintf(log_timings_vis_draw.file, "%s,%s,%s,%s,%s\n", "step_number", "clear_atomic_buffer", "calc_matMVP", "rasterize_atomic", "finalize");
+	fprintf(log_timings_vis_draw.file, "%s,%s,%s,%s,%s\n", "step_number", "clear_atomic_buffer", "calc_matMVP", "atomic_rasterization_accumulation", "atomic_buffer_to_render_buffer");
 
 	log_sync(&log_timings_vis_draw);
 	#endif
-
-	vis_t vis = *vis_ptr;
 
 	void* mem = NULL;
 
@@ -75,17 +73,21 @@ int vis_init(vis_t* vis_ptr, unsigned int w, unsigned int h) {
 	unsigned char* binary_buffer = (unsigned char*)NULL;
 	#endif
 
-	printf("Visualization Memory Addresses:\n");
+	const size_t atomic_buffer_length = (size_t)4u * (size_t)sizex * (size_t)sizey; //  32-bit        integer, RGBA, for atomic accumulation
+	const size_t render_buffer_length = (size_t)4u * (size_t)sizex * (size_t)sizey; //  32-bit floating-point, RGBA, for finishing the render and image post-processing (alpha channel is currently unused, only for alignment)
+	const size_t binary_buffer_length = (size_t)3u * (size_t)sizex * (size_t)sizey; // image format-dependent, RGB , for serializing the finalized image
 
-	size_t atomic_buffer_length = (size_t)4u * (size_t)w * (size_t)h; //  32-bit        integer, RGBA, for atomic accumulation
-	size_t render_buffer_length = (size_t)4u * (size_t)w * (size_t)h; //  32-bit floating-point, RGBA, for finishing the render and image post-processing (alpha channel is currently unused, only for alignment)
-	size_t binary_buffer_length = (size_t)3u * (size_t)w * (size_t)h; // image format-dependent, RGB , for serializing the finalized image
-
-	#if (0 >= VIS_FILE_FORMAT)
-	size_t mem_size = (sizeof(i32)*atomic_buffer_length)+(sizeof(i32)*render_buffer_length)+(sizeof(f32)*binary_buffer_length);
+	const size_t mem_size =
+		(sizeof(i32) * atomic_buffer_length) +
+		(sizeof(i32) * render_buffer_length) +
+	#if (IMAGE_FILETYPE_PFM == VIS_FILE_FORMAT)
+		(sizeof(f32) * binary_buffer_length)
 	#else
-	size_t mem_size = (sizeof(i32)*atomic_buffer_length)+(sizeof(i32)*render_buffer_length)+(sizeof(unsigned char)*binary_buffer_length);
+		(sizeof(unsigned char) * binary_buffer_length)
 	#endif
+	;
+
+	printf("Visualization Memory Addresses:\n");
 
 	TIMING_START();
 
@@ -143,7 +145,7 @@ int vis_init(vis_t* vis_ptr, unsigned int w, unsigned int h) {
 
 	TIMING_START();
 
-	for(unsigned int i = 0u; i < 4u * w * h; i++) {
+	for(unsigned int i = 0u; i < 4u * sizex * sizey; i++) {
 		#ifdef _OPENMP
 		#pragma omp atomic write
 		#endif
@@ -154,37 +156,41 @@ int vis_init(vis_t* vis_ptr, unsigned int w, unsigned int h) {
 	TIMING_PRINT("vis_init()", "initialize atomic_buffer");
 	TIMING_START();
 
-	for(unsigned int i = 0u; i < 4u * w * h; i++) {
-		render_buffer[i] = (f32)0.000;
+	for(unsigned int i = 0u; i < 4u * sizex * sizey; i++) {
+		render_buffer[i] = (f32)0;
 	}
 
 	TIMING_STOP();
 	TIMING_PRINT("vis_init()", "initialize render_buffer");
 
 	TIMING_START();
-	for(unsigned int i = 0u; i < 3u * w * h; i++) {
-		#if (0 >= VIS_FILE_FORMAT)
-		binary_buffer[i] = (f32)0.000;
+
+	for(unsigned int i = 0u; i < 3u * sizex * sizey; i++) {
+		#if (IMAGE_FILETYPE_PFM == VIS_FILE_FORMAT)
+		binary_buffer[i] = (f32)0;
 		#else
 		binary_buffer[i] = (unsigned char)0u;
 		#endif
 	}
+
 	TIMING_STOP();
 	TIMING_PRINT("vis_init()", "initialize binary_buffer");
 
-	vis.w = w;
-	vis.h = h;
-	vis.mem = mem;
-	vis.atomic_buffer = atomic_buffer;
-	vis.render_buffer = render_buffer;
-	vis.binary_buffer = binary_buffer;
+	{
+		vis_ptr->sizex = sizex;
+		vis_ptr->sizey = sizey;
 
-	*vis_ptr = vis;
+		vis_ptr->mem = mem;
+
+		vis_ptr->atomic_buffer = atomic_buffer;
+		vis_ptr->render_buffer = render_buffer;
+		vis_ptr->binary_buffer = binary_buffer;
+	}
 
 	return STARFLOOD_SUCCESS;
 }
 
-int vis_free(vis_t* vis_ptr) {
+int vis_free(vis_t* restrict vis_ptr) {
 	#ifdef ENABLE_VIS_IO_THREAD
 	pthread_join(vis_io_thread, NULL);
 	pthread_mutex_destroy(&vis_io_mutex);
@@ -198,46 +204,66 @@ int vis_free(vis_t* vis_ptr) {
 	}
 	#endif
 
-	vis_t vis = *vis_ptr;
-
 	TIMING_START();
 
-	free(vis.mem);
+	free(vis_ptr->mem);
 
 	TIMING_STOP();
 	TIMING_PRINT("vis_free()", "free()");
 
-	vis.mem = NULL;
+	{
+		vis_ptr->sizex = 0u;
+		vis_ptr->sizey = 0u;
 
-	vis.atomic_buffer = (i32*)NULL;
-	vis.render_buffer = (f32*)NULL;
+		vis_ptr->mem = NULL;
 
-	#if (0 >= VIS_FILE_FORMAT)
-	vis.binary_buffer = (f32*)NULL;
-	#else
-	vis.binary_buffer = (unsigned char*)NULL;
-	#endif
+		vis_ptr->atomic_buffer = (i32*)NULL;
+		vis_ptr->render_buffer = (f32*)NULL;
 
-	*vis_ptr = vis;
+		#if (IMAGE_FILETYPE_PFM == VIS_FILE_FORMAT)
+		vis_ptr->binary_buffer = (f32*)NULL;
+		#else
+		vis_ptr->binary_buffer = (unsigned char*)NULL;
+		#endif
+	}
 
 	return STARFLOOD_SUCCESS;
 }
 
+// identity matrix
+const real matI[16] = {
+	(real)1, (real)0, (real)0, (real)0,
+	(real)0, (real)1, (real)0, (real)0,
+	(real)0, (real)0, (real)1, (real)0,
+	(real)0, (real)0, (real)0, (real)1
+};
+
+// model matrix
+real matM[16];
+
+// view matrix
+real matV[16];
+
+// proj matrix
+real matP[16];
+
+// matP * (matV * matM)
+real matMVP[16];
+
 int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 	TIMING_INIT();
 
-	sim_t sim = *sim_ptr;
+	const sim_t sim = *sim_ptr;
+	const vis_t vis = *vis_ptr;
 
-	vis_t vis = *vis_ptr;
-
-	unsigned int w = vis.w;
-	unsigned int h = vis.h;
+	unsigned int sizex = vis_ptr->sizex;
+	unsigned int sizey = vis_ptr->sizey;
 
 	i32* atomic_buffer = vis.atomic_buffer;
 	f32* render_buffer = vis.render_buffer;
 
-	unsigned int step_number = sim.step_number;
-	unsigned int           N = sim.N;
+	const unsigned int step_number = sim.step_number;
+	const unsigned int           N = sim.N;
 
 	real* pos = sim_find(&sim, SIM_POS);
 	real* vel = sim_find(&sim, SIM_VEL);
@@ -298,10 +324,11 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 	real time = (real)( (double)TIMESTEP_SIZE * (double)step_number );
 	#endif
 
+	// atomic accumulation rasterization
+	#if 1
 	TIMING_START();
 
-	#ifdef VISUALIZATION_RASTERIZATION
-	for(unsigned int i = 0u; i < 4u * w * h; i++) {
+	for(unsigned int i = 0u; i < 4u * sizex * sizey; i++) {
 		#ifdef _OPENMP
 		#pragma omp atomic write
 		#endif
@@ -315,8 +342,29 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 	#endif
 	TIMING_START();
 
-	// model matrix
-	real matM[16];
+	for(int i = 0; i < 4; i++) {
+		for(int j = 0; j < 4; j++) {
+			matM[4*i+j] = matI[4*i+j];
+		}
+	}
+
+	for(int i = 0; i < 4; i++) {
+		for(int j = 0; j < 4; j++) {
+			matV[4*i+j] = matI[4*i+j];
+		}
+	}
+
+	for(int i = 0; i < 4; i++) {
+		for(int j = 0; j < 4; j++) {
+			matP[4*i+j] = matI[4*i+j];
+		}
+	}
+
+	for(int i = 0; i < 4; i++) {
+		for(int j = 0; j < 4; j++) {
+			matMVP[4*i+j] = matI[4*i+j];
+		}
+	}
 
 	// model matrix = rotation matrix
 	{
@@ -327,25 +375,34 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 		real bet = (real)0.0; // pitch
 		real gam = (real)0.0; // yaw
 
+		//alp = (real)TAU * (real)0.0625;
+
 		//bet = (real)TAU * (real)0.0000;
 		//bet = (real)TAU * (real)0.0625;
-		//bet = (real)TAU * (real)0.1250;
+		bet = (real)TAU * (real)0.1250;
 		//bet = (real)TAU * (real)0.2500;
 		//bet = (real)TAU * (real)1.000e-3 * time;
 
 		//gam = (real)TAU * (real)0.0000;
 		//gam = (real)TAU * (real)0.0025;
-		//gam = (real)TAU * (real)0.0625;
+		gam = (real)TAU * (real)0.0625;
 		//gam = (real)TAU * (real)0.1250;
-		gam = (real)TAU * (real)0.2500;
+		//gam = (real)TAU * (real)0.2500;
 		//gam = (real)TAU * (real)0.0625 * cos( (real)1.000e-2 * time * (real)TAU );
 		//gam = (real)TAU * (real)1.000e-3 * time;
 
-		real cos_alp = real_cos(alp), sin_alp = real_sin(alp);
-		real cos_bet = real_cos(bet), sin_bet = real_sin(bet);
-		real cos_gam = real_cos(gam), sin_gam = real_sin(gam);
+		#if 1
+		alp += (real)TAU * (real)1.000e-3 * time;
+		bet += (real)TAU * (real)1.000e-3 * time;
+		gam += (real)TAU * (real)1.000e-3 * time;
+		#endif
 
-		real rot_mat[16] = {
+		const real cos_alp = real_cos(alp), sin_alp = real_sin(alp);
+		const real cos_bet = real_cos(bet), sin_bet = real_sin(bet);
+		const real cos_gam = real_cos(gam), sin_gam = real_sin(gam);
+
+		// intrinsic rotation
+		const real rot_mat[16] = {
 			(real)(cos_alp*cos_bet), (real)(cos_alp*sin_bet*sin_gam-sin_alp*cos_gam), (real)(cos_alp*sin_bet*cos_gam+sin_alp*sin_gam), (real)(0.0),
 			(real)(sin_alp*cos_bet), (real)(sin_alp*sin_bet*sin_gam+cos_alp*cos_gam), (real)(sin_alp*sin_bet*cos_gam-cos_alp*sin_gam), (real)(0.0),
 			(real)(       -sin_bet), (real)(                        cos_bet*sin_gam), (real)(                        cos_bet*cos_gam), (real)(0.0),
@@ -357,14 +414,6 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 		}
 	}
 
-	// view matrix
-	real matV[16] = {
-		(real)( 1.000), (real)( 0.000), (real)( 0.000), (real)( 0.000),
-		(real)( 0.000), (real)( 1.000), (real)( 0.000), (real)( 0.000),
-		(real)( 0.000), (real)( 0.000), (real)( 1.000), (real)( 0.000),
-		(real)( 0.000), (real)( 0.000), (real)( 0.000), (real)( 1.000)
-	};
-
 	#ifdef ORTHO_SCALE
 	real ortho_scale = (real)exp2(ORTHO_SCALE);
 	#else
@@ -375,15 +424,11 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 	ortho_scale *= (real)(1.0 / average_radius);
 	#endif
 
-	// projection matrix
-	real matP[16] = {
-		(real)(ortho_scale), (real)(        0.0), (real)(        0.0), (real)(        0.0),
-		(real)(        0.0), (real)(ortho_scale), (real)(        0.0), (real)(        0.0),
-		(real)(        0.0), (real)(        0.0), (real)(ortho_scale), (real)(        0.0),
-		(real)(        0.0), (real)(        0.0), (real)(        0.0), (real)(        1.0)
-	};
-
-	real matMVP[16];
+	for(int i = 0; i < 3; i++) {
+		for(int j = 0; j < 3; j++) {
+			matP[4*i+j] *= ortho_scale;
+		}
+	}
 
 	// C = A * B
 	{
@@ -401,10 +446,10 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 		for(int i = 0; i < 4; i++) {
 			for(int j = 0; j < 4; j++) {
 				C[4*i+j] =
-				(A[4*i+3]*B[4*3+j])+
-				(A[4*i+2]*B[4*2+j])+
-				(A[4*i+1]*B[4*1+j])+
-				(A[4*i+0]*B[4*0+j]);
+				(A[4*i+3] * B[4*3+j]) +
+				(A[4*i+2] * B[4*2+j]) +
+				(A[4*i+1] * B[4*1+j]) +
+				(A[4*i+0] * B[4*0+j]);
 			}
 		}
 
@@ -429,10 +474,10 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 		for(int i = 0; i < 4; i++) {
 			for(int j = 0; j < 4; j++) {
 				C[4*i+j] =
-				(A[4*i+3]*B[4*3+j])+
-				(A[4*i+2]*B[4*2+j])+
-				(A[4*i+1]*B[4*1+j])+
-				(A[4*i+0]*B[4*0+j]);
+				(A[4*i+3] * B[4*3+j]) +
+				(A[4*i+2] * B[4*2+j]) +
+				(A[4*i+1] * B[4*1+j]) +
+				(A[4*i+0] * B[4*0+j]);
 			}
 		}
 
@@ -521,7 +566,7 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 
 			real time_offset = (real)0.0;
 
-			real sample_offset[2] = {(real)0.0, (real)0.0};
+			real samp_offset[2] = {(real)0.0, (real)0.0};
 
 			u32 s[4] = {
 				(u32)0xB79ABC95u + (u32)samp_number,
@@ -543,7 +588,7 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 
 				// Box-Muller Transform
 				// https://en.wikipedia.org/wiki/Box–Muller_transform
-				real n[2] = {
+				const real n[2] = {
 					real_sqrt( (real)(-2.0) * real_log(r[2]) ) * real_cos( (real)TAU * r[3] ),
 					real_sqrt( (real)(-2.0) * real_log(r[2]) ) * real_sin( (real)TAU * r[3] )
 				};
@@ -552,8 +597,8 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 				{
 					const real filter_sigma = (real)0.750;
 
-					sample_offset[0] = filter_sigma * n[0];
-					sample_offset[1] = filter_sigma * n[1];
+					samp_offset[0] = filter_sigma * n[0];
+					samp_offset[1] = filter_sigma * n[1];
 				}
 
 				{
@@ -620,12 +665,12 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 			*/
 
 			int coord[2] = {
-				(int)(sample_offset[0] - (real)0.5 + (real)0.5 * (real)h * p_i[0] + (real)0.5 * (real)w),
-				(int)(sample_offset[1] - (real)0.5 + (real)0.5 * (real)h * p_i[1] + (real)0.5 * (real)h)
+				(int)(samp_offset[0] + (real)(-0.5) + (real)0.5 * (real)sizey * p_i[0] + (real)0.5 * (real)sizex),
+				(int)(samp_offset[1] + (real)(-0.5) + (real)0.5 * (real)sizey * p_i[1] + (real)0.5 * (real)sizey)
 			};
 
-			if( 0 <= coord[0] && coord[0] < (int)w && 0 <= coord[1] && coord[1] < (int)h ) {
-				unsigned int pixel_index = w * (unsigned int)coord[1] + (unsigned int)coord[0];
+			if( 0 <= coord[0] && coord[0] < (int)sizex && 0 <= coord[1] && coord[1] < (int)sizey ) {
+				unsigned int pixel_index = sizex * (unsigned int)coord[1] + (unsigned int)coord[0];
 
 				for(unsigned int i = 0u; i < 4u; i++) {
 					#ifdef _OPENMP
@@ -638,7 +683,7 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("vis_draw()", "rasterize_atomic");
+	TIMING_PRINT("vis_draw()", "atomic_accumulation_rasterization");
 	#ifdef LOG_TIMINGS_VIS_DRAW
 	LOG_TIMING(log_timings_vis_draw);
 	#endif
@@ -653,8 +698,8 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 
 	TIMING_START();
 
-		// read the atomic buffer and finish rendering the visualization
-	for(unsigned int i = 0u; i < w * h; i++) {
+	// read the atomic buffer and finish rendering the visualization
+	for(unsigned int i = 0u; i < sizex * sizey; i++) {
 		double pixel[4] = {
 			(double)0.250,
 			(double)0.250,
@@ -695,7 +740,10 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 	}
 
 	TIMING_STOP();
-	TIMING_PRINT("vis_draw()", "finalize");
+	TIMING_PRINT("vis_draw()", "atomic_buffer_to_render_buffer");
+	#ifdef LOG_TIMINGS_VIS_DRAW
+	LOG_TIMING(log_timings_vis_draw);
+	#endif
 	#endif
 
 	#if 0

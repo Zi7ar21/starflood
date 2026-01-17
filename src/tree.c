@@ -11,12 +11,11 @@
 #include "timing.h"
 #include "types.h"
 
-int tree_init(tree_t* restrict tree_ptr, unsigned int max_nodes) {
+int tree_init(tree_t* restrict tree_ptr, uint max_nodes) {
 	tree_t tree = *tree_ptr;
 
-	tree.max_depth = 24u;
 	tree.max_nodes = max_nodes;
-	tree.num_nodes = 1u;
+	tree.num_nodes = (uint)1;
 
 	for(int i = 0; i < 3; i++) {
 		tree.bounds_min[i] = (real)0.0;
@@ -45,6 +44,8 @@ int tree_free(tree_t* restrict tree_ptr) {
 
 	{
 		free(tree.node);
+
+		tree.node = NULL;
 	}
 
 	*tree_ptr = tree;
@@ -52,7 +53,7 @@ int tree_free(tree_t* restrict tree_ptr) {
 	return STARFLOOD_SUCCESS;
 }
 
-int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict pos, const real* restrict mas) {
+int tree_build(tree_t* restrict tree_ptr, unsigned int num_parts, const real* restrict pos, const real* restrict mas) {
 	TIMING_INIT();
 
 	tree_t tree = *tree_ptr;
@@ -67,162 +68,234 @@ int tree_build(tree_t* restrict tree_ptr, unsigned int N, const real* restrict p
 	{
 		node_t node_init;
 
-		node_init.parent = 0;
-		node_init.bodies = 0;
+		node_init.parent = (uint)0u;
+		node_init.bodies = (uint)0u;
 
 		for(int i = 0; i < 8; i++) {
-			node_init.child[i] = -1;
+			node_init.child[i] = (uint)0;
+		}
+
+		for(int i = 0; i < 3; i++) {
+			node_init.bounds_min[i] = (real)0.0;
+			node_init.bounds_max[i] = (real)0.0;
 		}
 
 		for(int i = 0; i < (int)TREE_DOF; i++) {
 			node_init.param[i] = (real)0.0;
 		}
 
-		for(unsigned int i = 0u; i < N; i++) {
+		for(unsigned int i = 0u; i < (unsigned int)TREE_NODES_MAX; i++) {
 			node[i] = node_init;
 		}
+
+		for(int i = 0; i < 3; i++) {
+			node[0].bounds_min[i] = tree.bounds_min[i];
+			node[0].bounds_max[i] = tree.bounds_max[i];
+		}
 	}
-	
+
 	TIMING_STOP();
 	TIMING_PRINT("tree_build()", "purge");
 	TIMING_START();
 
-	for(unsigned int i = 0u; i < N; i++) {
-		real body_pos[3] = {
-			pos[3u*i+0u],
-			pos[3u*i+1u],
-			pos[3u*i+2u]
+	// Insert all of the particles into the tree
+	for(unsigned int idx = 0u; idx < num_parts; idx++) {
+		// particle being inserted's position
+		const real part_pos[3] = {
+			pos[3u*idx+0u],
+			pos[3u*idx+1u],
+			pos[3u*idx+2u]
 		};
 
-		real body_mass = mas[i];
+		// particle being inserted's mass
+		const real part_mas = mas[idx];
 
-		unsigned int cur_depth = 0u;
-
-		i32 curr_node = (i32)( 0);
-		i32 prev_node = (i32)(-1);
-
+		// Current node bounds
 		real bounds_min[3];
 		real bounds_max[3];
 
-		for(unsigned int j = 0u; j < 3u; j++) {
-			bounds_min[j] = tree.bounds_min[j];
-			bounds_max[j] = tree.bounds_max[j];
+		// Initialize the bounds tracking variables
+		for(int i = 0; i < 3; i++) {
+			bounds_min[i] = tree.bounds_min[i];
+			bounds_max[i] = tree.bounds_max[i];
 		}
 
-		if(bounds_min[0] > body_pos[0] || body_pos[0] > bounds_max[0]
-		|| bounds_min[1] > body_pos[1] || body_pos[1] > bounds_max[1]
-		|| bounds_min[2] > body_pos[2] || body_pos[2] > bounds_max[2]) {
+		// Check if the particle is within tree bounds
+		if(bounds_min[0] > part_pos[0] || part_pos[0] > bounds_max[0]
+		|| bounds_min[1] > part_pos[1] || part_pos[1] > bounds_max[1]
+		|| bounds_min[2] > part_pos[2] || part_pos[2] > bounds_max[2]) {
 			continue;
 		}
 
-		for(unsigned int depth = 0u; depth < tree.max_depth; depth++) {
-			int bodies = node[curr_node].bodies;
+		// Current node
+		uint cur_node = (uint)0u;
 
-			real bounds_mid[3];
+		// It takes at most TREE_DEPTH_MAX iterations to find a place to insert the particle
+		for(int depth = 0; depth <= TREE_DEPTH_MAX; depth++) {
+			// Number of particles in the current node
+			const uint cur_bodies = node[cur_node].bodies;
 
-			for(unsigned int j = 0u; j < 3u; j++) {
-				bounds_mid[j] = (real)0.5 * (bounds_min[j] + bounds_max[j]);
-			}
+			node[cur_node].bodies += (uint)1u;
 
-			// This node has room
-			if(8 > bodies) {
-				node[curr_node].child[bodies] = (int)i;
-				node[curr_node].bodies += 1;
+			// Midpoint of the currrent node
+			const real bounds_mid[3] = {
+				(real)0.5 * (bounds_min[0] + bounds_max[0]),
+				(real)0.5 * (bounds_min[1] + bounds_max[1]),
+				(real)0.5 * (bounds_min[2] + bounds_max[2])
+			};
+
+			// Add the particle's mass to the current node
+			node[cur_node].param[TREE_MAS_X] += part_mas * part_pos[0];
+			node[cur_node].param[TREE_MAS_Y] += part_mas * part_pos[1];
+			node[cur_node].param[TREE_MAS_Z] += part_mas * part_pos[2];
+			node[cur_node].param[TREE_MAS_W] += part_mas;
+
+			// If the current node has enough room, insert the particle
+			if( (uint)8u > cur_bodies ) {
+				node[cur_node].child[cur_bodies] = (uint)idx;
 				break;
 			}
 
-			// This node is full, split it
-			if(8 == bodies) {
-				if( tree.max_nodes < (tree.num_nodes + 8u) ) {
+			// If the current node is full, split it
+			if( (uint)8u == cur_bodies ) {
+				// Check if splitting the node would exceed the maximum number of tree nodes
+				if( tree.max_nodes <= (tree.num_nodes + (uint)8u) ) {
 					fprintf(stderr, "%s error: Exceeded maximum number of tree nodes!\n", "tree_build()");
 					return STARFLOOD_FAILURE;
 				}
 
-				// Children bodies of this current node
-				int child[8];
-
-				for(int child_num = 0; child_num < 8; child_num++) {
-					child[child_num] = node[curr_node].child[child_num]; // Save the body ID
-					node[curr_node].child[child_num] = (int)tree.num_nodes + child_num; // Set the node's child ID to the new node's ID
+				// Check if splitting the node would exceed the maximum tree depth
+				if( TREE_DEPTH_MAX <= depth ) {
+					fprintf(stderr, "%s error: Exceeded maximum tree depth!\n", "tree_build()");
+					return STARFLOOD_FAILURE;
 				}
 
-				for(int child_num = 0; child_num < 8; child_num++) {
-					unsigned int id = (unsigned int)child[child_num];
+				node_t new_node[8];
 
-					real child_body_pos[3] = {
-						pos[3u*id+0u],
-						pos[3u*id+1u],
-						pos[3u*id+2u]
+				// Initialize new_node
+				{
+					node_t nul_node;
+
+					nul_node.parent = cur_node;
+					nul_node.bodies = (uint)0u;
+
+					for(int i = 0; i < 8; i++) {
+						nul_node.child[i] = (uint)0u;
+					}
+
+					for(int i = 0; i < 3; i++) {
+						nul_node.bounds_min[i] = (real)0.0;
+						nul_node.bounds_max[i] = (real)0.0;
+					}
+
+					nul_node.param[TREE_MAS_X] = (real)0.0;
+					nul_node.param[TREE_MAS_Y] = (real)0.0;
+					nul_node.param[TREE_MAS_Z] = (real)0.0;
+					nul_node.param[TREE_MAS_W] = (real)0.0;
+
+					for(int i = 0; i < 8; i++) {
+						new_node[i] = nul_node;
+					}
+				}
+
+				// Loop over each octant
+				for(int i = 0; i < 8; i++) {
+					// Loop over each dimension
+					for(int j = 0; j < 3; j++) {
+						// Set the new node's bounds
+						new_node[i].bounds_min[j] = (i >> j) & 1 ? bounds_mid[j] : bounds_min[j];
+						new_node[i].bounds_max[j] = (i >> j) & 1 ? bounds_max[j] : bounds_mid[j];
+					}
+				}
+
+				// Split the current node's children into the new nodes
+				for(int i = 0; i < 8; i++) {
+					// Child particle's index
+					const uint child_idx = node[cur_node].child[i];
+
+					// Child particle's position
+					const real child_pos[3] = {
+						pos[3u*child_idx+0u],
+						pos[3u*child_idx+1u],
+						pos[3u*child_idx+2u]
 					};
 
-					int child_octant =
-						(bounds_mid[0] < child_body_pos[0] ? 1 : 0) +
-						(bounds_mid[1] < child_body_pos[1] ? 2 : 0) +
-						(bounds_mid[2] < child_body_pos[2] ? 4 : 0);
+					// Child particle's mass
+					const real child_mas = mas[child_idx];
 
-					// Get the ID of the new node
-					int new_node_id = (int)tree.num_nodes + child_octant;
+					// Octant the child particle should be inserted into
+					const int child_octant =
+						(bounds_mid[0] < child_pos[0] ? 1 : 0) +
+						(bounds_mid[1] < child_pos[1] ? 2 : 0) +
+						(bounds_mid[2] < child_pos[2] ? 4 : 0);
 
-					// Get the number of bodies in the new node
-					int new_node_bodies = node[new_node_id].bodies;
+					// Number of particles in the child node
+					const uint child_bodies = new_node[child_octant].bodies;
 
-					node[new_node_id].param[TREE_MAS_X] += mas[child[child_num]] * pos[3u*(unsigned int)child[child_num]+0u];
-					node[new_node_id].param[TREE_MAS_Y] += mas[child[child_num]] * pos[3u*(unsigned int)child[child_num]+1u];
-					node[new_node_id].param[TREE_MAS_Z] += mas[child[child_num]] * pos[3u*(unsigned int)child[child_num]+2u];
-					node[new_node_id].param[TREE_MAS_W] += mas[child[child_num]];
+					new_node[child_octant].bodies += (uint)1u;
 
-					// Add the child body ID from the current node to the new node
-					node[new_node_id].child[new_node_bodies] = child[child_num];
-					node[new_node_id].bodies = new_node_bodies;
+					new_node[child_octant].child[child_bodies] = child_idx;
+
+					new_node[child_octant].param[TREE_MAS_X] += child_mas * child_pos[0];
+					new_node[child_octant].param[TREE_MAS_Y] += child_mas * child_pos[1];
+					new_node[child_octant].param[TREE_MAS_Z] += child_mas * child_pos[2];
+					new_node[child_octant].param[TREE_MAS_W] += child_mas;
 				}
 
-				node[curr_node].bodies = 8 + 1; // we will change this later
+				// Add the new nodes to the tree
+				{
+					for(int i = 0; i < 8; i++) {
+						node[tree.num_nodes + (uint)i] = new_node[i];
+					}
 
-				tree.num_nodes += 8u;
+					for(int i = 0; i < 8; i++) {
+						node[cur_node].child[i] = tree.num_nodes + (uint)i;
+					}
+
+					tree.num_nodes += (uint)8u;
+				}
 			}
 
-			node[curr_node].param[TREE_MAS_X] += body_mass * body_pos[0];
-			node[curr_node].param[TREE_MAS_Y] += body_mass * body_pos[1];
-			node[curr_node].param[TREE_MAS_Z] += body_mass * body_pos[2];
-			node[curr_node].param[TREE_MAS_W] += body_mass;
-
-			node[curr_node].bodies++;
-
+			// Octant the particle should be inserted into
+			//
+			// Less than equal to is used here, so theoretically
+			// the tree can have 9 nodes in the same position
+			// without exceeding the max depth (unlikely if the
+			// initial conditions were generated correctly)
 			int octant =
-				(bounds_mid[0] < body_pos[0] ? 1 : 0) +
-				(bounds_mid[1] < body_pos[1] ? 2 : 0) +
-				(bounds_mid[2] < body_pos[2] ? 4 : 0);
+				(bounds_mid[0] <= part_pos[0] ? 1 : 0) +
+				(bounds_mid[1] <= part_pos[1] ? 2 : 0) +
+				(bounds_mid[2] <= part_pos[2] ? 4 : 0);
 
-			for(int j = 0; j < 3; j++) {
-				bounds_min[j] = bounds_mid[j] <  body_pos[j] ? bounds_mid[j] : bounds_min[j];
-				bounds_max[j] = bounds_mid[j] >= body_pos[j] ? bounds_mid[j] : bounds_max[j];
+			// Set the bounds
+			for(int i = 0; i < 3; i++) {
+				bounds_min[i] = (octant >> i) & 1 ? bounds_mid[i] : bounds_min[i];
+				bounds_max[i] = (octant >> i) & 1 ? bounds_max[i] : bounds_mid[i];
 			}
 
-			curr_node = node[curr_node].child[octant];
-
-			cur_depth = depth + 1;
-		}
-
-		if(tree.max_depth == cur_depth) {
-			fprintf(stderr, "%s error: Exceeded maximum tree depth!\n", "tree_build()");
-			return STARFLOOD_FAILURE;
+			// Set the current node to the child node the particle is to be inserted into
+			cur_node = node[cur_node].child[octant];
 		}
 	}
 
 	TIMING_STOP();
 	TIMING_PRINT("tree_build()", "insertion");
+	TIMING_START();
 
-	for(unsigned int i = 0u; i < tree.num_nodes; i++) {
-		int bodies = tree.node[i].bodies;
+	for(unsigned int i = 0u; i < (unsigned int)tree.num_nodes; i++) {
+		real mass = node[i].param[TREE_MAS_W];
 
-		real inv_bodies = 0 < bodies ? (real)1.0 / (real)bodies : (real)0.0;
+		real inv_mass = (real)0.0 < mass ? (real)1.0 / mass : (real)1.0;
 
-		tree.node[i].param[TREE_MAS_X] *= inv_bodies;
-		tree.node[i].param[TREE_MAS_Y] *= inv_bodies;
-		tree.node[i].param[TREE_MAS_Z] *= inv_bodies;
+		node[i].param[TREE_MAS_X] *= inv_mass;
+		node[i].param[TREE_MAS_Y] *= inv_mass;
+		node[i].param[TREE_MAS_Z] *= inv_mass;
 	}
 
-	printf("  %u\n", tree.num_nodes);
+	TIMING_STOP();
+	TIMING_PRINT("tree_build()", "center_of_mass");
+
+	printf("  built tree with %u nodes\n", tree.num_nodes);
 
 	return STARFLOOD_SUCCESS;
 }

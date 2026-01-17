@@ -19,7 +19,7 @@
 /* === General === */
 
 // Default number of simulation timesteps to run
-#define NUM_TIMESTEPS 150
+#define NUM_TIMESTEPS 100
 
 // Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
 // If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed
@@ -28,13 +28,19 @@
 // Uncomment to enable visualization
 #define ENABLE_VIS
 
+// Uncomment to debug the solver for particle with this index (currently only used for the tree)
+//#define SOLVER_VIS 3
+
 // Uncomment to enable tree calculations
 #define ENABLE_TREE
 
+// Maximum allowed depth of the tree
+#define TREE_DEPTH_MAX 24
+
+// Maximum allowed nodes in the tree
 #define TREE_NODES_MAX 262144
 
-//#define TREE_MAX_DEPTH
-//#define TREE_MAX_NODES
+#define TREE_THETA 0.5
 
 // CAUTION: Experimental
 // Uncomment to enable grid calculations
@@ -192,13 +198,6 @@
 
 /* === Visualization === */
 
-// Uncomment to visualize the simulation using accumulation rasterization
-// Otherwise, the gravitational potential across space is probed and plotted
-#define VISUALIZATION_RASTERIZATION
-
-// Decimate the number of bodies used for probe calculation
-//#define PROBE_DECIMATION 16
-
 // Number of samples for spatial anti-aliasing
 #define SPATIAL_SAMPLES 128
 
@@ -206,7 +205,7 @@
 #define EXPOSURE -1.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE -1.000
+#define ORTHO_SCALE 0.000
 
 // Uncomment to enable automatic scaling
 //#define AUTOSCALING

@@ -10,13 +10,14 @@ Starflood is an open-source astrophysical simulation code written in C.
 - Parallelization via [OpenMP](https://www.openmp.org/)
   - Device/GPU acceleration (when using a toolchain with offloading support)
 - [N-body gravitational simulation](https://en.wikipedia.org/wiki/N-body_simulation)
+  - O(N log N) Tree-code (monopole ["Barnes-Hut" method](https://en.wikipedia.org/wiki/Barnes–Hut_simulation))
+    - TODO: Add [Multipole expansion](https://en.wikipedia.org/wiki/Multipole_expansion) and [Fast Multipole Method (FMM)](https://en.wikipedia.org/wiki/Fast_multipole_method).
+  - O(Ng log Ng) Grid-based solver solver a.k.a. [particle-mesh method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pm)
+  - Still a work-in-progress, the [poisson equation](https://en.wikipedia.org/wiki/Poisson%27s_equation#Newtonian_gravity) is solved using an FFT (implemented using [FFTW](https://www.fftw.org/) with [wisdom](https://www.fftw.org/fftw3_doc/Words-of-Wisdom_002dSaving-Plans.html)!), but the grid isn't utilized for physics yet (the treecode is faster anyways, due to it being [sparse](https://en.wikipedia.org/wiki/Sparse_matrix) in nature).
   - O(N²) brute-force solver a.k.a. [particle-particle method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pp)
-  - O(N log N) treecode (work-in-progress)
-    - TODO: Implement physics using the tree
-  - O(Ng log Ng) FFT-based poisson equation solver a.k.a. [particle-mesh method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pm)\
-    - TODO: Implement physics using the grid
 - [Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
   - O(N²) brute-force solver
+  - TODO: using trees for faster neighbor search.
 - [Leapfrog integration](https://en.wikipedia.org/wiki/Leapfrog_integration)
   - Second-order [symplectic](https://en.wikipedia.org/wiki/Symplectic_integrator)
 - Visualization
@@ -43,14 +44,18 @@ Starflood is an open-source astrophysical simulation code written in C.
 
 ## References
 
+- _[A hierarchical O(N log N) force-calculation algorithm](https://doi.org/10.1038/324446a0)_ by Josh Barnes and Piet Hut
+  - Classic paper that originally introduced the now widely-known ["Barnes-Hut" method](https://en.wikipedia.org/wiki/Barnes–Hut_simulation). I don't have access to the paper (yet), but in-depth descriptions of the technique (and further improvements/variations) are widely available online.
+  - _[The Barnes-Hut Algorithm](https://arborjs.org/docs/barnes-hut)_ by Tom Ventimiglia and Kevin Wayne
+    - Includes intuitive diagrams and descriptions of steps needed to implement the algorithm in 2-dimensions.
+  - _[The Barnes-Hut Approximation: Efficient computation of N-body forces](https://jheer.github.io/barnes-hut/)_ by Jeffrey Heer
+    - An awesome article with interactive visualizations of the algorithm in 2-dimensions.
 - _[Create Your Own Smoothed-Particle Hydrodynamics Simulation (With Python)](https://github.com/pmocz/sph-python)_ by Philip Mocz
   - Used as a reference implementation of [SPH](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics), which is nice since the Wikipedia article only contains mathematical formulae/equations!
 - _[Dynamics and Astrophysics of Galaxies](https://galaxiesbook.org/)_ by Jo Bovy
   - Web-based book
 - _[GADGET-4 (GAlaxies with Dark matter and Gas intEracT)](https://wwwmpa.mpa-garching.mpg.de/gadget4/)_ by Volker Springel et al.
   - Used as a reference for what a well-organized astrophysical simulation codebase should look like. Also an awesome collaboration/project that was an inspiration to me.
-- _[The Barnes-Hut Approximation: Efficient computation of N-body forces](https://jheer.github.io/barnes-hut/)_ by Jeffrey Heer
-  - An epic article with interactive visualizations outlining the [Barnes-Hut](https://en.wikipedia.org/wiki/Barnes–Hut_simulation) algorithm.
 - _[STARFORGE: Star Formation in Gaseous Environments](https://starforge.space/)_ by Mike Grudić et al.
   - Another cool collaboration/project that inspires me.
 - _[PCG, A Family of Better Random Number Generators](https://www.pcg-random.org/)_ by Melissa E. O'Neill

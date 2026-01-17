@@ -16,8 +16,7 @@ typedef enum {
 } image_filetype_t;
 
 typedef struct {
-	unsigned int w;
-	unsigned int h;
+	unsigned int sizex, sizey; // Visualization dimensions
 
 	void* mem; // Shared memory for the visualization
 
@@ -27,10 +26,14 @@ typedef struct {
 	void* binary_buffer; // binary buffer for image file I/O
 } vis_t;
 
-int vis_init(vis_t* vis_ptr, unsigned int w, unsigned int h);
+// Initializes a visualization with with dimensions (sizex, sizey)
+int vis_init(vis_t* restrict vis_ptr, const unsigned int sizex, const unsigned int sizey);
 
-int vis_free(vis_t* vis_ptr);
+// Frees resources allocated by a visualization
+int vis_free(vis_t* restrict vis_ptr);
 
-int vis_save(const vis_t* vis_ptr, const char* restrict filename, image_filetype_t filetype);
+// Saves the visualization to a file
+int vis_save(const vis_t* restrict vis_ptr, const char* restrict filename, image_filetype_t filetype);
 
-int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr);
+// Update the visualization by drawing a simulation
+int vis_draw(const vis_t* restrict vis_ptr, const sim_t* restrict sim_ptr);

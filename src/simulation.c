@@ -114,6 +114,8 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 
 	printf("  mem: %p (%zu bytes)\n", mem, mem_size);
 
+	sim.mem = mem;
+
 	TIMING_START();
 
 	memset(mem, 0, mem_size);
@@ -229,7 +231,12 @@ int sim_free(sim_t* restrict sim_ptr) {
 }
 
 // Update/run the physical solvers
-int sim_solv(sim_t* restrict sim_ptr) {
+#ifdef SOLVER_VIS
+int sim_solv(sim_t* restrict sim_ptr, f32* restrict render_buffer, const unsigned int sizex, const unsigned int sizey)
+#else
+int sim_solv(sim_t* restrict sim_ptr)
+#endif
+{
 	TIMING_INIT();
 
 	sim_t sim = *sim_ptr;
@@ -240,9 +247,12 @@ int sim_solv(sim_t* restrict sim_ptr) {
 	#ifdef ENABLE_TREE
 	{
 		for(int i = 0; i < 3; i++) {
-			sim.tree.bounds_min[i] = (real)(-5.000);
-			sim.tree.bounds_max[i] = (real)( 5.000);
+			sim.tree.bounds_min[i] = (real)(-1.500);
+			sim.tree.bounds_max[i] = (real)( 1.500);
 		}
+
+		sim.tree.bounds_min[1] = (real)(-0.250);
+		sim.tree.bounds_max[1] = (real)( 0.250);
 	}
 
 	TIMING_START();
@@ -253,7 +263,11 @@ int sim_solv(sim_t* restrict sim_ptr) {
 	TIMING_PRINT("sim_solv()", "tree_build()");
 	TIMING_START();
 
+	#ifdef SOLVER_VIS
+	solve_gravity_part_tree(&sim, render_buffer, sizex, sizey);
+	#else
 	solve_gravity_part_tree(&sim);
+	#endif
 
 	TIMING_STOP();
 	TIMING_PRINT("sim_solv()", "solve_gravity_part_tree()");
@@ -279,7 +293,11 @@ int sim_solv(sim_t* restrict sim_ptr) {
 }
 
 // Update/run the simulation once (runs a timestep)
+#ifdef SOLVER_VIS
+int sim_step(sim_t* restrict sim_ptr, f32* restrict render_buffer, const unsigned int sizex, const unsigned int sizey) {
+#else
 int sim_step(sim_t* restrict sim_ptr) {
+#endif
 	TIMING_INIT();
 
 	sim_t sim = *sim_ptr;
@@ -331,9 +349,15 @@ int sim_step(sim_t* restrict sim_ptr) {
 	TIMING_START();
 
 	// run the solver
+	#ifdef SOLVER_VIS
+	if( STARFLOOD_SUCCESS != sim_solv(&sim, render_buffer, sizex, sizey) ) {
+		fprintf(stderr, "%s error: %s failed.\n", "sim_step()", "sim_solv()");
+	}
+	#else
 	if( STARFLOOD_SUCCESS != sim_solv(&sim) ) {
 		fprintf(stderr, "%s error: %s failed.\n", "sim_step()", "sim_solv()");
 	}
+	#endif
 
 	TIMING_STOP();
 	TIMING_PRINT("sim_step()", "sim_solv");
@@ -368,7 +392,7 @@ int sim_step(sim_t* restrict sim_ptr) {
 		ken[i] = (real)0.5 * m_i * v2; // K = (1/2) * m * v^2
 	}
 
-	// update potential energy
+	// update potential energy (TODO: add SPH)
 	for(unsigned int i = 0u; i < N; i++) {
 		pen[i] = mas[i] * pot[i];
 	}

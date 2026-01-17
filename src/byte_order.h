@@ -5,8 +5,8 @@
 #include <stdint.h>
 
 typedef enum {
-	BYTE_ORDER_LE,
-	BYTE_ORDER_BE,
+	BYTE_ORDER_LE, // Little-Endian
+	BYTE_ORDER_BE, //    Big-Endian
 	BYTE_ORDER_OTHER,
 	BYTE_ORDER_ERROR
 } byte_order_t;

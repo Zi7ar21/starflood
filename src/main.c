@@ -394,7 +394,12 @@ int main(int argc, char** argv) {
 		}
 
 		// An initial solver step is needed for the first leapfrog "kick" in the "kick-drift-kick" form, since acceleration is only updated after "drift"
-		if( STARFLOOD_SUCCESS != sim_solv(&sim) ) {
+		#ifdef SOLVER_VIS
+		if( STARFLOOD_SUCCESS != sim_solv(&sim, vis.render_buffer, vis.sizex, vis.sizey) )
+		#else
+		if( STARFLOOD_SUCCESS != sim_solv(&sim) )
+		#endif
+		{
 			fprintf(stderr, "fatal error: sim_solv() failed.\n");
 
 			if(enable_vis) {
@@ -524,24 +529,60 @@ int main(int argc, char** argv) {
 		}
 
 		#ifdef OUTPUT_INTERVAL
-		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_vis) {
+		if(!(step_num % OUTPUT_INTERVAL) && enable_vis) {
 		#else
 		if(enable_vis) {
 		#endif
 			if( STARFLOOD_SUCCESS != vis_draw(&vis, &sim) ) {
 				fprintf(stderr, "error: vis_draw(&vis, &sim) failed.\n");
 			}
-
-			if(enable_vis_io) {
-				if( STARFLOOD_SUCCESS != vis_save(&vis, vis_save_file_name, vis_save_file_type) ) {
-					fprintf(stderr, "error: vis_save(&vis, \"%s\") failed.\n", vis_save_file_name);
-				}
-			}
 		}
 
 		if( (step_num < num_timesteps) && enable_sim) {
+			#ifdef SOLVER_VIS
+			if( STARFLOOD_SUCCESS != sim_step(&sim, vis.render_buffer, vis.sizex, vis.sizey) ) {
+				fprintf(stderr, "error: sim_step(&sim) failed.\n");
+			}
+			#else
 			if( STARFLOOD_SUCCESS != sim_step(&sim) ) {
 				fprintf(stderr, "error: sim_step(&sim) failed.\n");
+			}
+			#endif
+		}
+
+		#ifdef OUTPUT_INTERVAL
+		if(!(step_num % OUTPUT_INTERVAL) && enable_vis && enable_vis_io)
+		#else
+		if(enable_vis && enable_vis_io)
+		#endif
+		{
+			#if 0
+			for(unsigned int y = 0u; y < vis.sizey; y++) {
+				for(unsigned int x = 0u; x < vis.sizex; x++) {
+					f32 rgba[4] = {
+						vis.render_buffer[4u*(vis.sizex*y+x)+0u],
+						vis.render_buffer[4u*(vis.sizex*y+x)+1u],
+						vis.render_buffer[4u*(vis.sizex*y+x)+2u],
+						vis.render_buffer[4u*(vis.sizex*y+x)+3u]
+					};
+
+					rgba[0] *= (f32)0.0 != rgba[3] ? (f32)1.0 / rgba[3] : (f32)1.0;
+					rgba[1] *= (f32)0.0 != rgba[3] ? (f32)1.0 / rgba[3] : (f32)1.0;
+					rgba[2] *= (f32)0.0 != rgba[3] ? (f32)1.0 / rgba[3] : (f32)1.0;
+					rgba[3] *= (f32)0.0 != rgba[3] ? (f32)1.0 / rgba[3] : (f32)1.0;
+
+					rgba[3] = (f32)1.0;
+
+					vis.render_buffer[4u*(vis.sizex*y+x)+0u] = rgba[0];
+					vis.render_buffer[4u*(vis.sizex*y+x)+1u] = rgba[1];
+					vis.render_buffer[4u*(vis.sizex*y+x)+2u] = rgba[2];
+					vis.render_buffer[4u*(vis.sizex*y+x)+3u] = rgba[3];
+				}
+			}
+			#endif
+
+			if( STARFLOOD_SUCCESS != vis_save(&vis, vis_save_file_name, vis_save_file_type) ) {
+				fprintf(stderr, "error: vis_save(&vis, \"%s\") failed.\n", vis_save_file_name);
 			}
 		}
 

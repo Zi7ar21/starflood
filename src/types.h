@@ -22,6 +22,13 @@ typedef f64 real;
 typedef f32 real;
 #endif
 
+// Unsigned integer types with same size as real type (for alignment purposes)
+#ifdef STARFLOOD_DOUBLE_PRECISION
+typedef u64 uint;
+#else
+typedef u32 uint;
+#endif
+
 // String of the floating-point type name (used for writing .ply file header)
 #ifdef STARFLOOD_DOUBLE_PRECISION
 #define REAL_TYPE_STRING "double"
