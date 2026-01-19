@@ -195,14 +195,14 @@ int initcond_generate(sim_t* restrict sim_ptr) {
 
 		//double sigma = sqrt(k_B * T / mas[i]);
 		//double sigma = sqrt(1.000e-14 * inv_body_mass);
-		double sigma = 1.000e-4;
+		const double sigma = 1.000e-4;
 
 		n[0] *= sigma;
 		n[1] *= sigma;
 		n[2] *= sigma;
 		n[3] *= sigma;
 
-		double velocity = sqrt( (n[0]*n[0])+(n[1]*n[1])+(n[2]*n[2]) );
+		const double velocity = sqrt( (n[0]*n[0])+(n[1]*n[1])+(n[2]*n[2]) );
 
 		{
 			pcg4d(s);
@@ -211,10 +211,10 @@ int initcond_generate(sim_t* restrict sim_ptr) {
 				r[j] = INV_PCG32_MAX * (double)s[j];
 			}
 
-			double phi = TAU * r[0], the = acos(2.0*r[1]-1.0);
+			const double phi = TAU * r[0], the = acos(2.0*r[1]-1.0);
 
-			double cos_phi = cos(phi), sin_phi = sin(phi);
-			double cos_the = cos(the), sin_the = sin(the);
+			const double cos_phi = cos(phi), sin_phi = sin(phi);
+			const double cos_the = cos(the), sin_the = sin(the);
 
 			// random point on unit sphere
 			v[0] = cos_phi * sin_the;
@@ -227,14 +227,19 @@ int initcond_generate(sim_t* restrict sim_ptr) {
 		}
 
 		//double r2 = (p[0]*p[0])+(p[2]*p[2]);
-		double r2 = (p[0]*p[0])+(p[1]*p[1])+(p[2]*p[2]);
+		const double r2 = (p[0]*p[0])+(p[1]*p[1])+(p[2]*p[2]);
 
-		double inv_r2 = 0.0 < r2 ? 1.0 /     (r2) : 0.0;
-		double inv_r1 = 0.0 < r2 ? 1.0 / sqrt(r2) : 0.0;
+		const double inv_r2 = 0.0 < r2 ? 1.0 /     (r2) : 0.0;
+		const double inv_r1 = 0.0 < r2 ? 1.0 / sqrt(r2) : 0.0;
 
+		// N = 65536 O(N^2)
 		//v[0] += 8.000e-3 * sqrt(PI_8_3 * G) * p[0];
 		//v[1] += 8.000e-3 * sqrt(PI_8_3 * G) * p[1];
 		//v[2] += 8.000e-3 * sqrt(PI_8_3 * G) * p[2];
+
+		v[0] += 4.000e-3 * sqrt(PI_8_3 * G) * p[0];
+		v[1] += 4.000e-3 * sqrt(PI_8_3 * G) * p[1];
+		v[2] += 4.000e-3 * sqrt(PI_8_3 * G) * p[2];
 
 		//v[0] = 0.250 * sqrt(G * 2.0 * body_mass) *  p[2] + 1.000e-6 * n[0];
 		//v[1] = 0.000 * sqrt(G * 2.0 * body_mass) *  p[1] + 1.000e-6 * n[1];
@@ -257,7 +262,7 @@ int initcond_generate(sim_t* restrict sim_ptr) {
 		vel[3u*i+2u] = (real)v[2u];
 	}
 
-	#if 1
+	#if 0
 	// Transform Position/Velocity
 	for(unsigned int i = 0u; i < N; i++) {
 		double p[3] = {
@@ -282,14 +287,14 @@ int initcond_generate(sim_t* restrict sim_ptr) {
 		pcg4d(s);
 		//pcg4d(s); // second round for better statistical quality
 
-		//double r[4];
+		double r[4];
 
-		//for(int j = 0; j < 4; j++) {
-		//	r[j] = INV_PCG32_MAX * (double)s[j];
-		//}
+		for(int j = 0; j < 4; j++) {
+			r[j] = INV_PCG32_MAX * (double)s[j];
+		}
 
 		// Thin disk
-		//if(0.000 <= r[0] && r[0] < 0.850) {
+		if(0.000 <= r[0] && r[0] < 0.850) {
 			p[1] *= 0.025;
 
 			double r2 = (p[0]*p[0])+(p[1]*p[1])+(p[2]*p[2]);
@@ -302,7 +307,7 @@ int initcond_generate(sim_t* restrict sim_ptr) {
 				v[1] = 0.000e-2 * sqrt(PI_8_3 * G) * inv_r1 *  p[1];
 				v[2] = 1.000e-2 * sqrt(PI_8_3 * G) * inv_r1 * -p[0];
 			}
-		//}
+		}
 
 		//p[0] += r[1] < 0.500 ?  4.000 : -4.000;
 		/*

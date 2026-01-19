@@ -1,4 +1,4 @@
-// Needed for pthread.h and posix_memalign()
+// Needed for pthread.h, posix_memalign(), and timing.h
 #define _POSIX_C_SOURCE 200809L
 
 #include "visualization.h"
@@ -278,19 +278,19 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 		double sum_com = 0.0;
 
 		for(unsigned int i = 0u; i < N; i++) {
-			double pos_i[3] = {
+			const double pos_i[3] = {
 				(double)pos[3u*i+0u],
 				(double)pos[3u*i+1u],
 				(double)pos[3u*i+2u]
 			};
 
-			double r2 = (pos_i[0]*pos_i[0])+(pos_i[1]*pos_i[1])+(pos_i[2]*pos_i[2]);
-			double r1 = sqrt(r2);
+			const double r2 = (pos_i[0]*pos_i[0])+(pos_i[1]*pos_i[1])+(pos_i[2]*pos_i[2]);
+			const double r1 = sqrt(r2);
 
 			{
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				double y = r1 - sum_com;
+				const double y = r1 - sum_com;
 				volatile double t = average_radius + y;
 				volatile double z = t - average_radius;
 				sum_com = z - y;
@@ -392,9 +392,9 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 		//gam = (real)TAU * (real)1.000e-3 * time;
 
 		#if 1
-		alp += (real)TAU * (real)1.000e-3 * time;
-		bet += (real)TAU * (real)1.000e-3 * time;
-		gam += (real)TAU * (real)1.000e-3 * time;
+		alp += (real)TAU * (real)1.000e-4 * time;
+		bet += (real)TAU * (real)1.000e-4 * time;
+		gam += (real)TAU * (real)1.000e-4 * time;
 		#endif
 
 		const real cos_alp = real_cos(alp), sin_alp = real_sin(alp);
@@ -495,7 +495,7 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 
 	#ifdef _OPENMP
 		#ifdef ENABLE_OFFLOAD_VIS
-		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*w*h]) map(to: pos[:3u*N], vel[:3u*N], pot[:N])
+		#pragma omp target teams distribute parallel for map(tofrom: atomic_buffer[:4u*sizex*sizey]) map(to: pos[:3u*N], vel[:3u*N], pot[:N])
 		#else
 		#pragma omp parallel for schedule(dynamic, 256)
 		#endif
@@ -545,9 +545,9 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 		real palette_phase = (real)1.000e-1 * potential;
 
 		real color[3] = {
-			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (0.0/3.0) ) )+(real)0.5,
-			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (1.0/3.0) ) )+(real)0.5,
-			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (2.0/3.0) ) )+(real)0.5
+			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (0.0 / 3.0) ) )+(real)0.5,
+			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (1.0 / 3.0) ) )+(real)0.5,
+			(real)0.5*real_cos( (real)TAU * palette_phase - (real)( TAU * (2.0 / 3.0) ) )+(real)0.5
 		};
 
 		for(unsigned int samp_number = 0u; samp_number < (unsigned int)SPATIAL_SAMPLES; samp_number++) {
@@ -884,7 +884,7 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 			#ifdef ENABLE_KAHAN_SUMMATION
 			// Kahan summation
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			real y = F[k] - acc_com[k];
+			const real y = F[k] - acc_com[k];
 			volatile real t = acc_sum[k] + y;
 			volatile real z = t - acc_sum[k];
 			acc_com[k] = z - y;
@@ -899,7 +899,7 @@ int vis_draw(const vis_t* vis_ptr, const sim_t* restrict sim_ptr) {
 			#ifdef ENABLE_KAHAN_SUMMATION
 			// Kahan summation
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			real y = pot_i - pot_com;
+			const real y = pot_i - pot_com;
 			volatile real t = pot_sum + y;
 			volatile real z = t - pot_sum;
 			pot_com = z - y;

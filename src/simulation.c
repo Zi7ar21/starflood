@@ -1,4 +1,4 @@
-// needed for clock_gettime()
+// needed for posix_memalign() and timing.h
 #define _POSIX_C_SOURCE 200112L
 
 #include "simulation.h"
@@ -16,7 +16,6 @@
 #include "config.h"
 #include "gravity.h"
 #include "grid.h"
-#include "initcond.h"
 #include "log.h"
 #include "rng.h"
 #include "sph.h"
@@ -106,9 +105,7 @@ int sim_init(sim_t* restrict sim_ptr, unsigned int N) {
 		#else
 		fprintf(stderr, "%s error: mem is NULL after malloc(%zu", "sim_init()", mem_size);
 		#endif
-
 		perror(")");
-
 		return STARFLOOD_FAILURE;
 	}
 
@@ -245,14 +242,69 @@ int sim_solv(sim_t* restrict sim_ptr)
 	real* mas = sim_find(&sim, SIM_MAS);
 
 	#ifdef ENABLE_TREE
+	double average_radius = 1.0;
+
 	{
-		for(int i = 0; i < 3; i++) {
-			sim.tree.bounds_min[i] = (real)(-1.500);
-			sim.tree.bounds_max[i] = (real)( 1.500);
+		average_radius = 0.0;
+
+		double sum_com = 0.0;
+
+		for(unsigned int i = 0u; i < sim.N; i++) {
+			const double pos_i[3] = {
+				(double)pos[3u*i+0u],
+				(double)pos[3u*i+1u],
+				(double)pos[3u*i+2u]
+			};
+
+			const double r2 = (pos_i[0]*pos_i[0])+(pos_i[1]*pos_i[1])+(pos_i[2]*pos_i[2]);
+			const double r1 = sqrt(r2);
+
+			{
+				// Kahan summation
+				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+				const double y = r1 - sum_com;
+				volatile double t = average_radius + y;
+				volatile double z = t - average_radius;
+				sum_com = z - y;
+				average_radius = t;
+
+				// Naïve summation
+				//average_radius += r1;
+			}
 		}
 
-		sim.tree.bounds_min[1] = (real)(-0.250);
-		sim.tree.bounds_max[1] = (real)( 0.250);
+		average_radius *= 1.0 / (double)sim.N;
+	}
+
+	{
+		#if 1
+		uint32_t s[4] = {
+			(uint32_t)0x638FE17Bu + (uint32_t)sim.step_number,
+			(uint32_t)0xB10BDCE7u,
+			(uint32_t)0x7B8ADB9Bu,
+			(uint32_t)0xD8C5850Eu
+		};
+
+		pcg4d(s);
+		//pcg4d(s); // second round for better statistical quality
+
+		const double bounds_jitter[4] = {
+			2.0 * (INV_PCG32_MAX * (double)s[0]) - 1.0,
+			2.0 * (INV_PCG32_MAX * (double)s[1]) - 1.0,
+			2.0 * (INV_PCG32_MAX * (double)s[2]) - 1.0,
+			2.0 * (INV_PCG32_MAX * (double)s[3]) - 1.0
+		};
+
+		for(int i = 0; i < 3; i++) {
+			sim.tree.bounds[3*0+i] = (real)(-2.000 * average_radius + 0.5 * bounds_jitter[i] * average_radius);
+			sim.tree.bounds[3*1+i] = (real)( 2.000 * average_radius + 0.5 * bounds_jitter[i] * average_radius);
+		}
+		#else
+		for(int i = 0; i < 3; i++) {
+			sim.tree.bounds[3*0+i] = (real)(-1.500 * average_radius);
+			sim.tree.bounds[3*1+i] = (real)( 1.500 * average_radius);
+		}
+		#endif
 	}
 
 	TIMING_START();
@@ -294,10 +346,11 @@ int sim_solv(sim_t* restrict sim_ptr)
 
 // Update/run the simulation once (runs a timestep)
 #ifdef SOLVER_VIS
-int sim_step(sim_t* restrict sim_ptr, f32* restrict render_buffer, const unsigned int sizex, const unsigned int sizey) {
+int sim_step(sim_t* restrict sim_ptr, f32* restrict render_buffer, const unsigned int sizex, const unsigned int sizey)
 #else
-int sim_step(sim_t* restrict sim_ptr) {
+int sim_step(sim_t* restrict sim_ptr)
 #endif
+{
 	TIMING_INIT();
 
 	sim_t sim = *sim_ptr;
@@ -379,15 +432,15 @@ int sim_step(sim_t* restrict sim_ptr) {
 
 	// update kinetic energy
 	for(unsigned int i = 0u; i < N; i++) {
-		real m_i = mas[i];
+		const real m_i = mas[i];
 
-		real v_i[3] = {
+		const real v_i[3] = {
 			vel[3u*i+0u],
 			vel[3u*i+1u],
 			vel[3u*i+2u]
 		};
 
-		real v2 = (v_i[0]*v_i[0])+(v_i[1]*v_i[1])+(v_i[2]*v_i[2]);
+		const real v2 = (v_i[0]*v_i[0])+(v_i[1]*v_i[1])+(v_i[2]*v_i[2]);
 
 		ken[i] = (real)0.5 * m_i * v2; // K = (1/2) * m * v^2
 	}
@@ -407,7 +460,7 @@ int sim_step(sim_t* restrict sim_ptr) {
 		for(unsigned int i = 0u; i < N; i++) {
 			// Kahan summation
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			double y = (double)ken[i] - T_com;
+			const double y = (double)ken[i] - T_com;
 			volatile double t = T_sum + y;
 			volatile double z = t - T_sum;
 			T_com = z - y;
@@ -427,7 +480,7 @@ int sim_step(sim_t* restrict sim_ptr) {
 		for(unsigned int i = 0u; i < N; i++) {
 			// Kahan summation
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-			double y = (double)pen[i] - V_com;
+			const double y = (double)pen[i] - V_com;
 			volatile double t = V_sum + y;
 			volatile double z = t - V_sum;
 			V_com = z - y;

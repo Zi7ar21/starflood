@@ -6,7 +6,7 @@
 
 // Uncomment to use OpenMP target constructs (if OpenMP is enabled)
 //#define ENABLE_OFFLOAD_SIM
-//#define ENABLE_OFFLOAD_VIS
+#define ENABLE_OFFLOAD_VIS
 
 // CAUTION: Experimental
 // Uncomment to create a separate thread for visualization file output (requires pthreads)
@@ -19,7 +19,7 @@
 /* === General === */
 
 // Default number of simulation timesteps to run
-#define NUM_TIMESTEPS 100
+#define NUM_TIMESTEPS 10
 
 // Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
 // If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed
@@ -29,17 +29,18 @@
 #define ENABLE_VIS
 
 // Uncomment to debug the solver for particle with this index (currently only used for the tree)
-//#define SOLVER_VIS 3
+#define SOLVER_VIS 3
 
 // Uncomment to enable tree calculations
 #define ENABLE_TREE
 
 // Maximum allowed depth of the tree
-#define TREE_DEPTH_MAX 24
+#define TREE_DEPTH_MAX 16
 
 // Maximum allowed nodes in the tree
 #define TREE_NODES_MAX 262144
 
+// Tree-code parameter "theta"
 #define TREE_THETA 0.5
 
 // CAUTION: Experimental
@@ -81,7 +82,7 @@
 //#define INIT_COND_FILE "/scratch/Simulations/ICs/starflood_expanding_sphere_1.raw"
 
 // Uncomment to write simulation snapshots to OUTPUT_DIR/SIM_FILENAME(          .raw), if ENABLE_SIM is defined
-//#define SIM_FILENAME "sim/step_%04u"
+#define SIM_FILENAME "sim/step_%04u"
 
 // Uncomment to write visualization frames to OUTPUT_DIR/VIS_FILENAME(.pfm/.ppm/.png), if ENABLE_VIS is defined
 #define VIS_FILENAME "vis/step_%04u"
@@ -113,7 +114,7 @@
 // Uncomment to override stb_image_write zlib compression level (higher: longer compression time, smaller files)
 // 5 is the internal minimum, setting this any lower will have no additional benefit.
 // Commenting this will leave the internal default (8).
-#define IO_PNG_COMPRESSION_LEVEL 14
+#define IO_PNG_COMPRESSION_LEVEL 8
 
 // Uncomment to log statistics to a CSV file (OUTPUT_DIR/LOG_STATISTICS)
 #define LOG_STATISTICS "statistics.csv"
@@ -155,9 +156,9 @@
 //#define NUM_BODIES 8192
 //#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-#define NUM_BODIES 65536
+//#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
-//#define NUM_BODIES 262144
+#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
 //#define NUM_BODIES 1048576
 
@@ -166,7 +167,7 @@
 //#define PAIRWISE_SOLVER_DECIMATION 4
 
 // Simulation timestep size (dt)
-#define TIMESTEP_SIZE 1.000e-1
+#define TIMESTEP_SIZE 1.000e-0
 
 // Gravitational potential softening parameter
 #define EPSILON 1.000e-3
@@ -205,10 +206,10 @@
 #define EXPOSURE -1.000
 
 // Orthographic projection scale, Log2 scale (more positive: more zoomed-in, more negative: more zoomed-out)
-#define ORTHO_SCALE 0.000
+#define ORTHO_SCALE -1.000
 
 // Uncomment to enable automatic scaling
-//#define AUTOSCALING
+#define AUTOSCALING
 
 // Uncomment to enable motion blur
 //#define SHUTTER_SPEED 0.5

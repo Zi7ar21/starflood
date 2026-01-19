@@ -129,7 +129,7 @@ int solve_sph(const sim_t* restrict sim_ptr) {
 				#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = rho_j - rho_com;
+				const real y = rho_j - rho_com;
 				volatile real t = rho_sum + y;
 				volatile real z = t - rho_sum;
 				rho_com = z - y;
@@ -259,7 +259,7 @@ int solve_sph(const sim_t* restrict sim_ptr) {
 				#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = X[k] - acc_com[k];
+				const real y = X[k] - acc_com[k];
 				volatile real t = acc_sum[k] + y;
 				volatile real z = t - acc_sum[k];
 				acc_com[k] = z - y;

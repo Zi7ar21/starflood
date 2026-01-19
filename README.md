@@ -7,23 +7,28 @@ Starflood is an open-source astrophysical simulation code written in C.
 
 ## Features
 
-- Parallelization via [OpenMP](https://www.openmp.org/)
-  - Device/GPU acceleration (when using a toolchain with offloading support)
-- [N-body gravitational simulation](https://en.wikipedia.org/wiki/N-body_simulation)
-  - O(N log N) Tree-code (monopole ["Barnes-Hut" method](https://en.wikipedia.org/wiki/Barnes–Hut_simulation))
-    - TODO: Add [Multipole expansion](https://en.wikipedia.org/wiki/Multipole_expansion) and [Fast Multipole Method (FMM)](https://en.wikipedia.org/wiki/Fast_multipole_method).
-  - O(Ng log Ng) Grid-based solver solver a.k.a. [particle-mesh method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pm)
-  - Still a work-in-progress, the [poisson equation](https://en.wikipedia.org/wiki/Poisson%27s_equation#Newtonian_gravity) is solved using an FFT (implemented using [FFTW](https://www.fftw.org/) with [wisdom](https://www.fftw.org/fftw3_doc/Words-of-Wisdom_002dSaving-Plans.html)!), but the grid isn't utilized for physics yet (the treecode is faster anyways, due to it being [sparse](https://en.wikipedia.org/wiki/Sparse_matrix) in nature).
-  - O(N²) brute-force solver a.k.a. [particle-particle method](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pp)
-- [Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
-  - O(N²) brute-force solver
-  - TODO: using trees for faster neighbor search.
-- [Leapfrog integration](https://en.wikipedia.org/wiki/Leapfrog_integration)
-  - Second-order [symplectic](https://en.wikipedia.org/wiki/Symplectic_integrator)
-- Visualization
-  - Accumulation rasterization using [atomic](https://en.wikipedia.org/wiki/Linearizability#Primitive_atomic_instructions) operations
+- Parallelism
+  - Single-node parallelization via [OpenMP](https://www.openmp.org/)
+    - Device/GPU acceleration (when using a toolchain with offloading support)
+- Code for astrophysical/cosmological simulation
+  - Supports [N-body simulation](https://en.wikipedia.org/wiki/N-body_simulation) with [Smoothed-particle hydrodynamics (SPH)](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
+    - [Leapfrog integration](https://en.wikipedia.org/wiki/Leapfrog_integration) ("kick-drift-kick" form)
+      - Second-order integrator that is [symplectic](https://en.wikipedia.org/wiki/Symplectic_integrator) in nature
+    - [Tree code](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#tcu)
+      - Supported for gravity
+      - O(N log N) monopole ["Barnes-Hut" (BH)](https://en.wikipedia.org/wiki/Barnes–Hut_simulation) method
+    - [Particle-Mesh (PM)](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pm) code
+      - Still a work-in-progress, currently unused by physics solvers (tree code is normally faster anyways, due to it being [sparse](https://en.wikipedia.org/wiki/Sparse_matrix) in nature)
+      - Technique for solving the [poisson equation](https://en.wikipedia.org/wiki/Poisson%27s_equation#Newtonian_gravity) using Discrete Fourier Transforms (DFTs)
+      - O(N log N) FFT implemented using [FFTW](https://www.fftw.org/) (with [wisdom](https://www.fftw.org/fftw3_doc/Words-of-Wisdom_002dSaving-Plans.html)!)
+    - [Particle-Particle (PP)](https://www.cs.cmu.edu/afs/cs/academic/class/15850c-s96/www/nbody.html#pp) code
+      - Supported for gravity and hydrodynamics
+      - O(N²) naïve brute-force method that compares every possible pair of particles
+- Code for visualization
+  - Support for simultaneous simulation/visualization
+  - Support for accumulation rasterization (using [atomic](https://en.wikipedia.org/wiki/Linearizability#Primitive_atomic_instructions) operations)
   - [Spatial anti-aliasing](https://en.wikipedia.org/wiki/Spatial_anti-aliasing) ([Gaussian window function](https://en.wikipedia.org/wiki/Window_function#Gaussian_window) stochastic sampling)
-- Generation of Initial Conditions (ICs)
+- Code for generating Initial Conditions (ICs)
 - File I/O
   - Simulation snapshots can be saved as files (in a raw binary format), body positions can be saved in the [Standford Polygon File Format (`.ply`)](https://en.wikipedia.org/wiki/PLY_(file_format))
   - Visualization can be done during a run, or afterwards by loading snapshot files
@@ -32,17 +37,40 @@ Starflood is an open-source astrophysical simulation code written in C.
 
 ### Planned (To-do List)
 
-- Add support for [distributed computing](https://en.wikipedia.org/wiki/Distributed_computing)
-  - [Message Passing Interface (MPI)](https://en.wikipedia.org/wiki/Message_Passing_Interface)
-- Add support for [volume rendering](https://en.wikipedia.org/wiki/Volume_rendering) to visualization
-- Create physically accurate initial conditions
-  - [Andromeda-Milky Way collision](https://en.wikipedia.org/wiki/Andromeda–Milky_Way_collision)
-  - [Molecular cloud/Stellar nursery](https://en.wikipedia.org/wiki/Molecular_cloud)
-- Improve physical solvers
-  - [Barnes-Hut](https://en.wikipedia.org/wiki/Barnes–Hut_simulation) tree method
-  - [Fast Multipole Method (FMM)](https://en.wikipedia.org/wiki/Fast_multipole_method)
+- Improve parallelism
+  - Add support for multi-node parallelization ([distributed computing](https://en.wikipedia.org/wiki/Distributed_computing))
+    - Maybe using [Message Passing Interface (MPI)](https://en.wikipedia.org/wiki/Message_Passing_Interface)?
+- Improve code for astrophysical/cosmological simulation
+  - Add support for variable timesteps or [multi-time-step integration](https://en.wikipedia.org/wiki/Multi-time-step_integration)
+  - Add support for O(N) [Fast Multipole Method (FMM)](https://en.wikipedia.org/wiki/Fast_multipole_method)
+    - Add support for [Multipole expansion](https://en.wikipedia.org/wiki/Multipole_expansion)
+- Improve code for visualization
+  - Add support for [volume rendering](https://en.wikipedia.org/wiki/Volume_rendering)
+- Improve code for generating Initial Conditions (ICs)
+  - Add physically accurate initial conditions representing real-world/hypothesized scenarios
+    - [Andromeda-Milky Way collision](https://en.wikipedia.org/wiki/Andromeda–Milky_Way_collision)
+    - [Molecular cloud/Stellar nursery](https://en.wikipedia.org/wiki/Molecular_cloud)
+- Improve File I/O
+  - Add support for more file formats (for compatibility with other software)
 
 ## References
+
+Here are some projects (categorized by subject) that have either been inspiring or useful to me.
+
+### Astrophysics
+
+- _[Dynamics and Astrophysics of Galaxies](https://galaxiesbook.org/)_ by Jo Bovy
+  - Online book (or in print) covering galaxies, with examples for verification
+- _[Illustris collaboration](https://www.illustris-project.org/)_
+  - Research collaboration responsible for a series of cosmological simulations
+
+### Astrophysical/Cosmological Codes
+
+- _[GADGET-4 (GAlaxies with Dark matter and Gas intEracT)](https://wwwmpa.mpa-garching.mpg.de/gadget4/)_ by Volker Springel et al.
+- _[PKDGRAV3: Beyond Trillion Particle Cosmological Simulations for the Next Era of Galaxy Surveys](https://arxiv.org/abs/1609.08621)_ by Douglas Potter, Joachim Stadel, and Romain Teyssier
+- _[STARFORGE: Star Formation in Gaseous Environments](https://starforge.space/)_ by Mike Grudić et al.
+
+### Other
 
 - _[A hierarchical O(N log N) force-calculation algorithm](https://doi.org/10.1038/324446a0)_ by Josh Barnes and Piet Hut
   - Classic paper that originally introduced the now widely-known ["Barnes-Hut" method](https://en.wikipedia.org/wiki/Barnes–Hut_simulation). I don't have access to the paper (yet), but in-depth descriptions of the technique (and further improvements/variations) are widely available online.
@@ -52,12 +80,9 @@ Starflood is an open-source astrophysical simulation code written in C.
     - An awesome article with interactive visualizations of the algorithm in 2-dimensions.
 - _[Create Your Own Smoothed-Particle Hydrodynamics Simulation (With Python)](https://github.com/pmocz/sph-python)_ by Philip Mocz
   - Used as a reference implementation of [SPH](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics), which is nice since the Wikipedia article only contains mathematical formulae/equations!
-- _[Dynamics and Astrophysics of Galaxies](https://galaxiesbook.org/)_ by Jo Bovy
-  - Web-based book
-- _[GADGET-4 (GAlaxies with Dark matter and Gas intEracT)](https://wwwmpa.mpa-garching.mpg.de/gadget4/)_ by Volker Springel et al.
-  - Used as a reference for what a well-organized astrophysical simulation codebase should look like. Also an awesome collaboration/project that was an inspiration to me.
-- _[STARFORGE: Star Formation in Gaseous Environments](https://starforge.space/)_ by Mike Grudić et al.
-  - Another cool collaboration/project that inspires me.
+
+### Technical/Libraries
+
 - _[PCG, A Family of Better Random Number Generators](https://www.pcg-random.org/)_ by Melissa E. O'Neill
   - Fast/high-quality/simple hash functions used for generating the simulation intial conditions and graphical visualizations.
   - [Hash Functions for GPU Rendering](https://www.jcgt.org/published/0009/03/02/) by Mark Jarzynski and Marc Olano

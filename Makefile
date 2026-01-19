@@ -7,9 +7,14 @@ ROCM_PATH ?= /opt/rocm
 
 # === Compiler Selection ===
 
+# default compiler
+#CC ?= clang
+CC ?= gcc
+
+# override default compiler
 #CC := $(ROCM_PATH)/bin/amdclang
 #CC := clang
-CC := gcc
+#CC := gcc
 #CC := icx
 #CC := nvc
 

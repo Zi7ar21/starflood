@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 log_dir = './out'
 
 #log_name = 'log_nvidia-smi'
-#log_name = 'statistics'
-log_name = 'timings_fft_exec'
+log_name = 'statistics'
+#log_name = 'timings_fft_exec'
 #log_name = 'timings_sim_step'
 #log_name = 'timings_vis_draw'
 

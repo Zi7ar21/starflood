@@ -206,8 +206,6 @@ int sim_read_ply(sim_t* restrict sim_ptr, const char* restrict filename) {
 
 	fprintf(stderr, "%s error: PLY file reader implementation is incomplete.\n", "sim_read_ply()");
 
-	return STARFLOOD_FAILURE;
-
 	/*
 	if(NULL == (void*)filename) {
 		fprintf(stderr, "%s error: filename is NULL!\n", "sim_read_ply()");

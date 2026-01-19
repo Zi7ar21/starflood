@@ -87,10 +87,7 @@ int rasterize_line_3d(f32* restrict render_buffer, const unsigned int sizex, con
 	for(;;) {
 		if(0 < x && x < (int)sizex && 0 < y && y < (int)sizey) {
 			for(unsigned int chan = 0u; chan < 4u; chan++) {
-				#ifdef _OPENMP
-				#pragma omp atomic write
-				#endif
-				render_buffer[4u*(unsigned int)((int)sizex*y+x)+chan] = rgba[chan];
+				render_buffer[4u*(unsigned int)((int)sizex*y+x)+chan] += rgba[chan];
 			}
 		}
 
@@ -261,10 +258,17 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 
 	const tree_t tree = sim.tree;
 
+	const uint num_nodes = tree.num_nodes;
+
 	const node_t* node = tree.node;
 
 	#ifdef _OPENMP
-	#pragma omp parallel for schedule(dynamic, 256)
+		#ifdef ENABLE_OFFLOAD_SIM
+		// TODO: fix
+		//#pragma omp target teams distribute parallel for map(tofrom: acc[:3u*N], pot[:N]) map(to: pos[:3u*N], mas[:N], node[:num_nodes])
+		#else
+		#pragma omp parallel for schedule(dynamic, 256)
+		#endif
 	#endif
 	for(unsigned int idx = 0u; idx < N; idx++) {
 		real acc_sum[3] = {(real)0.0, (real)0.0, (real)0.0};
@@ -299,7 +303,7 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 
 		//for(unsigned int j = 0u; j < 8u * (unsigned int)TREE_NODES_MAX; j++) {
 		//while(1) {
-		for(unsigned int search_iter = 0u; search_iter < 16u * (unsigned int)TREE_NODES_MAX; search_iter++) {
+		for(unsigned int search_iter = 0u; search_iter < 2u * 8u * (unsigned int)TREE_NODES_MAX; search_iter++) {
 			//if(i == j) {
 			//	continue;
 			//}
@@ -310,11 +314,11 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 				break;
 			}
 
-			node_t this_node = node[next_node];
+			const node_t this_node = node[next_node];
 
 			// this node's bounds
-			const real bounds_min[3] = {this_node.bounds_min[0], this_node.bounds_min[1], this_node.bounds_min[2]};
-			const real bounds_max[3] = {this_node.bounds_max[0], this_node.bounds_max[1], this_node.bounds_max[2]};
+			const real bounds_min[3] = {this_node.bounds[3*0+0], this_node.bounds[3*0+1], this_node.bounds[3*0+2]};
+			const real bounds_max[3] = {this_node.bounds[3*1+0], this_node.bounds[3*1+1], this_node.bounds[3*1+2]};
 
 			// check if this node is empty
 			if( (uint)0u >= this_node.bodies ) {
@@ -326,14 +330,14 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 			// check if this node has children (nodes)
 			if( (uint)8u < this_node.bodies ) {
 				// current octant being searched
-				int octant = tree_path[cur_depth];
+				const int octant = tree_path[cur_depth];
 
 				// should not be possible
-				if(8 <= octant) {
-					fprintf(stderr, "%s error: glitch\n", "solve_gravity_part_tree()");
-					break;
-					//return STARFLOOD_FAILURE;
-				}
+				//if(8 <= octant) {
+				//	fprintf(stderr, "%s error: glitch\n", "solve_gravity_part_tree()");
+				//	break;
+				//	//return STARFLOOD_FAILURE;
+				//}
 
 				// check if this node is done being searched
 				if(7 <= octant) {
@@ -382,8 +386,8 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 							(f32)1.000
 						};
 
-						// axis 0
 						{
+							// axis 0
 							{
 								const real p0[3] = {bounds_min[0], bounds_min[1], bounds_min[2]}, p1[3] = {bounds_max[0], bounds_min[1], bounds_min[2]};
 								rasterize_line_3d(render_buffer, sizex, sizey, rgba, p0, p1);
@@ -400,10 +404,8 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 								const real p0[3] = {bounds_min[0], bounds_max[1], bounds_max[2]}, p1[3] = {bounds_max[0], bounds_max[1], bounds_max[2]};
 								rasterize_line_3d(render_buffer, sizex, sizey, rgba, p0, p1);
 							}
-						}
 
-						// axis 1
-						{
+							// axis 1
 							{
 								const real p0[3] = {bounds_min[0], bounds_min[1], bounds_min[2]}, p1[3] = {bounds_min[0], bounds_max[1], bounds_min[2]};
 								rasterize_line_3d(render_buffer, sizex, sizey, rgba, p0, p1);
@@ -420,10 +422,8 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 								const real p0[3] = {bounds_max[0], bounds_min[1], bounds_max[2]}, p1[3] = {bounds_max[0], bounds_max[1], bounds_max[2]};
 								rasterize_line_3d(render_buffer, sizex, sizey, rgba, p0, p1);
 							}
-						}
 
-						// axis 2
-						{
+							// axis 2
 							{
 								const real p0[3] = {bounds_min[0], bounds_min[1], bounds_min[2]}, p1[3] = {bounds_min[0], bounds_min[1], bounds_max[2]};
 								rasterize_line_3d(render_buffer, sizex, sizey, rgba, p0, p1);
@@ -446,14 +446,14 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 
 					// check if we are to visit this node's children
 					if( (real)TREE_THETA <= dist_ratio ) {
-						next_node = this_node.child[0];
+						next_node = this_node.branch[0];
 						tree_path[cur_depth] = 0;
 						cur_depth = cur_depth + 1;
 						continue;
 					}
 				} else {
 					// we are searching this node, move to the next octant
-					next_node = this_node.child[octant + 1];
+					next_node = this_node.branch[octant + 1];
 					tree_path[cur_depth] = octant + 1;
 					cur_depth = cur_depth + 1;
 					continue;
@@ -462,19 +462,20 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 
 			// body j's position
 			real r_j[3] = {
-				this_node.param[TREE_MAS_X],
-				this_node.param[TREE_MAS_Y],
-				this_node.param[TREE_MAS_Z]
+				this_node.params[TREE_MAS_X],
+				this_node.params[TREE_MAS_Y],
+				this_node.params[TREE_MAS_Z]
 			};
 
-			real m_j = this_node.param[TREE_MAS_W]; // body j's mass
+			real m_j = this_node.params[TREE_MAS_W]; // body j's mass
 
 			// factor out the current particle
-			if(bounds_min[0] <= r_i[0] && r_i [0] <= bounds_max[0]
-			&& bounds_min[1] <= r_i[1] && r_i [1] <= bounds_max[1]
-			&& bounds_min[2] <= r_i[2] && r_i [2] <= bounds_max[2]) {
+			if(bounds_min[0] <= r_i[0] && r_i[0] <= bounds_max[0]
+			&& bounds_min[1] <= r_i[1] && r_i[1] <= bounds_max[1]
+			&& bounds_min[2] <= r_i[2] && r_i[2] <= bounds_max[2]
+			&& (uint)1u < this_node.bodies) {
 				for(int k = 0; k < 3; k++) {
-					r_j[k] *= (real)this_node.bodies;
+					r_j[k] *= m_j;
 				}
 
 				for(int k = 0; k < 3; k++) {
@@ -484,33 +485,33 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 				m_j -= m_i;
 
 				for(int k = 0; k < 3; k++) {
-					r_j[k] *= (uint)0u < this_node.bodies ? (real)1.0 / (real)this_node.bodies : (real)0.0;
+					r_j[k] *= (real)0.0 < m_j ? (real)1.0 / m_j : (real)1.0;
 				}
 			}
 
 			// vector to body i's position from body j's position
-			real r_ij[3] = {
+			const real r_ij[3] = {
 				r_i[0] - r_j[0],
 				r_i[1] - r_j[1],
 				r_i[2] - r_j[2]
 			};
 
 			// squared distance between bodies i and j
-			real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
+			const real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
 
 			#ifdef EPSILON
-			real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
-			real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
+			const real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
+			const real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
 			#else
-			real inv_r2 = (real)0.0 < r2 ? (real)1.0 /          (r2) : (real)0.0;
-			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
+			const real inv_r2 = (real)0.0 < r2 ? (real)1.0 /          (r2) : (real)0.0;
+			const real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
 			#endif
 
 			// gravitational potential of body j
 			// (G and m_i are taken into account later)
-			real pot_j = m_j * inv_r1;
+			const real pot_j = m_j * inv_r1;
 
-			real F[3] = {
+			const real F[3] = {
 				pot_j * inv_r2 * r_ij[0],
 				pot_j * inv_r2 * r_ij[1],
 				pot_j * inv_r2 * r_ij[2]
@@ -520,7 +521,7 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 				#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = F[k] - acc_com[k];
+				const real y = F[k] - acc_com[k];
 				volatile real t = acc_sum[k] + y;
 				volatile real z = t - acc_sum[k];
 				acc_com[k] = z - y;
@@ -535,7 +536,7 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 				#ifdef ENABLE_KAHAN_SUMMATION_ENERGY
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = pot_j - pot_com;
+				const real y = pot_j - pot_com;
 				volatile real t = pot_sum + y;
 				volatile real z = t - pot_sum;
 				pot_com = z - y;
@@ -548,6 +549,7 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 
 			#ifdef SOLVER_VIS
 			if( (unsigned int)SOLVER_VIS == idx ) {
+				#if 0
 				printf(
 					"debug\n"
 					"  idx: %u\n"
@@ -563,6 +565,7 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 					r_j[0], r_j[1], r_j[2],
 					m_j
 				);
+				#endif
 
 				const f32 rgba[4] = {0.8f, 0.1f, 0.8f, 1.0f};
 
@@ -622,7 +625,7 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 				#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = F[k] - acc_com[k];
+				const real y = F[k] - acc_com[k];
 				volatile real t = acc_sum[k] + y;
 				volatile real z = t - acc_sum[k];
 				acc_com[k] = z - y;
@@ -637,7 +640,7 @@ int solve_gravity_part_tree(const sim_t* restrict sim_ptr)
 				#ifdef ENABLE_KAHAN_SUMMATION_ENERGY
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = pot_j - pot_com;
+				const real y = pot_j - pot_com;
 				volatile real t = pot_sum + y;
 				volatile real z = t - pot_sum;
 				pot_com = z - y;
@@ -674,8 +677,8 @@ int solve_gravity_part_part(const sim_t* restrict sim_ptr) {
 	real* pot = sim_find(&sim, SIM_POT);
 
 	#ifdef PAIRWISE_SOLVER_DECIMATION
-	unsigned int j_length = (          N / (unsigned int)PAIRWISE_SOLVER_DECIMATION);
-	unsigned int j_offset = (step_number % (unsigned int)PAIRWISE_SOLVER_DECIMATION) * j_length;
+	const unsigned int j_length = (          N / (unsigned int)PAIRWISE_SOLVER_DECIMATION);
+	const unsigned int j_offset = (step_number % (unsigned int)PAIRWISE_SOLVER_DECIMATION) * j_length;
 	#endif
 
 	TIMING_START();
@@ -707,58 +710,59 @@ int solve_gravity_part_part(const sim_t* restrict sim_ptr) {
 		#endif
 		#endif
 
-		real m_i = mas[i]; // body i's mass
+		const real m_i = mas[i]; // body i's mass
 
 		// body i's position
-		real r_i[3] = {
+		const real r_i[3] = {
 			pos[3u*i+0u],
 			pos[3u*i+1u],
 			pos[3u*i+2u]
 		};
 
 		#ifdef PAIRWISE_SOLVER_DECIMATION
-		for(unsigned int j = j_offset; j < (j_offset+j_length); j++) {
+		for(unsigned int j = j_offset; j < (j_offset+j_length); j++)
 		#else
-		for(unsigned int j = 0u; j < N; j++) {
+		for(unsigned int j = 0u; j < N; j++)
 		#endif
+		{
 			/*
 			if(i == j) {
 				continue;
 			}
 			*/
 
-			real m_j = mas[j]; // body j's mass
+			const real m_j = mas[j]; // body j's mass
 
 			// body j's position
-			real r_j[3] = {
+			const real r_j[3] = {
 				pos[3u*j+0u],
 				pos[3u*j+1u],
 				pos[3u*j+2u]
 			};
 
 			// vector to body i's position from body j's position
-			real r_ij[3] = {
+			const real r_ij[3] = {
 				r_i[0] - r_j[0],
 				r_i[1] - r_j[1],
 				r_i[2] - r_j[2]
 			};
 
 			// squared distance between bodies i and j
-			real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
+			const real r2 = (r_ij[0]*r_ij[0])+(r_ij[1]*r_ij[1])+(r_ij[2]*r_ij[2]);
 
 			#ifdef EPSILON
-			real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
-			real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
+			const real inv_r2 = (real)1.0 /          ( r2 + (real)(EPSILON*EPSILON) );
+			const real inv_r1 = (real)1.0 / real_sqrt( r2 + (real)(EPSILON*EPSILON) );
 			#else
-			real inv_r2 = (real)0.0 < r2 ? (real)1.0 /          (r2) : (real)0.0;
-			real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
+			const real inv_r2 = (real)0.0 < r2 ? (real)1.0 /          (r2) : (real)0.0;
+			const real inv_r1 = (real)0.0 < r2 ? (real)1.0 / real_sqrt(r2) : (real)0.0;
 			#endif
 
 			// gravitational potential of body j
 			// (G and m_i are taken into account later)
-			real pot_j = m_j * inv_r1;
+			const real pot_j = m_j * inv_r1;
 
-			real F[3] = {
+			const real F[3] = {
 				pot_j * inv_r2 * r_ij[0],
 				pot_j * inv_r2 * r_ij[1],
 				pot_j * inv_r2 * r_ij[2]
@@ -768,7 +772,7 @@ int solve_gravity_part_part(const sim_t* restrict sim_ptr) {
 				#ifdef ENABLE_KAHAN_SUMMATION_SOLVER
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = F[k] - acc_com[k];
+				const real y = F[k] - acc_com[k];
 				volatile real t = acc_sum[k] + y;
 				volatile real z = t - acc_sum[k];
 				acc_com[k] = z - y;
@@ -783,7 +787,7 @@ int solve_gravity_part_part(const sim_t* restrict sim_ptr) {
 				#ifdef ENABLE_KAHAN_SUMMATION_ENERGY
 				// Kahan summation
 				// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-				real y = pot_j - pot_com;
+				const real y = pot_j - pot_com;
 				volatile real t = pot_sum + y;
 				volatile real z = t - pot_sum;
 				pot_com = z - y;

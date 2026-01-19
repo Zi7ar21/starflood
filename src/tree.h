@@ -14,15 +14,14 @@ enum tree_conf {
 
 // Structure containing data of a tree node
 typedef struct {
-	uint parent; // parent of this node
+	uint parent; // parent node id
 	uint bodies; // number of particles in this node and children
 
-	uint child[8]; // children of this node (8 >= bodies: children are particles, 8 < bodies: children are nodes)
+	uint branch[8]; // children of this node (8 >= bodies: children are particles, 8 < bodies: children are nodes)
 
-	real bounds_min[3]; // node bounds min
-	real bounds_max[3]; // node bounds max
+	real bounds[6]; // node boundaries (boundary min/max in each axis, axis-minor order)
 
-	real param[TREE_DOF]; // tree parameters
+	real params[TREE_DOF]; // tree parameters
 } node_t;
 
 // Structure containing data of a tree
@@ -30,10 +29,9 @@ typedef struct {
 	uint max_nodes; // max number of nodes in the tree
 	uint num_nodes; //     number of nodes in the tree
 
-	real bounds_min[3]; // tree bounds min
-	real bounds_max[3]; // tree bounds max
+	real bounds[6]; // tree boundaries (boundary min/max in each axis, axis-minor order)
 
-	node_t* node; // dynamically allocated array containing the tree nodes
+	node_t* node; // array of nodes
 } tree_t;
 
 // Initializes a tree

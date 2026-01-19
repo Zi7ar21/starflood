@@ -72,27 +72,27 @@ int main(int argc, char** argv) {
 	enable_vis_io = 1;
 	#endif
 
-	unsigned int num_bodies = (unsigned int)NUM_BODIES, num_timesteps = (unsigned int)NUM_TIMESTEPS;
+	const unsigned int num_bodies = (unsigned int)NUM_BODIES, num_timesteps = (unsigned int)NUM_TIMESTEPS;
 
 	// ( 1:1) Aspect Ratio
-	//unsigned int visualization_dimensions[2] = { 144u,  144u}; // Potato (useful for computationally intensive phase-space searches)
-	//unsigned int visualization_dimensions[2] = { 360u,  360u}; //   Standard Definition
-	//unsigned int visualization_dimensions[2] = { 720u,  720u}; //       High-Definition
-	unsigned int visualization_dimensions[2] = {1080u, 1080u}; //  Full High-Definition
-	//unsigned int visualization_dimensions[2] = {2160u, 2160u}; // Ultra High-Definition
+	//const unsigned int visualization_dimensions[2] = { 144u,  144u}; // Potato (useful for computationally intensive phase-space searches)
+	//const unsigned int visualization_dimensions[2] = { 360u,  360u}; //   Standard Definition
+	//const unsigned int visualization_dimensions[2] = { 720u,  720u}; //       High-Definition
+	const unsigned int visualization_dimensions[2] = {1080u, 1080u}; //  Full High-Definition
+	//const unsigned int visualization_dimensions[2] = {2160u, 2160u}; // Ultra High-Definition
 
 	// (16:9) Aspect Ratio
-	//unsigned int visualization_dimensions[2] = { 640u,  360u}; //   Standard Definition
-	//unsigned int visualization_dimensions[2] = {1280u,  720u}; //       High-Definition
-	//unsigned int visualization_dimensions[2] = {1920u, 1080u}; //  Full High-Definition
-	//unsigned int visualization_dimensions[2] = {3840u, 2160u}; // Ultra High-Definition
+	//const unsigned int visualization_dimensions[2] = { 640u,  360u}; //   Standard Definition
+	//const unsigned int visualization_dimensions[2] = {1280u,  720u}; //       High-Definition
+	//const unsigned int visualization_dimensions[2] = {1920u, 1080u}; //  Full High-Definition
+	//const unsigned int visualization_dimensions[2] = {3840u, 2160u}; // Ultra High-Definition
 
 	// Cinematic Aspect Ratio
-	//unsigned int visualization_dimensions[2] = {2048u, 1080u}; // DCI 2K
-	//unsigned int visualization_dimensions[2] = {4096u, 2160u}; // DCI 4K
+	//const unsigned int visualization_dimensions[2] = {2048u, 1080u}; // DCI 2K
+	//const unsigned int visualization_dimensions[2] = {4096u, 2160u}; // DCI 4K
 
 	// Powers of Two
-	//unsigned int visualization_dimensions[2] = {1u << 8u, 1u << 8u}; // 256
+	//const unsigned int visualization_dimensions[2] = {1u << 8u, 1u << 8u}; // 256
 
 	sim_t sim;
 	vis_t vis;
@@ -413,13 +413,11 @@ int main(int argc, char** argv) {
 	}
 	#endif
 
-	unsigned int step_inc = 1u;
-
-	// If the simulation is disabled, we can increment step_num by OUTPUT_INTERVAL
 	#ifdef OUTPUT_INTERVAL
-	if(!enable_sim) {
-		step_inc = OUTPUT_INTERVAL;
-	}
+	// If the simulation is disabled, we can increment step_num by OUTPUT_INTERVAL
+	const unsigned int step_inc = !enable_sim ? (unsigned int)OUTPUT_INTERVAL : 1u;
+	#else
+	const unsigned int step_inc = 1u;
 	#endif
 
 	for(unsigned int step_num = 0u; step_num <= num_timesteps; step_num += step_inc) {
@@ -487,10 +485,11 @@ int main(int argc, char** argv) {
 		#endif
 
 		#ifdef OUTPUT_INTERVAL
-		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_sim_io ) {
+		if( (0u == (step_num % OUTPUT_INTERVAL)) && enable_sim_io )
 		#else
-		if(enable_sim_io) {
+		if(enable_sim_io)
 		#endif
+		{
 			if(enable_sim) {
 				#if (0 == SIM_FILE_FORMAT_SAVE)
 				if( STARFLOOD_SUCCESS != sim_save_raw(&sim, sim_save_file_name) ) {
@@ -529,10 +528,11 @@ int main(int argc, char** argv) {
 		}
 
 		#ifdef OUTPUT_INTERVAL
-		if(!(step_num % OUTPUT_INTERVAL) && enable_vis) {
+		if(!(step_num % OUTPUT_INTERVAL) && enable_vis)
 		#else
-		if(enable_vis) {
+		if(enable_vis)
 		#endif
+		{
 			if( STARFLOOD_SUCCESS != vis_draw(&vis, &sim) ) {
 				fprintf(stderr, "error: vis_draw(&vis, &sim) failed.\n");
 			}
@@ -540,14 +540,13 @@ int main(int argc, char** argv) {
 
 		if( (step_num < num_timesteps) && enable_sim) {
 			#ifdef SOLVER_VIS
-			if( STARFLOOD_SUCCESS != sim_step(&sim, vis.render_buffer, vis.sizex, vis.sizey) ) {
-				fprintf(stderr, "error: sim_step(&sim) failed.\n");
-			}
+			if( STARFLOOD_SUCCESS != sim_step(&sim, vis.render_buffer, vis.sizex, vis.sizey) )
 			#else
-			if( STARFLOOD_SUCCESS != sim_step(&sim) ) {
+			if( STARFLOOD_SUCCESS != sim_step(&sim) )
+			#endif
+			{
 				fprintf(stderr, "error: sim_step(&sim) failed.\n");
 			}
-			#endif
 		}
 
 		#ifdef OUTPUT_INTERVAL
@@ -556,7 +555,7 @@ int main(int argc, char** argv) {
 		if(enable_vis && enable_vis_io)
 		#endif
 		{
-			#if 0
+			#if 1
 			for(unsigned int y = 0u; y < vis.sizey; y++) {
 				for(unsigned int x = 0u; x < vis.sizex; x++) {
 					f32 rgba[4] = {
@@ -566,10 +565,12 @@ int main(int argc, char** argv) {
 						vis.render_buffer[4u*(vis.sizex*y+x)+3u]
 					};
 
-					rgba[0] *= (f32)0.0 != rgba[3] ? (f32)1.0 / rgba[3] : (f32)1.0;
-					rgba[1] *= (f32)0.0 != rgba[3] ? (f32)1.0 / rgba[3] : (f32)1.0;
-					rgba[2] *= (f32)0.0 != rgba[3] ? (f32)1.0 / rgba[3] : (f32)1.0;
-					rgba[3] *= (f32)0.0 != rgba[3] ? (f32)1.0 / rgba[3] : (f32)1.0;
+					f32 inv_alpha = (f32)0.0 != rgba[3] ? (f32)1.0 / rgba[3] : (f32)1.0;
+
+					rgba[0] *= inv_alpha;
+					rgba[1] *= inv_alpha;
+					rgba[2] *= inv_alpha;
+					rgba[3] *= inv_alpha;
 
 					rgba[3] = (f32)1.0;
 
