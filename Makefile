@@ -10,7 +10,7 @@ ROCM_PATH ?= /opt/rocm
 # default compiler
 CC ?= gcc
 
-# override default compiler
+# override default compiler (please don't commit uncommented lines)
 #CC := $(ROCM_PATH)/bin/amdclang
 #CC := clang
 #CC := gcc
@@ -19,16 +19,21 @@ CC ?= gcc
 
 # === Basic Optimization Flags ===
 
-# Clang/GCC optimized for debug (default)
-CFLAGS := -Og
+# Clang/GCC optimization flags (-O2 is the suggested default)
+#CFLAGS := -O0
+#CFLAGS := -Og
+#CLFAGS := -O1
+#CFLAGS := -O2
+CFLAGS := -O3
 
-# Clang/GCC tuned for performance on compiler host machine (x86-64)
-#CFLAGS := -flto=auto -march=native -O2
-#CFLAGS := -flto=auto -march=native -O3
+# Clang/GCC tune for performance on compiler host machine
+# x86-64
+#CFLAGS := $(CFLAGS) -march=native
+# AArch64 (TODO: research Clang vs GCC big.LITTLE tuning)
+#CFLAGS := $(CFLAGS) -mcpu=native
 
-# Clang/GCC tuned for performance on compiler host machine (AArch64)
-#CFLAGS := -flto=auto -mcpu=native -O2
-#CFLAGS := -flto=auto -mcpu=native -O3
+# Clang/GCC link-time optimization
+CFLAGS := -flto=auto $(CFLAGS)
 
 # GCC flag to enable auto-vectorization (GCC doesn't enable this unless using -O3, and Clang uses its own auto-vectorization by default)
 ifeq ($(CC),gcc)
@@ -64,6 +69,8 @@ CFLAGS := -fopenmp $(CFLAGS)
 # Note: This makes floating-point math non-deterministic
 # across different compilers/platforms/vendors
 #CFLAGS := -ffast-math $(CFLAGS)
+CFLAGS := -mfpmath=sse $(CFLAGS)
+CFLAGS := -fno-math-errno -fassociative-math -freciprocal-math $(CFLAGS)
 
 # Generate debugging information (regular)
 #DEBUG_CFLAGS := -g
@@ -143,37 +150,37 @@ $(OUT_DIR)/src:
 	mkdir -p $(OUT_DIR)/src
 
 $(OUT_DIR)/starflood: $(OBJS) | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -isystem stb $^ -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) -isystem stb -o $@ $^ $(LDFLAGS)
 
 $(OUT_DIR)/src/main.c.o: $(SRC_DIR)/main.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OUT_DIR)/src/gravity.c.o: $(SRC_DIR)/gravity.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OUT_DIR)/src/grid.c.o: $(SRC_DIR)/grid.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OUT_DIR)/src/initcond.c.o: $(SRC_DIR)/initcond.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OUT_DIR)/src/log.c.o: $(SRC_DIR)/log.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OUT_DIR)/src/simulation.c.o: $(SRC_DIR)/simulation.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OUT_DIR)/src/simulation_io.c.o: $(SRC_DIR)/simulation_io.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OUT_DIR)/src/sph.c.o: $(SRC_DIR)/sph.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OUT_DIR)/src/tree.c.o: $(SRC_DIR)/tree.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OUT_DIR)/src/visualization.c.o: $(SRC_DIR)/visualization.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OUT_DIR)/src/visualization_io.c.o: $(SRC_DIR)/visualization_io.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -isystem stb -c $< -o $@
+	$(CC) $(CFLAGS) -isystem stb -c -o $@ $<
