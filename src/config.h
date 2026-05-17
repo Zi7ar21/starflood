@@ -136,11 +136,12 @@
 // Uncomment to enable timing
 #define ENABLE_TIMING
 
-// Uncomment to use omp_get_wtime() instead of POSIX time.h functions, requires OpenMP to be enabled
+// Uncomment to use OpenMP omp_get_wtime() instead of POSIX clock and time functions
+// for timing (requires OpenMP)
 //#define TIMING_USE_OMP_GET_WTIME
 
 // Uncomment to override the POSIX clockid (used by clock_getres(), clock_gettime(), etc.)
-// When commented, it defaults to CLOCK_MONOTONIC
+// If commented, STARFLOOD_POSIX_CLOCKID will be defined as CLOCK_MONOTONIC
 // Note: This has no effect when using #define TIMING_USE_OMP_GET_WTIME
 //#define STARFLOOD_POSIX_CLOCKID CLOCK_REALTIME
 //#define STARFLOOD_POSIX_CLOCKID CLOCK_MONOTONIC
@@ -156,9 +157,9 @@
 //#define NUM_BODIES 8192
 //#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-//#define NUM_BODIES 65536
+#define NUM_BODIES 65536
 //#define NUM_BODIES 131072
-#define NUM_BODIES 262144
+//#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
 //#define NUM_BODIES 1048576
 
