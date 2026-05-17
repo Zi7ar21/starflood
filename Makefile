@@ -8,7 +8,6 @@ ROCM_PATH ?= /opt/rocm
 # === Compiler Selection ===
 
 # default compiler
-#CC ?= clang
 CC ?= gcc
 
 # override default compiler
@@ -23,9 +22,13 @@ CC ?= gcc
 # Clang/GCC optimized for debug (default)
 CFLAGS := -Og
 
-# Clang/GCC tuned for performance on compiler host machine
+# Clang/GCC tuned for performance on compiler host machine (x86-64)
 #CFLAGS := -flto=auto -march=native -O2
 #CFLAGS := -flto=auto -march=native -O3
+
+# Clang/GCC tuned for performance on compiler host machine (AArch64)
+#CFLAGS := -flto=auto -mcpu=native -O2
+#CFLAGS := -flto=auto -mcpu=native -O3
 
 # GCC flag to enable auto-vectorization (GCC doesn't enable this unless using -O3, and Clang uses its own auto-vectorization by default)
 ifeq ($(CC),gcc)
@@ -76,7 +79,7 @@ DEBUG_CFLAGS := -g
 DEBUG_CFLAGS := -gopt
 endif
 
-# === Profiling Guided Optimization ===
+# === Profiling-Guided Optimization ===
 
 #CFLAGS := -fprofile-instr-generate $(CFLAGS)
 #llvm-profdata merge -output=starflood.profdata default.profraw
