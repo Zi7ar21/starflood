@@ -152,10 +152,19 @@ int sim_save_raw(const sim_t* restrict sim_ptr, const char* restrict filename) {
 #define IO_PLY_MAX_PROPERTY_LEN 32
 
 // Maximum number of properties
-#define IO_PLY_MAX_PROPERTY_NUM 16
+#define IO_PLY_MAX_PROPERTY_NUM 32
 
 #define IO_PLY_HEADER_MAX_LINE_LEN 256
 #define IO_PLY_HEADER_MAX_LINE_NUM 256
+
+typedef enum {
+	IO_PLY_HEADER_LINE_PLY,
+	IO_PLY_HEADER_LINE_COMMENT,
+	IO_PLY_HEADER_LINE_FORMAT,
+	IO_PLY_HEADER_LINE_ELEMENT,
+	IO_PLY_HEADER_LINE_PROPERTY,
+	IO_PLY_HEADER_LINE_END,
+} io_ply_header_line_t;
 
 // Enumeration of format types
 typedef enum {
@@ -164,23 +173,15 @@ typedef enum {
 	IO_PLY_FORMAT_BINARY_BE
 } io_ply_format_t;
 
-// Enumeration of property datatypes
 typedef enum {
-	IO_PLY_DATATYPE_F32, // 32-bit floating-point
-	IO_PLY_DATATYPE_F64, // 64-bit floating-point
-	IO_PLY_DATATYPE_I32, // 32-bit   signed integer
-	IO_PLY_DATATYPE_I64, // 64-bit   signed integer
-	IO_PLY_DATATYPE_U32, // 32-bit unsigned integer
-	IO_PLY_DATATYPE_U64, // 64-bit unsigned integer
-	IO_PLY_DATATYPE_END
+	IO_PLY_DATATYPE_FLOAT,
+	IO_PLY_DATATYPE_DOUBLE,
 } io_ply_datatype_t;
 
 typedef struct {
-	enum sim_conf sim_parameter; // simulation parameter the property is linked to
-
 	io_ply_datatype_t datatype;
-
 	char name[IO_PLY_MAX_PROPERTY_LEN];
+	enum sim_conf sim_parameter;
 } io_ply_property_t;
 
 typedef struct {
@@ -194,16 +195,18 @@ int sim_read_ply(sim_t* restrict sim_ptr, const char* restrict filename) {
 	TIMING_INIT();
 
 	#ifdef STARFLOOD_DOUBLE_PRECISION
-	if( sizeof(real) != sizeof(f64) )
-	#else
-	if( sizeof(real) != sizeof(f32) )
-	#endif
-	{
+	if( sizeof(real) != sizeof(f64) ) {
 		return STARFLOOD_FAILURE;
 	}
+	#else
+	if( sizeof(real) != sizeof(f32) ) {
+		return STARFLOOD_FAILURE;
+	}
+	#endif
 
-	fprintf(stderr, "%s warning: PLY file reader implementation is incomplete.\n", "sim_read_ply()");
+	fprintf(stderr, "%s error: PLY file reader implementation is incomplete.\n", "sim_read_ply()");
 
+	/*
 	if(NULL == (void*)filename) {
 		fprintf(stderr, "%s error: filename is NULL!\n", "sim_read_ply()");
 		return STARFLOOD_FAILURE;
@@ -229,7 +232,6 @@ int sim_read_ply(sim_t* restrict sim_ptr, const char* restrict filename) {
 		return STARFLOOD_FAILURE;
 	}
 
-	/*
 	if( 0 != fseek(file, 0l, SEEK_END) ) {
 		fprintf(stderr, "%s error: fseek(file, 0l, SEEK_END) ", "sim_read_ply()");
 		perror("failed");
@@ -365,8 +367,6 @@ int sim_read_ply(sim_t* restrict sim_ptr, const char* restrict filename) {
 
 	TIMING_STOP();
 	TIMING_PRINT("sim_read_ply()", "parse_header");
-	*/
-
 	TIMING_START();
 
 	if( 0 != fclose(file) ) {
@@ -377,6 +377,7 @@ int sim_read_ply(sim_t* restrict sim_ptr, const char* restrict filename) {
 
 	TIMING_STOP();
 	TIMING_PRINT("sim_read_ply()", "fclose()");
+	*/
 
 	return STARFLOOD_FAILURE;
 }
@@ -384,16 +385,17 @@ int sim_read_ply(sim_t* restrict sim_ptr, const char* restrict filename) {
 int sim_save_ply(const sim_t* restrict sim_ptr, const char* restrict filename) {
 	TIMING_INIT();
 
-	const sim_t sim = *sim_ptr;
+	sim_t sim = *sim_ptr;
 
 	#ifdef STARFLOOD_DOUBLE_PRECISION
-	if( sizeof(real) != sizeof(f64) )
-	#else
-	if( sizeof(real) != sizeof(f32) )
-	#endif
-	{
+	if( sizeof(real) != sizeof(f64) ) {
 		return STARFLOOD_FAILURE;
 	}
+	#else
+	if( sizeof(real) != sizeof(f32) ) {
+		return STARFLOOD_FAILURE;
+	}
+	#endif
 
 	if(NULL == (void*)filename) {
 		fprintf(stderr, "%s error: filename is NULL!\n", "sim_save_ply()");
@@ -424,7 +426,6 @@ int sim_save_ply(const sim_t* restrict sim_ptr, const char* restrict filename) {
 
 	io_ply_header_t ply_header;
 
-	ply_header.format = (BYTE_ORDER_LE == host_byte_order) ? IO_PLY_FORMAT_BINARY_LE : IO_PLY_FORMAT_BINARY_BE;
 	ply_header.num_vertices = (size_t)sim.N;
 
 	#if (1 == SIM_FILE_FORMAT_SAVE)
@@ -435,12 +436,6 @@ int sim_save_ply(const sim_t* restrict sim_ptr, const char* restrict filename) {
 
 	for(size_t i = (size_t)0u; i < ply_header.num_property; i++) {
 		ply_header.property[i].sim_parameter = (enum sim_conf)i;
-
-		#ifdef STARFLOOD_DOUBLE_PRECISION
-		ply_header.property[i].datatype = IO_PLY_DATATYPE_F64;
-		#else
-		ply_header.property[i].datatype = IO_PLY_DATATYPE_F32;
-		#endif
 
 		char property_name[IO_PLY_MAX_PROPERTY_LEN];
 
@@ -502,30 +497,18 @@ int sim_save_ply(const sim_t* restrict sim_ptr, const char* restrict filename) {
 		strcpy(ply_header.property[i].name, property_name);
 	}
 
-	fprintf(file, "ply\n");
-
-	fprintf(file, "format %s 1.0\n", (IO_PLY_FORMAT_BINARY_LE == ply_header.format) ? "binary_little_endian" : "binary_big_endian");
-
-	fprintf(file, "comment Created by Starflood version %d.%d.%d\n", STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH);
-
-	fprintf(file, "element vertex %zu\n", (size_t)sim.N);
+	fprintf(file,
+		"ply\n"
+		"format %s 1.0\n"
+		"comment Created by Starflood version %d.%d.%d\n"
+		"element vertex %zu\n",
+		(BYTE_ORDER_LE == host_byte_order ? "binary_little_endian" : "binary_big_endian"),
+		STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH,
+		(size_t)sim.N
+	);
 
 	for(size_t i = (size_t)0u; i < ply_header.num_property; i++) {
-		char datatype_str[8];
-
-		switch(ply_header.property[i].datatype) {
-			case IO_PLY_DATATYPE_F32:
-				strcpy(datatype_str, "float");
-				break;
-			case IO_PLY_DATATYPE_F64:
-				strcpy(datatype_str, "double");
-				break;
-			default:
-				strcpy(datatype_str, "unknown");
-				break;
-		}
-
-		fprintf(file, "property %s %s\n", datatype_str, ply_header.property[i].name);
+		fprintf(file, "property " REAL_TYPE_STRING " %s\n", ply_header.property[i].name);
 	}
 
 	fprintf(file, "end_header\n");
@@ -552,14 +535,7 @@ int sim_save_ply(const sim_t* restrict sim_ptr, const char* restrict filename) {
 	TIMING_PRINT("sim_save_ply()", "fwrite()");
 	TIMING_START();
 	#else
-	size_t property_data_size = (size_t)0u;
-
-	for(size_t i = (size_t)0u; i < ply_header.num_property; i++) {
-	}
-
 	for(unsigned int i = 0u; i < ply_header.num_vertices; i++) {
-		unsigned char property_data[8u * IO_PLY_MAX_PROPERTY_NUM];
-
 		for(unsigned int j = 0u; j < ply_header.num_property; j++) {
 			enum sim_conf sim_parameter = ply_header.property[j].sim_parameter;
 
@@ -569,8 +545,6 @@ int sim_save_ply(const sim_t* restrict sim_ptr, const char* restrict filename) {
 
 			fwrite(&property, sizeof(real), (size_t)1u, file);
 		}
-
-		fwrite(&property_data, sizeof(unsigned char), 
 	}
 
 	TIMING_STOP();

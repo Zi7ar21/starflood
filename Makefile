@@ -17,28 +17,38 @@ CC ?= gcc
 #CC := icx
 #CC := nvc
 
-# === Basic Optimization Flags ===
+# === Optimization Flags ===
 
 # Clang/GCC optimization flags (-O2 is the suggested default)
 #CFLAGS := -O0
 #CFLAGS := -Og
 #CLFAGS := -O1
-#CFLAGS := -O2
-CFLAGS := -O3
+CFLAGS := -O2
+#CFLAGS := -O3
 
 # Clang/GCC tune for performance on compiler host machine
-# x86-64
+#  x86-64: use -march=native
+# AArch64: use  -mcpu=native
 #CFLAGS := $(CFLAGS) -march=native
-# AArch64 (TODO: research Clang vs GCC big.LITTLE tuning)
 #CFLAGS := $(CFLAGS) -mcpu=native
 
-# Clang/GCC link-time optimization
-CFLAGS := -flto=auto $(CFLAGS)
+# Clang/GCC enable OpenMP (compiler directive-based parallelization)
+CFLAGS := -fopenmp $(CFLAGS)
 
-# GCC flag to enable auto-vectorization (GCC doesn't enable this unless using -O3, and Clang uses its own auto-vectorization by default)
+# GCC auto-vectorization (Clang has auto-vectorization enabled by default, GCC does not unless using -O3)
 ifeq ($(CC),gcc)
 #CFLAGS := -ftree-vectorize $(CFLAGS)
 endif
+
+# Clang/GCC unsafe floating-point optimizations
+# Note: This makes floating-point math non-deterministic
+# across different compilers/platforms/vendors
+#CFLAGS := -ffast-math $(CFLAGS)
+#CFLAGS := -mfpmath=sse $(CFLAGS)
+CFLAGS := -fno-math-errno -fassociative-math -freciprocal-math $(CFLAGS)
+
+# Clang/GCC link-time optimization
+CFLAGS := -flto=auto $(CFLAGS)
 
 # AMD ROCm Clang/LLVM Compiler
 ifeq ($(CC),$(ROCM_PATH)/bin/amdclang)
@@ -61,16 +71,6 @@ endif
 
 # === More Optimization Flags ===
 # Uncomment any of the following special flags matching your compiler
-
-# Clang/GCC enable OpenMP (compiler directive-based parallelization)
-CFLAGS := -fopenmp $(CFLAGS)
-
-# Clang/GCC unsafe floating-point optimizations
-# Note: This makes floating-point math non-deterministic
-# across different compilers/platforms/vendors
-#CFLAGS := -ffast-math $(CFLAGS)
-CFLAGS := -mfpmath=sse $(CFLAGS)
-CFLAGS := -fno-math-errno -fassociative-math -freciprocal-math $(CFLAGS)
 
 # Generate debugging information (regular)
 #DEBUG_CFLAGS := -g
@@ -95,12 +95,12 @@ endif
 # === Regular Flags ===
 
 # Set the C language standard
-CFLAGS := $(CFLAGS) -pedantic -std=c99
+CFLAGS := $(CFLAGS) -std=c99 -Wpedantic
 
 # Enable warnings
 CFLAGS := $(CFLAGS) -Wall -Wconversion -Wextra -Wshadow
 
-# Disable warnings
+# Disable some warnings
 CFLAGS := $(CFLAGS) -Wno-unused-parameter -Wno-unused-variable
 
 # Include stb headers as if they were system headers
