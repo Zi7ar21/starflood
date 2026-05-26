@@ -11,7 +11,7 @@ typedef enum {
 	BYTE_ORDER_ERROR
 } byte_order_t;
 
-static inline byte_order_t detect_host_byte_order() {
+static inline byte_order_t detect_host_byte_order(void) {
 	#ifdef STARFLOOD_DOUBLE_PRECISION
 	volatile uint64_t magic_number = (uint32_t)0x401921FB54442D18u;
 

@@ -95,7 +95,7 @@ endif
 # === Regular Flags ===
 
 # Set the C language standard
-CFLAGS := $(CFLAGS) -std=c99 -Wpedantic
+CFLAGS := $(CFLAGS) -std=c11 -Wpedantic
 
 # Enable warnings
 CFLAGS := $(CFLAGS) -Wall -Wconversion -Wextra -Wshadow
@@ -126,61 +126,30 @@ LDFLAGS := $(LDFLAGS) -lpthread
 # Enable debug flags
 CFLAGS := $(DEBUG_CFLAGS) $(CFLAGS)
 
-# === Targets ===
+# === Make ===
 
-OUT_DIR := ./build
+BUILD_DIR := ./build
 
-SRC_DIR := ./src
+CFLAGS := $(CFLAGS) -MMD -MP -isystem stb
 
-SRCS := main.c gravity.c grid.c initcond.c log.c simulation.c simulation_io.c sph.c tree.c visualization.c visualization_io.c
+SOURCES := $(shell find src -name '*.c')
 
-OBJS := $(addprefix $(OUT_DIR)/src/,$(addsuffix .o,$(SRCS)))
+OBJECTS := $(SOURCES:%=$(BUILD_DIR)/%.o)
+
+DEPENDS := $(OBJECTS:.o=.d)
 
 .PHONY: all
-all: $(OUT_DIR)/starflood
+all: build/starflood
 
 .PHONY: clean
 clean:
-	rm -rfv $(OUT_DIR)/*
-#	rm -fdv $(OUT_DIR)/starflood $(OBJS)
-#	rm -fdv $(OUT_DIR)/src
-#	rm -fdv $(OUT_DIR)
+	rm -r $(BUILD_DIR)
 
-$(OUT_DIR)/src:
-	mkdir -p $(OUT_DIR)/src
+$(BUILD_DIR)/starflood: $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-$(OUT_DIR)/starflood: $(OBJS) | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -isystem stb -o $@ $^ $(LDFLAGS)
-
-$(OUT_DIR)/src/main.c.o: $(SRC_DIR)/main.c | $(OUT_DIR)/src
+$(BUILD_DIR)/%.c.o: %.c
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(OUT_DIR)/src/gravity.c.o: $(SRC_DIR)/gravity.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OUT_DIR)/src/grid.c.o: $(SRC_DIR)/grid.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OUT_DIR)/src/initcond.c.o: $(SRC_DIR)/initcond.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OUT_DIR)/src/log.c.o: $(SRC_DIR)/log.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OUT_DIR)/src/simulation.c.o: $(SRC_DIR)/simulation.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OUT_DIR)/src/simulation_io.c.o: $(SRC_DIR)/simulation_io.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OUT_DIR)/src/sph.c.o: $(SRC_DIR)/sph.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OUT_DIR)/src/tree.c.o: $(SRC_DIR)/tree.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OUT_DIR)/src/visualization.c.o: $(SRC_DIR)/visualization.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(OUT_DIR)/src/visualization_io.c.o: $(SRC_DIR)/visualization_io.c | $(OUT_DIR)/src
-	$(CC) $(CFLAGS) -isystem stb -c -o $@ $<
+-include depends
