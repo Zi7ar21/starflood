@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+/* Copyright (c) 2023-2026 Jacob Bingham
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
+ */
 // needed for posix_memalign() and timing.h
 #define _POSIX_C_SOURCE 200112L
 

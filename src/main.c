@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+/* Copyright (c) 2023-2026 Jacob Bingham
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
+ */
 // needed for clock_getres() and clock_gettime()
 #define _POSIX_C_SOURCE 199309L
 
@@ -203,11 +208,13 @@ int main(int argc, char** argv) {
 		if( 0 == strcmp("-V", argv[i]) || 0 == strcmp("--version", argv[i]) ) {
 			printf(
 				"Starflood version %d.%d.%d\n"
-				"\n"
+				"%s\n\n%s\n"
 				"Starflood repository: <%s>\n",
 				STARFLOOD_VERSION_MAJOR,
 				STARFLOOD_VERSION_MINOR,
 				STARFLOOD_VERSION_PATCH,
+				STARFLOOD_COPYRIGHT,
+				STARFLOOD_LICENSE,
 				STARFLOOD_REPOSITORY
 			);
 
@@ -228,6 +235,8 @@ int main(int argc, char** argv) {
 	printf("=== Starflood ===\n");
 
 	printf("  Version %d.%d.%d\n", STARFLOOD_VERSION_MAJOR, STARFLOOD_VERSION_MINOR, STARFLOOD_VERSION_PATCH);
+
+	printf("%s\n", STARFLOOD_COPYRIGHT);
 
 	fflush(stdout);
 

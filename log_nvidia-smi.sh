@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
 #FILENAME="./out/log_nvidia-smi_$(date +%Y-%m-%d).csv"
 FILENAME="./out/log_nvidia-smi.csv"

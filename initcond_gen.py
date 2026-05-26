@@ -1,6 +1,15 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2023-2026 Jacob Bingham
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+
+# galpy: A Python Library for Galactic Dynamics, Jo Bovy (2015), Astrophys. J. Supp., 216, 29 (arXiv/1412.3451).
+# http://arxiv.org/abs/1412.3451
+# http://github.com/jobovy/galpy
 from galpy import df
 from galpy import potential
 from galpy.actionAngle import actionAngleStaeckel
+
 import matplotlib.pyplot as plt
 
 print("This script is incomplete, feel free to make any contributions/suggestions on the Starflood repository: https://github.com/Zi7ar21/starflood")
