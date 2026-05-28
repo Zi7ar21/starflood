@@ -259,7 +259,7 @@ int main(int argc, char** argv) {
 		printf("\n        POSIX clock enabled: ");
 		#ifdef TIMING_USE_OMP_GET_WTIME
 		printf("false");
-		#else
+		#else // TIMING_USE_OMP_GET_WTIME
 		printf("true");
 		printf("\n            clockid: ");
 
@@ -320,10 +320,10 @@ int main(int argc, char** argv) {
 
 			printf("%.03f nsec", 0.01 * (double)clock_minimum_difference);
 		}
-		#endif
-	#else
+		#endif // TIMING_USE_OMP_GET_WTIME
+	#else // ENABLE_TIMING
 	printf("false");
-	#endif
+	#endif // ENABLE_TIMING
 	printf("\nParameters:");
 	printf("\n    num_timesteps: %u", num_timesteps);
 	printf("\n    Simulation:");

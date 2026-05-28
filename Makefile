@@ -100,7 +100,7 @@ endif
 # === Regular Flags ===
 
 # Set the C language standard
-CFLAGS := $(CFLAGS) -std=c11 -Wpedantic
+CFLAGS := $(CFLAGS) -std=c99 -Wpedantic
 
 # Enable warnings
 CFLAGS := $(CFLAGS) -Wall -Wconversion -Wextra -Wshadow
@@ -148,7 +148,7 @@ all: build/starflood
 
 .PHONY: clean
 clean:
-	rm -r $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)
 
 $(BUILD_DIR)/starflood: $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)

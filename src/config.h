@@ -11,7 +11,7 @@
 
 // Uncomment to use OpenMP target constructs (if OpenMP is enabled)
 //#define ENABLE_OFFLOAD_SIM
-#define ENABLE_OFFLOAD_VIS
+//#define ENABLE_OFFLOAD_VIS
 
 // CAUTION: Experimental
 // Uncomment to create a separate thread for visualization file output (requires pthreads)
@@ -24,7 +24,7 @@
 /* === General === */
 
 // Default number of simulation timesteps to run
-#define NUM_TIMESTEPS 10
+#define NUM_TIMESTEPS 100
 
 // Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
 // If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed

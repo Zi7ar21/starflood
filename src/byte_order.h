@@ -18,7 +18,7 @@ typedef enum {
 
 static inline byte_order_t detect_host_byte_order(void) {
 	#ifdef STARFLOOD_DOUBLE_PRECISION
-	volatile uint64_t magic_number = (uint32_t)0x401921FB54442D18u;
+	volatile uint64_t magic_number = (uint64_t)0x401921FB54442D18u;
 
 	uint64_t accumulator = (uint64_t)0u;
 
