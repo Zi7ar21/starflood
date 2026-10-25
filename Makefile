@@ -65,9 +65,13 @@ ifeq ($(CC),icx)
 CFLAGS := -fiopenmp -fopenmp-targets=spir64 -march=native -O2
 endif
 
-# NVIDIA HPC Compilers tuned for performance on compiler host machine with offloading
+# (unsupported, read note below) NVIDIA HPC Compilers tuned for performance on compiler host machine with offloading
 ifeq ($(CC),nvc)
-CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
+# please see https://github.com/Zi7ar21/starflood/issues/2#issuecomment-6393741084
+# comment the following line, and uncomment one of the ones below it if you wish to try the NVIDIA HPC SDK...
+# if it fails to work, it's NVIDIA's fault and I cannot help because they will refuse to help. Sorry!
+CFLAGS := -gpu=ccnative -mp=gpu -march=x86-64-v2 -O2 --diag_suppress lossy_conversion
+#CFLAGS := -gpu=ccnative -mp=gpu -march=native -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O2 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O3 --diag_suppress lossy_conversion
 #CFLAGS := -gpu=ccnative -mp=gpu -march=native -fast -O4 --diag_suppress lossy_conversion
