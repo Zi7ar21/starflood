@@ -5,8 +5,6 @@
  */
 #pragma once
 
-#include <stddef.h>
-
 #include "config.h"
 #include "types.h"
 
@@ -17,6 +15,8 @@
 #ifdef ENABLE_TREE
 #include "tree.h"
 #endif
+
+#include <stddef.h>
 
 // enumeration of simulation parameters (configuration space)
 enum sim_conf {

@@ -5,9 +5,9 @@
  */
 #pragma once
 
-#include <stdint.h>
-
 #include "pcg.h"
+
+#include <stdint.h>
 
 // The closest (but still less than) IEEE-754 binary32 value to 1 / exp2(32)
 // Multiplying a random, uniformly distributed unsigned 32-bit integer by

@@ -5,12 +5,12 @@
  */
 #pragma once
 
-#include <stddef.h>
-
 #include "common.h"
 #include "config.h"
 #include "simulation.h"
 #include "types.h"
+
+#include <stddef.h>
 
 // Enumeration of image file types
 typedef enum {

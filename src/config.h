@@ -37,7 +37,7 @@
 #define SOLVER_VIS 3
 
 // Uncomment to enable tree calculations
-#define ENABLE_TREE
+//#define ENABLE_TREE
 
 // Maximum allowed depth of the tree
 #define TREE_DEPTH_MAX 16

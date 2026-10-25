@@ -6,16 +6,8 @@
 // Needed for pthread.h, posix_memalign(), and timing.h
 #define _POSIX_C_SOURCE 200809L
 
+// include corresponding header
 #include "visualization.h"
-
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#ifdef _OPENMP
-#include <omp.h>
-#endif
 
 #include "common.h"
 #include "config.h"
@@ -25,8 +17,20 @@
 #include "types.h"
 #include "timing.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #ifdef ENABLE_VIS_IO_THREAD
 #include <pthread.h>
+#endif
+
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef ENABLE_VIS_IO_THREAD
 extern pthread_t vis_io_thread;
 extern pthread_mutex_t vis_io_mutex;
 

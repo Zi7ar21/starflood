@@ -3,8 +3,22 @@
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <https://www.gnu.org/licenses/>.
  */
-// needed for clock_getres() and clock_gettime()
 #define _POSIX_C_SOURCE 199309L
+
+#include "common.h"
+#include "config.h"
+#include "initcond.h"
+#include "simulation.h"
+#include "timing.h"
+#include "types.h"
+#include "visualization.h"
+
+#ifdef _OPENMP
+//#pragma message("OpenMP is ENABLED")
+#include <omp.h>
+#else
+//#pragma message("OpenMP is NOT ENABLED")
+#endif
 
 #include <math.h>
 #include <stdbool.h>
@@ -14,21 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#ifdef _OPENMP
-//#pragma message("OpenMP is ENABLED")
-#include <omp.h>
-#else
-//#pragma message("OpenMP is NOT ENABLED")
-#endif
-
-#include "common.h"
-#include "config.h"
-#include "initcond.h"
-#include "simulation.h"
-#include "timing.h"
-#include "types.h"
-#include "visualization.h"
 
 #if (0 >= SIM_FILE_FORMAT_READ)
 #define SIM_FILE_EXTENSION_READ ".raw"

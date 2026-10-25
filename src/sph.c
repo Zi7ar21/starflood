@@ -3,9 +3,9 @@
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <https://www.gnu.org/licenses/>.
  */
-// Needed for timing.h
 #define _POSIX_C_SOURCE 199309L
 
+// include corresponding header
 #include "sph.h"
 
 #ifdef ENABLE_SPH

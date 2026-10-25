@@ -33,8 +33,8 @@ CFLAGS := -O2
 
 # Clang/GCC tune for performance on compiler host machine
 #  x86-64: use -march=native
-# AArch64: use  -mcpu=native
-#CFLAGS := $(CFLAGS) -march=native
+# AArch64: use  -mcpu=native also
+CFLAGS := $(CFLAGS) -march=native
 #CFLAGS := $(CFLAGS) -mcpu=native
 
 # Clang/GCC enable OpenMP (compiler directive-based parallelization)
@@ -49,8 +49,8 @@ endif
 # Note: This makes floating-point math non-deterministic
 # across different compilers/platforms/vendors
 #CFLAGS := -ffast-math $(CFLAGS)
-#CFLAGS := -mfpmath=sse $(CFLAGS)
-CFLAGS := -fno-math-errno -fassociative-math -freciprocal-math $(CFLAGS)
+CFLAGS := -mfpmath=sse $(CFLAGS)
+CFLAGS := -fassociative-math -fno-math-errno -fno-signed-zeros -fno-trapping-math -freciprocal-math $(CFLAGS)
 
 # Clang/GCC link-time optimization
 CFLAGS := -flto=auto $(CFLAGS)
@@ -148,7 +148,7 @@ all: build/starflood
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/*
 
 $(BUILD_DIR)/starflood: $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)

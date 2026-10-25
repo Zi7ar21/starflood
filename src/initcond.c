@@ -3,15 +3,18 @@
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <https://www.gnu.org/licenses/>.
  */
-#include "initcond.h"
+#define _POSIX_C_SOURCE 199309L
 
-#include <math.h>
+// include corresponding header
+#include "initcond.h"
 
 #include "common.h"
 #include "config.h"
 #include "rng.h"
 #include "simulation.h"
 #include "types.h"
+
+#include <math.h>
 
 int initcond_generate(sim_t* restrict sim_ptr) {
 	sim_t sim = *sim_ptr;

@@ -3,14 +3,10 @@
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <https://www.gnu.org/licenses/>.
  */
-// Needed for timing.h
 #define _POSIX_C_SOURCE 199309L
 
+// include corresponding header
 #include "grid.h"
-
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "common.h"
 #include "log.h"
@@ -27,6 +23,10 @@
 log_t log_timings_fft_exec;
 #endif
 #endif
+
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 int grid_init(grid_t* restrict grid_ptr, unsigned int side_length, const real* restrict bounds_min, const real* restrict bounds_max) {
 	grid_t grid = *grid_ptr;

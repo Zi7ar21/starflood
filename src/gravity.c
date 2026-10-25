@@ -3,20 +3,20 @@
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <https://www.gnu.org/licenses/>.
  */
-// Needed for timing.h
 #define _POSIX_C_SOURCE 199309L
 
+// include corresponding header
 #include "gravity.h"
-
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "common.h"
 #include "config.h"
 #include "rng.h"
 #include "timing.h"
 #include "types.h"
+
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifdef SOLVER_VIS
 extern real matMVP[16];

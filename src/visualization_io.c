@@ -6,13 +6,8 @@
 // Needed for pthread.h and timing.h
 #define _POSIX_C_SOURCE 200809L
 
+// include corresponding header
 #include "visualization.h"
-
-#include <math.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "common.h"
 #include "config.h"
@@ -21,13 +16,22 @@
 
 #ifdef ENABLE_VIS_IO_THREAD
 #include <pthread.h>
-pthread_t vis_io_thread;
-pthread_mutex_t vis_io_mutex;
 #endif
 
 #ifdef ENABLE_STB_IMAGE_WRITE
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
+#endif
+
+#include <math.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef ENABLE_VIS_IO_THREAD
+pthread_t vis_io_thread;
+pthread_mutex_t vis_io_mutex;
 #endif
 
 int image_write_pfm(const void* restrict data, size_t w, size_t h, const char* restrict filename) {

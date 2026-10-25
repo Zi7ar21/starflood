@@ -3,20 +3,20 @@
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <https://www.gnu.org/licenses/>.
  */
-// Needed for timing.h
 #define _POSIX_C_SOURCE 199309L
 
+// include corresponding header
 #include "simulation.h"
-
-#include <stddef.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "byte_order.h"
 #include "common.h"
 #include "config.h"
 #include "timing.h"
 #include "types.h"
+
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
 int sim_read_raw(sim_t* restrict sim_ptr, const char* restrict filename) {
 	TIMING_INIT();

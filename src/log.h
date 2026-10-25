@@ -5,9 +5,9 @@
  */
 #pragma once
 
-#include <stdio.h>
-
 #include "config.h"
+
+#include <stdio.h>
 
 typedef struct {
 	FILE* file;

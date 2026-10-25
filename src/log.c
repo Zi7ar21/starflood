@@ -3,13 +3,16 @@
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <https://www.gnu.org/licenses/>.
  */
+#define _POSIX_C_SOURCE 199309L
+
+// include corresponding header
 #include "log.h"
+
+#include "common.h"
 
 #include <stdint.h>
 #include <stdio.h>
 #include <time.h>
-
-#include "common.h"
 
 int log_init(log_t* restrict log, const char* restrict filename) {
 	if(NULL == (void*)filename) {

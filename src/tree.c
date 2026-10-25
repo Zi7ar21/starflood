@@ -6,15 +6,16 @@
 // Needed for posix_memalign() and timing.h
 #define _POSIX_C_SOURCE 200112L
 
+// include corresponding header
 #include "tree.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "common.h"
 #include "timing.h"
 #include "types.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 int tree_init(tree_t* restrict tree_ptr, uint max_nodes) {
 	{

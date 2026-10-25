@@ -6,16 +6,8 @@
 // needed for posix_memalign() and timing.h
 #define _POSIX_C_SOURCE 200112L
 
+// include corresponding header
 #include "simulation.h"
-
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#ifdef _OPENMP
-#include <omp.h>
-#endif
 
 #include "common.h"
 #include "config.h"
@@ -25,6 +17,15 @@
 #include "rng.h"
 #include "sph.h"
 #include "timing.h"
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef LOG_STATISTICS
 log_t log_statistics;
