@@ -7,6 +7,11 @@
 
 # === Environment Variables ===
 
+# (ONLY IF BUILT FROM SOURCE!) LLVM Clang install directory (this should match CMAKE_INSTALL_PREFIX, it is /usr/local if unspecified when building Clang)
+# cmake ../llvm -G Ninja -C ../offload/cmake/caches/Offload.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/llvm
+# find /opt/llvm -name "libomptarget.so*"
+LLVM_PATH ?= /opt/llvm
+
 # AMD ROCm install directory (only if compiling for AMDGPU)
 ROCM_PATH ?= /opt/rocm
 
@@ -16,6 +21,7 @@ ROCM_PATH ?= /opt/rocm
 CC ?= gcc
 
 # override default compiler (please don't commit uncommented lines)
+CC := $(LLVM_PATH)/bin/clang
 #CC := $(ROCM_PATH)/bin/amdclang
 #CC := clang
 #CC := gcc
@@ -54,6 +60,13 @@ CFLAGS := -fassociative-math -fno-math-errno -fno-signed-zeros -fno-trapping-mat
 
 # Clang/GCC link-time optimization
 CFLAGS := -flto=auto $(CFLAGS)
+
+## LLVM/Clang with offloading support
+ifeq ($(CC),$(LLVM_PATH)/bin/clang)
+# circumvent missing LLVMgold.so error (why doesn't clang use this linker by default??)
+LDFLAGS := --ld-path=$(LLVM_PATH)/bin/ld.lld -Wl,-rpath=$(LLVM_PATH)/lib/x86_64-unknown-linux-gnu $(CFLAGS)
+CFLAGS := -fopenmp -fopenmp-targets=nvptx64 --offload-arch=native $(CFLAGS)
+endif
 
 # AMD ROCm Clang/LLVM Compiler
 ifeq ($(CC),$(ROCM_PATH)/bin/amdclang)
@@ -117,7 +130,7 @@ CFLAGS := $(CFLAGS) -Wno-unused-parameter -Wno-unused-variable
 #CFLAGS := $(CFLAGS) -isystem stb
 
 # Link standard math library (needed for math.h functions)
-LDFLAGS := -lm
+LDFLAGS := $(LDFLAGS) -lm
 
 # Link POSIX threads (only required for separate visualization I/O thread)
 # ENABLE_VIS_IO_THREAD must also be defined in src/config.h
