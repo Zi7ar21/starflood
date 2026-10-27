@@ -21,7 +21,7 @@ ROCM_PATH ?= /opt/rocm
 CC ?= gcc
 
 # override default compiler (please don't commit uncommented lines)
-CC := $(LLVM_PATH)/bin/clang
+#CC := $(LLVM_PATH)/bin/clang
 #CC := $(ROCM_PATH)/bin/amdclang
 #CC := clang
 #CC := gcc
@@ -62,6 +62,10 @@ CFLAGS := -fassociative-math -fno-math-errno -fno-signed-zeros -fno-trapping-mat
 CFLAGS := -flto=auto $(CFLAGS)
 
 ## LLVM/Clang with offloading support
+ifeq ($(CC),clang)
+CFLAGS := -fopenmp -fopenmp-targets=nvptx64 --offload-arch=native $(CFLAGS)
+endif
+
 ifeq ($(CC),$(LLVM_PATH)/bin/clang)
 # circumvent missing LLVMgold.so error (why doesn't clang use this linker by default??)
 LDFLAGS := --ld-path=$(LLVM_PATH)/bin/ld.lld -Wl,-rpath=$(LLVM_PATH)/lib/x86_64-unknown-linux-gnu $(CFLAGS)

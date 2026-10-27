@@ -148,7 +148,7 @@ make clean
 
 #### OpenMP Offloading
 
-Starflood supports offloading to devices (i.e. coprocessors, GPUs, etc.) using OpenMP `target` directives.
+Starflood supports offloading to devices (i.e. accelerators, GPUs, etc.) using OpenMP `target` directives.
 
 ##### AMD ROCm
 
@@ -168,18 +168,18 @@ For OpenMP offloading using the [Intel OneAPI DPC++/C++ Compiler](https://www.in
 icx -fiopenmp -fopenmp-targets=spir64 -march=native -O3 -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
 ```
 
-##### [NVIDIA HPC SDK](https://developer.nvidia.com/hpc-sdk)
+##### [LLVM/OpenMP](https://openmp.llvm.org/)
 
-> **Tip**: On x86_64 Arch Linux, the NVIDIA HPC SDK has a package ([`extra/nvhpc`](https://archlinux.org/packages/extra/x86_64/nvhpc/)).
+> **Tip**: On x86_64 Arch Linux, LLVM/OpenMP has a package ([`extra/offload`](https://archlinux.org/packages/extra/x86_64/offload/)).
 
-For OpenMP offloading using the [NVIDIA HPC Compilers](https://docs.nvidia.com/hpc-sdk/compilers/):
+For OpenMP offloading using [LLVM/OpenMP and Clang](https://openmp.llvm.org/CommandLineArgumentReference.html):
 
 ```sh
-nvc -gpu=ccnative -mp=gpu -fopenmp -g -march=native -O3 -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
+clang -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,nvptx64 --offload-arch=native -ggdb -march=native -O2 -pedantic -std=c99 -Wall -Wconversion -Wextra -Wshadow -o build/starflood src/*.c -lm
 ```
 
-- `-mp=gpu`: Enables compilation of OpenMP target constructs for GPU execution.
-- `-gpu=ccnative`: Only generate code for visible GPUs on the compiler host machine.
+- `-fopenmp-targets`: Enables compilation of OpenMP target constructs for GPU execution.
+- `--offload-arch`: Only generate code for GPUs detected on the compiler host machine.
 
 ### Mounting a `tmpfs` (Optional)
 
