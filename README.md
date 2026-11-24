@@ -62,13 +62,24 @@ Here are some projects (categorized by subject) that have either been inspiring 
 - _[Dynamics and Astrophysics of Galaxies](https://galaxiesbook.org/)_ by Jo Bovy
   - Online book (or in print) covering galaxies, with examples for verification
 - _[Illustris collaboration](https://www.illustris-project.org/)_
-  - Research collaboration responsible for a series of cosmological simulations
+  - Research collaboration responsible for some detailed large-scale cosmological simulations
+- _[STARFORGE: Star Formation in Gaseous Environments](https://starforge.space/)_ by Mike Grudić et al.
+  - Research collaboration responsible for some awesome simulations of molecular clouds
 
 ### Astrophysical/Cosmological Codes
 
+- _[Arepo code: moving mesh hydrodynamics](https://arepo-code.org/)_ by Volker Springel et al.
+  - Fork of GADGET with finite-volume magnetohydrodynamics on a Voronoi-mesh, used in some of the best cosmological simulations.
 - _[GADGET-4 (GAlaxies with Dark matter and Gas intEracT)](https://wwwmpa.mpa-garching.mpg.de/gadget4/)_ by Volker Springel et al.
+  - The classic cosmological N-body and SPH that inspired me to pursue computational astrophysics!
+- _[GIZMO: Multi-method astrophysical simulations](http://www.tapir.caltech.edu/~phopkins/Site/GIZMO.html)_ by Philip Hopkins et al.
+  - Another fork of GADGET with a bunch of solver techniques (MFV, MFM, Euler, SPH, Voronoi-grid, etc.)
+- _[OpenSPH: Astrophysical SPH and N-body simulations and interactive visualization tools](https://gitlab.com/sevecekp/sph#compilation)_ by [Pavel Ševeček](https://pavelsevecek.github.io/)
+  - Pretty much what Starflood is trying to be, but better :)
 - _[PKDGRAV3: Beyond Trillion Particle Cosmological Simulations for the Next Era of Galaxy Surveys](https://arxiv.org/abs/1609.08621)_ by Douglas Potter, Joachim Stadel, and Romain Teyssier
-- _[STARFORGE: Star Formation in Gaseous Environments](https://starforge.space/)_ by Mike Grudić et al.
+  - A large-scale cosmological code that uses k-d trees and supports GPU acceleration.
+- _SpaceSim: Astrophysical Simulation Software_ by [Pavel Ševeček](https://pavelsevecek.github.io/)
+  - Proprietary fork of OpenSPH with more features and an interactive interface, available on Steam.
 
 ### Other
 
@@ -79,7 +90,7 @@ Here are some projects (categorized by subject) that have either been inspiring 
   - _[The Barnes-Hut Approximation: Efficient computation of N-body forces](https://jheer.github.io/barnes-hut/)_ by Jeffrey Heer
     - An awesome article with interactive visualizations of the algorithm in 2-dimensions.
 - _[Create Your Own Smoothed-Particle Hydrodynamics Simulation (With Python)](https://github.com/pmocz/sph-python)_ by Philip Mocz
-  - Used as a reference implementation of [SPH](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics), which is nice since the Wikipedia article only contains mathematical formulae/equations!
+  - Used as a reference implementation of [SPH](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics), which is nice since the [SPH Wikipedia article](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics) is just boring equations!
 
 ### Technical/Libraries
 

@@ -10,8 +10,8 @@
 /* === Compute === */
 
 // Uncomment to use OpenMP target constructs (if OpenMP is enabled)
-//#define ENABLE_OFFLOAD_SIM
-//#define ENABLE_OFFLOAD_VIS
+#define ENABLE_OFFLOAD_SIM
+#define ENABLE_OFFLOAD_VIS
 
 // CAUTION: Experimental
 // Uncomment to create a separate thread for visualization file output (requires pthreads)
@@ -24,7 +24,7 @@
 /* === General === */
 
 // Default number of simulation timesteps to run
-#define NUM_TIMESTEPS 100
+#define NUM_TIMESTEPS 300
 
 // Uncomment to enable simulation timestepping (otherwise, simulation snapshots are loaded if SIM_FILENAME is defined)
 // If commented, only every NUM_TIMESTEPS/OUTPUT_INTERVAL step will be processed
@@ -162,8 +162,8 @@
 //#define NUM_BODIES 8192
 //#define NUM_BODIES 16384
 //#define NUM_BODIES 32768
-#define NUM_BODIES 65536
-//#define NUM_BODIES 131072
+//#define NUM_BODIES 65536
+#define NUM_BODIES 131072
 //#define NUM_BODIES 262144
 //#define NUM_BODIES 524288
 //#define NUM_BODIES 1048576
@@ -226,14 +226,15 @@
 // On most platforms, single is IEEE-754 binary32 and double is IEEE-754 binary64
 //#define STARFLOOD_DOUBLE_PRECISION
 
-// Uncomment to enable memory alignment (good practice)
+// Uncomment to enable memory alignment
 // 4 KiB (4*1024 = 4096 bytes) is the smallest on many architectures
 // however, larger page sizes exist:
 // x86 huge pages are 2 MiB (2*1024*1024 = 2097152 bytes)
 // RISCV32 "megapage" is 4 MiB (4*1024*1024 = 4194304 bytes)
 // There is really no point increasing this
 // much before you are just wasting memory
-#define STARFLOOD_ALIGNMENT 4194304
+#define STARFLOOD_ALIGNMENT 4096
+//#define STARFLOOD_ALIGNMENT 4194304
 
 // Uncomment to override max filename length (otherwise use FILENAME_MAX)
 // FILENAME_MAX is often 4096
